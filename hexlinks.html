@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Hex Links — Puzzle</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+    *{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+    body{background:#0a0a1a;display:flex;flex-direction:column;align-items:center;min-height:100vh;font-family:'Inter',sans-serif;color:#e2e8f0;overflow:hidden}
+    .top{display:flex;justify-content:space-between;width:100%;max-width:420px;padding:.4rem .6rem;background:#111827;font-size:.7rem}
+    .top .val{font-weight:700}.top .moves{color:#f59e0b}.top .level{color:#3b82f6}.top .best{color:#22c55e}
+    canvas{display:block;touch-action:none}
+    .ctrls{display:flex;gap:.5rem;padding:.4rem}
+    .btn{background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:.4rem 1rem;border-radius:6px;font-family:inherit;font-size:.75rem;cursor:pointer;font-weight:600}
+    .btn:hover{border-color:#3b82f6;color:#fff}
+    .overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;text-align:center;padding:1rem}
+    .overlay h1{font-size:1.3rem;margin-bottom:.5rem}.overlay p{font-size:.75rem;color:#94a3b8;margin-bottom:.75rem;max-width:300px;line-height:1.4}
+    .overlay button{background:#3b82f6;color:#fff;border:none;padding:.5rem 1.5rem;border-radius:6px;font-family:inherit;font-size:.85rem;cursor:pointer;margin:.2rem}
+  </style>
+</head>
+<body>
+<div class="top" id="hud" style="display:none">
+  <div>Level <span class="level val" id="lvl">1</span></div>
+  <div>Moves <span class="moves val" id="moves">0</span></div>
+  <div>Best <span class="best val" id="best">—</span></div>
+</div>
+<canvas id="c"></canvas>
+<div class="ctrls" id="ctrls" style="display:none">
+  <button class="btn" onclick="resetPuzzle()">↺ Reset</button>
+  <button class="btn" onclick="showHint()">💡 Hint</button>
+</div>
+<div class="overlay" id="start">
+  <h1 style="color:#a855f7">🔮 HEX LINKS</h1>
+  <p>Rotate hexagonal tiles to connect all pipes from the source ⬡ to the goals ●. Every tile rotates 60° when clicked. Complete all 20 levels!</p>
+  <button onclick="startGame()">PLAY</button>
+</div>
+<div class="overlay" id="win" style="display:none">
+  <h1 style="color:#22c55e">✓ Connected!</h1>
+  <p id="winMsg"></p>
+  <button onclick="nextLevel()">Next Level</button>
+</div>
+<div class="overlay" id="done" style="display:none">
+  <h1 style="color:#f59e0b">🏆 All Clear!</h1>
+  <p id="doneMsg"></p>
+  <button onclick="startGame()">Play Again</button>
+</div>
+<script>
+const C=document.getElementById('c'),X=C.getContext('2d');
+const S=38; // hex radius
+let grid,cols,rows,W,H,level,moves,best,solved,source,goals,connections;
+
+// Pipe types: each is an array of edge indices (0-5) that connect
+// Edges: 0=top-right, 1=right, 2=bottom-right, 3=bottom-left, 4=left, 5=top-left (flat-top hex)
+// Actually let's use: 0=top,1=top-right,2=bottom-right,3=bottom,4=bottom-left,5=top-left (pointy-top)
+// For pointy-top: edges at 0°,60°,120°,180°,240°,300°
+
+const PIPES={
+  dead:[0],        // straight stub
+  straight:[0,3],  // through
+  curve:[0,1],     // bend
+  tee:[0,1,3],     // T junction
+  cross:[0,1,2,3], // + (rare)
+  fork:[0,1,5],    // Y
+  source:[0,1,3,4,5], // source - almost all
+};
+
+const LEVELS=[
+  // {grid template: each cell = pipe type + rotation, source position, goal positions}
+  // Generate procedurally based on level
+];
+
+function generateLevel(lvl){
+  const size=Math.min(3+Math.floor(lvl/4),6);
+  cols=size;rows=size;
+  grid=Array.from({length:rows},()=>Array(cols).fill(null));
+  
+  // Place source in center-ish
+  source={r:Math.floor(rows/2),c:Math.floor(cols/2)};
+  
+  // Place goals at edges
+  goals=[];
+  const numGoals=Math.min(2+Math.floor(lvl/3),5);
+  const edges=[];
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    if(r===0||r===rows-1||c===0||c===cols-1)edges.push({r,c});
+  }
+  // Shuffle edges
+  for(let i=edges.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[edges[i],edges[j]]=[edges[j],edges[i]]}
+  for(let i=0;i<numGoals&&i<edges.length;i++){
+    if(edges[i].r!==source.r||edges[i].c!==source.c)goals.push(edges[i]);
+  }
+
+  // Build a spanning tree from source using random DFS
+  const visited=Array.from({length:rows},()=>Array(cols).fill(false));
+  const tree=Array.from({length:rows},()=>Array.from({length:cols},()=>new Set()));
+  
+  function neighbors(r,c){
+    const n=[];
+    // Pointy-top hex neighbors
+    const dirs=[[-1,0],[-1,1],[0,1],[1,0],[1,-1],[0,-1]]; // even row
+    const dirsOdd=[[-1,-1],[-1,0],[0,1],[1,1],[1,0],[0,-1]]; // odd row
+    const d=r%2===0?dirs:dirsOdd;
+    d.forEach((dr,dc)=>{ // fix: destructure properly
+    });
+    // Let me redo this properly
+    const evenDirs=[{dr:-1,dc:0},{dr:-1,dc:1},{dr:0,dc:1},{dr:1,dc:0},{dr:1,dc:-1},{dr:0,dc:-1}];
+    const oddDirs=[{dr:-1,dc:-1},{dr:-1,dc:0},{dr:0,dc:1},{dr:1,dc:1},{dr:1,dc:0},{dr:0,dc:-1}];
+    (r%2===0?evenDirs:oddDirs).forEach(({dr,dc2})=>{
+      const nr=r+dr,nc=c+dc2;
+      if(nr>=0&&nr<rows&&nc>=0&&nc<cols)n.push({r:nr,c:nc});
+    });
+    return n;
+  }
+
+  // Actually let me simplify with a basic grid (square with diagonals for hex feel)
+  function getNeighbors(r,c){
+    const n=[];
+    const offsets=r%2===0?[[-1,0],[-1,1],[0,1],[1,0],[1,-1],[0,-1]]:[[-1,-1],[-1,0],[0,1],[1,1],[1,0],[0,-1]];
+    offsets.forEach(([dr,dc])=>{const nr=r+dr,nc=c+dc;if(nr>=0&&nr<rows&&nc>=0&&nc<cols)n.push({r:nr,c:nc})});
+    return n;
+  }
+  
+  // Random DFS to build spanning tree
+  const stack=[{r:source.r,c:source.c}];
+  visited[source.r][source.c]=true;
+  while(stack.length){
+    const cur=stack[stack.length-1];
+    const nbrs=getNeighbors(cur.r,cur.c).filter(n=>!visited[n.r][n.c]);
+    if(!nbrs.length){stack.pop();continue}
+    const next=nbrs[Math.floor(Math.random()*nbrs.length)];
+    visited[next.r][next.c]=true;
+    // Connect cur and next
+    const edgeIdx=getEdgeIdx(cur.r,cur.c,next.r,next.c);
+    const edgeIdx2=getEdgeIdx(next.r,next.c,cur.r,cur.c);
+    tree[cur.r][cur.c].add(edgeIdx);
+    tree[next.r][next.c].add(edgeIdx2);
+    stack.push(next);
+  }
+  
+  // Add some extra edges for complexity
+  const extra=Math.floor(lvl/2);
+  for(let i=0;i<extra;i++){
+    const r=Math.floor(Math.random()*rows),c=Math.floor(Math.random()*cols);
+    const nbrs=getNeighbors(r,c);
+    const n=nbrs[Math.floor(Math.random()*nbrs.length)];
+    const e1=getEdgeIdx(r,c,n.r,n.c);
+    const e2=getEdgeIdx(n.r,n.c,r,c);
+    tree[r][c].add(e1);
+    tree[n.r][n.c].add(e2);
+  }
+
+  // Convert tree to pipe tiles
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    const edges=[...tree[r][c]].sort();
+    const isSource=r===source.r&&c===source.c;
+    const isGoal=goals.some(g=>g.r===r&&g.c===c);
+    
+    // Determine pipe type from connected edges
+    const numEdges=edges.length;
+    let pipe={edges:[...edges],rotation:0,isSource,isGoal};
+    
+    // Scramble rotation for puzzle
+    const rotations=Math.floor(Math.random()*6);
+    pipe.edges=pipe.edges.map(e=>(e+rotations)%6);
+    pipe.solutionRot=rotations;
+    pipe.currentRot=0; // player hasn't rotated yet, edges are already scrambled
+    
+    grid[r][c]=pipe;
+  }
+  
+  // Store solution rotations for hints
+  // Actually, the scrambled edges ARE the initial state. Player needs to rotate to match the tree.
+  // Let's restructure: store the solution edges and a random offset
+  
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    const solEdges=[...tree[r][c]].sort();
+    const rot=Math.floor(Math.random()*5)+1; // always rotate at least once
+    grid[r][c]={
+      solutionEdges:solEdges,
+      currentEdges:solEdges.map(e=>(e+rot)%6),
+      rotation:rot,
+      isSource:r===source.r&&c===source.c,
+      isGoal:goals.some(g=>g.r===r&&g.c===c)
+    };
+  }
+}
+
+function getEdgeIdx(r1,c1,r2,c2){
+  const offsets=r1%2===0?[[-1,0],[-1,1],[0,1],[1,0],[1,-1],[0,-1]]:[[-1,-1],[-1,0],[0,1],[1,1],[1,0],[0,-1]];
+  for(let i=0;i<6;i++){if(r1+offsets[i][0]===r2&&c1+offsets[i][1]===c2)return i}
+  return 0;
+}
+
+function hexCenter(r,c){
+  const w=S*Math.sqrt(3);
+  const h=S*2;
+  const x=c*w+(r%2)*w/2+S+w/2;
+  const y=r*h*0.75+S+h/2;
+  return{x,y};
+}
+
+function resizeCanvas(){
+  W=cols*(S*Math.sqrt(3))+S*4;H=rows*S*1.5+S*4;
+  C.width=Math.min(W,420);C.height=Math.min(H,600);
+}
+
+function startGame(){
+  level=1;best=Infinity;moves=0;solved=false;
+  document.getElementById('start').style.display='none';
+  document.getElementById('done').style.display='none';
+  document.getElementById('win').style.display='none';
+  ['hud','ctrls'].forEach(id=>document.getElementById(id).style.display='');
+  loadLevel();
+}
+
+function loadLevel(){
+  generateLevel(level);
+  moves=0;solved=false;
+  resizeCanvas();
+  updateHUD();render();
+}
+
+function resetPuzzle(){
+  // Re-scramble
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    const rot=Math.floor(Math.random()*5)+1;
+    grid[r][c].currentEdges=grid[r][c].solutionEdges.map(e=>(e+rot)%6);
+    grid[r][c].rotation=rot;
+  }
+  moves=0;render();updateHUD();
+}
+
+function nextLevel(){
+  document.getElementById('win').style.display='none';
+  level++;
+  if(level>20){
+    document.getElementById('doneMsg').textContent=`All 20 levels cleared! Best moves used.`;
+    document.getElementById('done').style.display='flex';return;
+  }
+  loadLevel();
+}
+
+function showHint(){
+  // Rotate one incorrect tile to correct position
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    const cell=grid[r][c];
+    const sorted=[...cell.currentEdges].sort().join(',');
+    const sol=[...cell.solutionEdges].sort().join(',');
+    if(sorted!==sol){
+      cell.currentEdges=[...cell.solutionEdges];
+      cell.rotation=0;
+      moves+=5; // penalty
+      updateHUD();render();checkWin();
+      return;
+    }
+  }
+}
+
+function updateHUD(){
+  document.getElementById('lvl').textContent=level;
+  document.getElementById('moves').textContent=moves;
+  document.getElementById('best').textContent=best===Infinity?'—':best;
+}
+
+// Click handling
+C.addEventListener('click',e=>{
+  if(solved)return;
+  const rect=C.getBoundingClientRect();
+  const scaleX=C.width/rect.width,scaleY=C.height/rect.height;
+  const mx=(e.clientX-rect.left)*scaleX,my=(e.clientY-rect.top)*scaleY;
+  
+  // Find which hex was clicked
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    const h=hexCenter(r,c);
+    if(Math.hypot(mx-h.x,my-h.y)<S){
+      // Rotate this tile by 1 (60°)
+      const cell=grid[r][c];
+      cell.currentEdges=cell.currentEdges.map(e=>(e+1)%6);
+      cell.rotation=(cell.rotation+1)%6;
+      moves++;
+      updateHUD();render();checkWin();
+      return;
+    }
+  }
+});
+
+function checkWin(){
+  // Check if all tiles match their solution
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    const cell=grid[r][c];
+    const cur=[...cell.currentEdges].sort().join(',');
+    const sol=[...cell.solutionEdges].sort().join(',');
+    if(cur!==sol)return;
+  }
+  solved=true;
+  if(moves<best)best=moves;
+  document.getElementById('winMsg').textContent=`Level ${level} in ${moves} moves!`;
+  setTimeout(()=>document.getElementById('win').style.display='flex',300);
+}
+
+// RENDER
+function render(){
+  X.fillStyle='#0a0a1a';X.fillRect(0,0,C.width,C.height);
+  
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    const cell=grid[r][c];
+    const h=hexCenter(r,c);
+    
+    // Draw hex
+    X.beginPath();
+    for(let i=0;i<6;i++){
+      const a=Math.PI/180*(60*i-30);
+      X.lineTo(h.x+S*Math.cos(a),h.y+S*Math.sin(a));
+    }
+    X.closePath();
+    
+    // Fill
+    const isCorrect=[...cell.currentEdges].sort().join(',')===[...cell.solutionEdges].sort().join(',');
+    X.fillStyle=cell.isSource?'#1e3a5f':cell.isGoal?'#1a3a2a':isCorrect?'#1a2535':'#1e293b';
+    X.fill();
+    X.strokeStyle=isCorrect?'#22c55e33':'#334155';X.lineWidth=1.5;X.stroke();
+    
+    // Draw pipes
+    X.strokeStyle=cell.isSource?'#3b82f6':cell.isGoal?'#22c55e':isCorrect?'#22c55e':'#94a3b8';
+    X.lineWidth=3;
+    cell.currentEdges.forEach(edge=>{
+      const a=Math.PI/180*(60*edge-30);
+      X.beginPath();X.moveTo(h.x,h.y);X.lineTo(h.x+S*0.75*Math.cos(a),h.y+S*0.75*Math.sin(a));X.stroke();
+    });
+    
+    // Center dot
+    X.fillStyle=cell.isSource?'#3b82f6':cell.isGoal?'#22c55e':'#475569';
+    X.beginPath();X.arc(h.x,h.y,4,0,Math.PI*2);X.fill();
+    
+    // Source/Goal labels
+    if(cell.isSource){X.fillStyle='#3b82f6';X.font='bold 10px Inter';X.textAlign='center';X.fillText('⬡',h.x,h.y-S-4)}
+    if(cell.isGoal){X.fillStyle='#22c55e';X.font='bold 10px Inter';X.textAlign='center';X.fillText('●',h.x,h.y-S-4)}
+  }
+}
+</script>
+</body>
+</html>
