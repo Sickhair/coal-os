@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>COAL OS — Pomo Focus</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000a14; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; min-height: 100vh;
+      font-family: 'Courier New', monospace; color: #00d4ff; padding: 1rem;
+    }
+    h1 { font-size: 0.8rem; letter-spacing: 3px; text-shadow: 0 0 20px #00d4ff; margin-bottom: 1.5rem; }
+    .timer-ring {
+      position: relative; width: 220px; height: 220px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .timer-ring svg { position: absolute; top: 0; left: 0; transform: rotate(-90deg); }
+    .timer-ring circle {
+      fill: none; stroke-width: 3; cx: 110; cy: 110; r: 100;
+    }
+    .ring-bg { stroke: #0a1628; }
+    .ring-progress { stroke: #00d4ff; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+    .ring-progress.break-mode { stroke: #22c55e; }
+    .time-display {
+      font-size: 2.5rem; letter-spacing: 4px;
+      text-shadow: 0 0 30px #00d4ff44; z-index: 1;
+    }
+    .mode-label {
+      font-size: 0.6rem; color: #475569; letter-spacing: 3px; margin-top: 0.5rem;
+    }
+    .controls { display: flex; gap: 0.5rem; margin-top: 1.5rem; }
+    .controls button {
+      background: transparent; border: 1px solid #00d4ff44; color: #00d4ff;
+      font-family: 'Courier New', monospace; font-size: 0.75rem;
+      padding: 0.5rem 1.2rem; cursor: pointer; border-radius: 3px; transition: all 0.3s;
+    }
+    .controls button:hover { background: #00d4ff22; }
+    .controls button.primary { border-color: #00d4ff; }
+    .stats { margin-top: 1.5rem; display: flex; gap: 2rem; }
+    .stat { text-align: center; }
+    .stat .val { font-size: 1.2rem; color: #e2e8f0; }
+    .stat .label { font-size: 0.5rem; color: #475569; letter-spacing: 2px; margin-top: 0.1rem; }
+    .settings { margin-top: 1rem; font-size: 0.65rem; color: #334155; text-align: center; }
+    .settings select {
+      background: #0a1628; border: 1px solid #00d4ff33; color: #00d4ff;
+      font-family: 'Courier New', monospace; font-size: 0.65rem; padding: 0.2rem;
+    }
+    .back-link { margin-top: 1.5rem; font-size: 0.7rem; }
+    .back-link a { color: #475569; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <h1>◆ POMO FOCUS ◆</h1>
+  <div class="timer-ring">
+    <svg width="220" height="220">
+      <circle class="ring-bg"/>
+      <circle class="ring-progress" id="ringProgress" stroke-dasharray="628.3" stroke-dashoffset="0"/>
+    </svg>
+    <div class="time-display" id="timeDisplay">25:00</div>
+  </div>
+  <div class="mode-label" id="modeLabel">FOCUS</div>
+  <div class="controls">
+    <button onclick="startTimer()" class="primary" id="startBtn">▶ START</button>
+    <button onclick="resetTimer()">⟳ RESET</button>
+    <button onclick="skipTimer()">⏭ SKIP</button>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="val" id="sessions">0</div><div class="label">SESSIONS</div></div>
+    <div class="stat"><div class="val" id="totalMin">0</div><div class="label">MINUTES</div></div>
+    <div class="stat"><div class="val" id="streak">0</div><div class="label">STREAK</div></div>
+  </div>
+  <div class="settings">
+    Focus: <select id="focusTime" onchange="resetTimer()">
+      <option value="15">15 min</option>
+      <option value="25" selected>25 min</option>
+      <option value="45">45 min</option>
+      <option value="60">60 min</option>
+    </select>
+    Break: <select id="breakTime" onchange="resetTimer()">
+      <option value="5" selected>5 min</option>
+      <option value="10">10 min</option>
+      <option value="15">15 min</option>
+    </select>
+  </div>
+  <div class="back-link"><a href="index.html">← BACK</a></div>
+
+  <script>
+    const CIRC = 2 * Math.PI * 100; // 628.3
+    let timer = null;
+    let remaining = 0;
+    let total = 0;
+    let isBreak = false;
+    let sessions = parseInt(localStorage.getItem('coalPomoSessions')||'0');
+    let totalMin = parseInt(localStorage.getItem('coalPomoMin')||'0');
+    let streak = parseInt(localStorage.getItem('coalPomoStreak')||'0');
+
+    document.getElementById('sessions').textContent = sessions;
+    document.getElementById('totalMin').textContent = totalMin;
+    document.getElementById('streak').textContent = streak;
+
+    function getFocusSec() { return parseInt(document.getElementById('focusTime').value) * 60; }
+    function getBreakSec() { return parseInt(document.getElementById('breakTime').value) * 60; }
+
+    function startTimer() {
+      if (timer) { pauseTimer(); return; }
+      if (remaining === 0) { total = isBreak ? getBreakSec() : getFocusSec(); remaining = total; }
+      document.getElementById('startBtn').textContent = '⏸ PAUSE';
+      timer = setInterval(tick, 1000);
+    }
+
+    function pauseTimer() {
+      clearInterval(timer);
+      timer = null;
+      document.getElementById('startBtn').textContent = '▶ RESUME';
+    }
+
+    function resetTimer() {
+      clearInterval(timer); timer = null;
+      isBreak = false;
+      remaining = 0; total = 0;
+      document.getElementById('startBtn').textContent = '▶ START';
+      document.getElementById('modeLabel').textContent = 'FOCUS';
+      document.getElementById('ringProgress').classList.remove('break-mode');
+      updateDisplay();
+    }
+
+    function skipTimer() {
+      clearInterval(timer); timer = null;
+      completeSession();
+    }
+
+    function tick() {
+      remaining--;
+      if (remaining <= 0) { completeSession(); return; }
+      updateDisplay();
+    }
+
+    function completeSession() {
+      if (!isBreak) {
+        sessions++; totalMin += parseInt(document.getElementById('focusTime').value);
+        streak++;
+        localStorage.setItem('coalPomoSessions', sessions);
+        localStorage.setItem('coalPomoMin', totalMin);
+        localStorage.setItem('coalPomoStreak', streak);
+        document.getElementById('sessions').textContent = sessions;
+        document.getElementById('totalMin').textContent = totalMin;
+        document.getElementById('streak').textContent = streak;
+        isBreak = true;
+      } else {
+        isBreak = false;
+      }
+      clearInterval(timer); timer = null;
+      remaining = 0;
+      document.getElementById('startBtn').textContent = '▶ START';
+      document.getElementById('modeLabel').textContent = isBreak ? 'BREAK' : 'FOCUS';
+      document.getElementById('ringProgress').classList.toggle('break-mode', isBreak);
+      updateDisplay();
+      // Notify
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(isBreak ? 'Break time!' : 'Focus time!', { body: isBreak ? 'Take a breather' : 'Get back to work' });
+      }
+    }
+
+    function updateDisplay() {
+      const sec = remaining || (isBreak ? getBreakSec() : getFocusSec());
+      const tot = total || (isBreak ? getBreakSec() : getFocusSec());
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      document.getElementById('timeDisplay').textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+      const progress = 1 - (sec / tot);
+      document.getElementById('ringProgress').style.strokeDashoffset = CIRC * (1 - progress);
+    }
+
+    if ('Notification' in window) Notification.requestPermission();
+    updateDisplay();
+  </script>
+</body>
+</html>

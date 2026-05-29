@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>COAL OS — Snake</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000a14; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; min-height: 100vh;
+      font-family: 'Courier New', monospace; color: #00d4ff; padding: 0.5rem;
+      touch-action: none;
+    }
+    h1 { font-size: 0.8rem; letter-spacing: 3px; text-shadow: 0 0 20px #00d4ff; margin-bottom: 0.25rem; }
+    .score-bar { display: flex; justify-content: space-between; width: 300px; font-size: 0.75rem; color: #64748b; margin-bottom: 0.25rem; }
+    .score-bar span { color: #00d4ff; }
+    canvas { border: 1px solid #00d4ff22; border-radius: 4px; display: block; max-width: 100%; }
+    .controls { display: grid; grid-template-columns: repeat(3, 48px); gap: 4px; margin-top: 0.5rem; justify-content: center; }
+    .controls button {
+      background: #0a1628; border: 1px solid #00d4ff33; color: #00d4ff;
+      font-size: 1.2rem; width: 48px; height: 48px; cursor: pointer; border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .controls button:active { background: #00d4ff22; }
+    .placeholder { visibility: hidden; }
+    .overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,10,20,0.85); display: flex; flex-direction: column;
+      align-items: center; justify-content: center; z-index: 10;
+    }
+    .overlay h2 { color: #ef4444; letter-spacing: 3px; margin-bottom: 0.5rem; }
+    .overlay p { color: #64748b; font-size: 0.8rem; margin-bottom: 1rem; }
+    .overlay button {
+      background: transparent; border: 1px solid #00d4ff; color: #00d4ff;
+      font-family: 'Courier New', monospace; padding: 0.5rem 1.5rem; cursor: pointer;
+      font-size: 0.8rem; border-radius: 3px;
+    }
+    .back-link { margin-top: 0.5rem; font-size: 0.7rem; }
+    .back-link a { color: #475569; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <h1>◆ NEON SERPENT ◆</h1>
+  <div class="score-bar">
+    <div>SCORE: <span id="score">0</span></div>
+    <div>BEST: <span id="best">0</span></div>
+  </div>
+  <canvas id="game" width="300" height="300"></canvas>
+  <div class="controls">
+    <div class="placeholder"></div>
+    <button onclick="setDir(0,-1)">▲</button>
+    <div class="placeholder"></div>
+    <button onclick="setDir(-1,0)">◄</button>
+    <button onclick="setDir(0,1)">▼</button>
+    <button onclick="setDir(1,0)">►</button>
+  </div>
+  <div class="overlay" id="overlay">
+    <h2>GAME OVER</h2>
+    <p>Score: <span id="final">0</span></p>
+    <button onclick="startGame()">PLAY AGAIN</button>
+  </div>
+  <div class="back-link"><a href="index.html">← BACK</a></div>
+
+  <script>
+    const C = document.getElementById('game');
+    const ctx = C.getContext('2d');
+    const SZ = 15, COLS = 20, ROWS = 20;
+    let snake, dir, food, score, best, interval, running;
+
+    best = parseInt(localStorage.getItem('coalSnakeBest')||'0');
+    document.getElementById('best').textContent = best;
+
+    function startGame() {
+      document.getElementById('overlay').style.display = 'none';
+      snake = [{x:10,y:10}];
+      dir = {x:1,y:0};
+      score = 0;
+      document.getElementById('score').textContent = 0;
+      placeFood();
+      running = true;
+      if (interval) clearInterval(interval);
+      interval = setInterval(tick, 100);
+    }
+
+    function placeFood() {
+      do { food = {x:Math.floor(Math.random()*COLS), y:Math.floor(Math.random()*ROWS)}; }
+      while (snake.some(s => s.x===food.x && s.y===food.y));
+    }
+
+    function setDir(x,y) {
+      if (dir.x === -x && dir.y === -y) return;
+      dir = {x,y};
+    }
+
+    function tick() {
+      if (!running) return;
+      const head = {x: snake[0].x+dir.x, y: snake[0].y+dir.y};
+      // Walls
+      if (head.x<0||head.x>=COLS||head.y<0||head.y>=ROWS) return die();
+      // Self
+      if (snake.some(s=>s.x===head.x&&s.y===head.y)) return die();
+
+      snake.unshift(head);
+      if (head.x===food.x && head.y===food.y) {
+        score += 10;
+        document.getElementById('score').textContent = score;
+        placeFood();
+        // Speed up
+        clearInterval(interval);
+        interval = setInterval(tick, Math.max(40, 100 - score));
+      } else {
+        snake.pop();
+      }
+      draw();
+    }
+
+    function die() {
+      running = false;
+      clearInterval(interval);
+      if (score > best) { best = score; localStorage.setItem('coalSnakeBest', best); document.getElementById('best').textContent = best; }
+      document.getElementById('final').textContent = score;
+      document.getElementById('overlay').style.display = 'flex';
+    }
+
+    function draw() {
+      ctx.fillStyle = '#000a14';
+      ctx.fillRect(0,0,C.width,C.height);
+      // Grid
+      ctx.strokeStyle = '#00d4ff08';
+      for (let i=0;i<=COLS;i++) { ctx.beginPath(); ctx.moveTo(i*SZ,0); ctx.lineTo(i*SZ,ROWS*SZ); ctx.stroke(); }
+      for (let i=0;i<=ROWS;i++) { ctx.beginPath(); ctx.moveTo(0,i*SZ); ctx.lineTo(COLS*SZ,i*SZ); ctx.stroke(); }
+      // Snake
+      snake.forEach((s,i) => {
+        const alpha = 1 - (i/snake.length)*0.5;
+        ctx.fillStyle = `rgba(0,212,255,${alpha})`;
+        ctx.shadowColor = '#00d4ff';
+        ctx.shadowBlur = i===0 ? 12 : 4;
+        ctx.fillRect(s.x*SZ+1, s.y*SZ+1, SZ-2, SZ-2);
+        ctx.shadowBlur = 0;
+      });
+      // Food
+      ctx.fillStyle = '#ef4444';
+      ctx.shadowColor = '#ef4444';
+      ctx.shadowBlur = 10;
+      ctx.fillRect(food.x*SZ+2, food.y*SZ+2, SZ-4, SZ-4);
+      ctx.shadowBlur = 0;
+    }
+
+    // Swipe controls
+    let tx, ty;
+    C.addEventListener('touchstart', e => { e.preventDefault(); tx=e.touches[0].clientX; ty=e.touches[0].clientY; });
+    C.addEventListener('touchend', e => {
+      const dx = e.changedTouches[0].clientX - tx;
+      const dy = e.changedTouches[0].clientY - ty;
+      if (Math.abs(dx)>Math.abs(dy)) setDir(dx>0?1:-1, 0);
+      else setDir(0, dy>0?1:-1);
+    });
+
+    document.addEventListener('keydown', e => {
+      if (e.key==='ArrowUp') setDir(0,-1);
+      if (e.key==='ArrowDown') setDir(0,1);
+      if (e.key==='ArrowLeft') setDir(-1,0);
+      if (e.key==='ArrowRight') setDir(1,0);
+    });
+
+    startGame();
+  </script>
+</body>
+</html>

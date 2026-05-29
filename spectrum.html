@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>COAL OS — Spectrum Analyzer</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000a14; display: flex; flex-direction: column;
+      align-items: center; min-height: 100vh;
+      font-family: 'Courier New', monospace; color: #00d4ff; padding: 0.5rem;
+    }
+    h1 { font-size: 0.8rem; letter-spacing: 3px; text-shadow: 0 0 20px #00d4ff; margin-bottom: 0.5rem; }
+    canvas { border: 1px solid #00d4ff22; border-radius: 4px; display: block; max-width: 100%; }
+    .controls { display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap; justify-content: center; }
+    .controls button {
+      background: transparent; border: 1px solid #00d4ff44; color: #00d4ff;
+      font-family: 'Courier New', monospace; font-size: 0.65rem;
+      padding: 0.3rem 0.6rem; cursor: pointer; border-radius: 3px;
+    }
+    .controls button:hover, .controls button.active { background: #00d4ff22; border-color: #00d4ff; }
+    .info { font-size: 0.55rem; color: #334155; margin-top: 0.4rem; text-align: center; }
+    .back-link { margin-top: 0.5rem; font-size: 0.7rem; }
+    .back-link a { color: #475569; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <h1>◆ SPECTRUM ◆</h1>
+  <canvas id="viz" width="360" height="280"></canvas>
+  <div class="controls">
+    <button onclick="startMic()" id="micBtn">🎤 MIC</button>
+    <button onclick="setStyle('bars')" class="active" id="btn-bars">BARS</button>
+    <button onclick="setStyle('wave')" id="btn-wave">WAVE</button>
+    <button onclick="setStyle('circle')" id="btn-circle">CIRCLE</button>
+    <button onclick="setStyle('rain')" id="btn-rain'>RAIN</button>
+  </div>
+  <div class="info">Tap MIC to use your microphone, or watch the demo tone</div>
+  <div class="back-link"><a href="index.html">← BACK</a></div>
+
+  <script>
+    const canvas = document.getElementById('viz');
+    const ctx = canvas.getContext('2d');
+    const W = 360, H = 280;
+
+    let audioCtx, analyser, source, dataArray, bufferLength;
+    let style = 'bars';
+    let running = true;
+    let useMic = false;
+
+    // Demo tone
+    function initDemo() {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      bufferLength = analyser.frequencyBinCount;
+      dataArray = new Uint8Array(bufferLength);
+
+      // Create interesting demo sound
+      const osc1 = audioCtx.createOscillator();
+      const osc2 = audioCtx.createOscillator();
+      const osc3 = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      gain.gain.value = 0.08;
+
+      osc1.frequency.value = 220;
+      osc2.frequency.value = 330;
+      osc3.frequency.value = 440;
+
+      // Modulate
+      const lfo = audioCtx.createOscillator();
+      lfo.frequency.value = 0.5;
+      const lfoGain = audioCtx.createGain();
+      lfoGain.gain.value = 100;
+      lfo.connect(lfoGain);
+      lfoGain.connect(osc1.frequency);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      osc3.connect(gain);
+      gain.connect(analyser);
+      analyser.connect(audioCtx.destination);
+
+      osc1.start(); osc2.start(); osc3.start(); lfo.start();
+    }
+
+    async function startMic() {
+      try {
+        if (!audioCtx) initDemo();
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        if (source) source.disconnect();
+        source = audioCtx.createMediaStreamSource(stream);
+        source.connect(analyser);
+        // Disconnect demo
+        useMic = true;
+        document.getElementById('micBtn').textContent = '🎤 LIVE';
+        document.getElementById('micBtn').classList.add('active');
+        document.querySelector('.info').textContent = 'Microphone active — make some noise!';
+      } catch(e) {
+        document.querySelector('.info').textContent = 'Mic access denied. Demo mode active.';
+      }
+    }
+
+    function setStyle(s) {
+      style = s;
+      document.querySelectorAll('.controls button:not(#micBtn)').forEach(b => b.classList.remove('active'));
+      document.getElementById('btn-'+s)?.classList.add('active');
+    }
+
+    function draw() {
+      requestAnimationFrame(draw);
+      if (!analyser) return;
+      analyser.getByteFrequencyData(dataArray);
+
+      ctx.fillStyle = 'rgba(0, 10, 20, 0.15)';
+      ctx.fillRect(0, 0, W, H);
+
+      const bars = bufferLength;
+      const step = W / bars;
+
+      switch(style) {
+        case 'bars':
+          for (let i = 0; i < bars; i++) {
+            const v = dataArray[i] / 255;
+            const h = v * H;
+            const hue = (i/bars) * 200 + 160;
+            ctx.fillStyle = `hsla(${hue}, 100%, 60%, ${0.3 + v*0.7})`;
+            ctx.fillRect(i * step, H - h, step - 1, h);
+          }
+          break;
+
+        case 'wave':
+          ctx.beginPath();
+          ctx.moveTo(0, H/2);
+          for (let i = 0; i < bars; i++) {
+            const v = dataArray[i] / 255;
+            const y = H/2 + (v - 0.5) * H * 0.8;
+            ctx.lineTo(i * step, y);
+          }
+          ctx.strokeStyle = '#00d4ff';
+          ctx.lineWidth = 2;
+          ctx.shadowColor = '#00d4ff';
+          ctx.shadowBlur = 10;
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+          // Mirror
+          ctx.beginPath();
+          ctx.moveTo(0, H/2);
+          for (let i = 0; i < bars; i++) {
+            const v = dataArray[i] / 255;
+            const y = H/2 - (v - 0.5) * H * 0.8;
+            ctx.lineTo(i * step, y);
+          }
+          ctx.strokeStyle = '#00d4ff66';
+          ctx.stroke();
+          break;
+
+        case 'circle':
+          const cx = W/2, cy = H/2;
+          for (let i = 0; i < bars; i++) {
+            const v = dataArray[i] / 255;
+            const angle = (i/bars) * Math.PI * 2;
+            const r = 40 + v * 80;
+            const x = cx + Math.cos(angle) * r;
+            const y = cy + Math.sin(angle) * r;
+            const hue = (i/bars) * 360;
+            ctx.fillStyle = `hsla(${hue}, 100%, 60%, ${v})`;
+            ctx.beginPath();
+            ctx.arc(x, y, 2 + v*4, 0, Math.PI*2);
+            ctx.fill();
+          }
+          break;
+
+        case 'rain':
+          for (let i = 0; i < bars; i++) {
+            const v = dataArray[i] / 255;
+            if (v > 0.3) {
+              const x = i * step;
+              const hue = 180 + v * 60;
+              ctx.fillStyle = `hsla(${hue}, 100%, 60%, ${v * 0.6})`;
+              ctx.fillRect(x, Math.random() * H, step, 2 + v * 8);
+            }
+          }
+          break;
+      }
+    }
+
+    initDemo();
+    draw();
+  </script>
+</body>
+</html>
