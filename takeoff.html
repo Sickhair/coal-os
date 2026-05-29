@@ -96,14 +96,16 @@
     /* PRINT */
     @media print{.toolbar,.panel,.topbar-actions,.zoom-ctrl,.canvas-info{display:none!important}.panel{width:100%!important;border:none!important}.main{flex-direction:column!important}}
   </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'</script>
 </head>
 <body>
 
 <div class="topbar">
   <div class="logo">TAKEOFF PRO <span>Blueprint Measurement System</span></div>
   <div class="topbar-actions">
-    <label class="btn" for="fileInput">📂 Load Blueprint</label>
-    <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="loadBlueprint(event)">
+    <label class="btn" for="fileInput">📂 Load PDF/Plan</label>
+    <input type="file" id="fileInput" accept="application/pdf,image/*" style="display:none" onchange="loadBlueprint(event)">
     <button class="btn" onclick="undoLast()">↩ Undo</button>
     <button class="btn" onclick="clearAll()">🗑 Clear</button>
     <button class="btn primary" onclick="exportReport()">📊 Report</button>
@@ -253,12 +255,62 @@ COLORS.forEach(c=>{const d=document.createElement('div');d.className='color-dot'
 function resize(){C.width=wrap.clientWidth;C.height=wrap.clientHeight;render()}
 window.addEventListener('resize',resize);resize();
 
+let pdfPages=[],currentPdfPage=0,pdfDoc=null;
+
 function loadBlueprint(e){
   const file=e.target.files[0];if(!file)return;
-  const reader=new FileReader();
-  reader.onload=ev=>{const i=new Image();i.onload=()=>{img=i;zoomFit();render()};i.src=ev.target.result};
-  reader.readAsDataURL(file);
+  const type=file.type||file.name.split('.').pop();
+  
+  if(type==='application/pdf'||file.name.toLowerCase().endsWith('.pdf')){
+    // Load PDF
+    const reader=new FileReader();
+    reader.onload=async ev=>{
+      try{
+        const typedArray=new Uint8Array(ev.target.result);
+        pdfDoc=await pdfjsLib.getDocument(typedArray).promise;
+        pdfPages=[];currentPdfPage=0;
+        // Render first page
+        await renderPdfPage(0);
+        // Show page nav
+        updatePageNav();
+      }catch(err){alert('Failed to load PDF: '+err.message)}
+    };
+    reader.readAsArrayBuffer(file);
+  }else{
+    // Image file
+    const reader=new FileReader();
+    reader.onload=ev=>{const i=new Image();i.onload=()=>{img=i;pdfDoc=null;zoomFit();render()};i.src=ev.target.result};
+    reader.readAsDataURL(file);
+  }
 }
+
+async function renderPdfPage(pageIdx){
+  if(!pdfDoc)return;
+  const page=await pdfDoc.getPage(pageIdx+1);
+  const scale=2; // high res for measurement accuracy
+  const viewport=page.getViewport({scale});
+  const offscreen=document.createElement('canvas');
+  offscreen.width=viewport.width;offscreen.height=viewport.height;
+  const ctx=offscreen.getContext('2d');
+  await page.render({canvasContext:ctx,viewport}).promise;
+  const i=new Image();i.onload=()=>{img=i;zoomFit();render()};i.src=offscreen.toDataURL();
+  currentPdfPage=pageIdx;
+}
+
+function updatePageNav(){
+  if(!pdfDoc)return;
+  let nav=document.getElementById('pageNav');
+  if(!nav){
+    nav=document.createElement('div');nav.id='pageNav';
+    nav.style.cssText='display:flex;align-items:center;gap:.3rem;margin-left:.3rem';
+    nav.innerHTML=`<button class="btn sm" onclick="prevPage()">◀</button><span id="pageInfo" style="font-size:.65rem;color:#94a3b8"></span><button class="btn sm" onclick="nextPage()">▶</button>`;
+    document.querySelector('.topbar-actions').insertBefore(nav,document.querySelector('.topbar-actions').children[2]);
+  }
+  document.getElementById('pageInfo').textContent=`Page ${currentPdfPage+1}/${pdfDoc.numPages}`;
+}
+
+async function nextPage(){if(pdfDoc&&currentPdfPage<pdfDoc.numPages-1){await renderPdfPage(currentPdfPage+1);updatePageNav()}}
+async function prevPage(){if(pdfDoc&&currentPdfPage>0){await renderPdfPage(currentPdfPage-1);updatePageNav()}}
 
 function zoomIn(){zoom=Math.min(zoom*1.25,10);render()}
 function zoomOut(){zoom=Math.max(zoom/1.25,.1);render()}
