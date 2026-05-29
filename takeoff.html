@@ -30,8 +30,10 @@
     
     /* LEFT TOOLBAR */
     .toolbar{width:48px;background:#0c1222;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:.3rem 0;gap:.15rem}
-    .tool{width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:var(--r);cursor:pointer;font-size:1rem;color:var(--text3);border:1px solid transparent;transition:all .15s}
+    .tool{width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:var(--r);cursor:pointer;font-size:1rem;color:var(--text3);border:1px solid transparent;transition:all .15s;position:relative}
     .tool:hover{color:var(--text);background:var(--surface)}.tool.active{color:var(--cyan);border-color:var(--cyan);background:var(--surface)}
+    .tool::after{content:attr(title);position:absolute;left:44px;top:50%;transform:translateY(-50%);background:var(--surface2);color:var(--text);font-size:.6rem;padding:.2rem .5rem;border-radius:4px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;z-index:50}
+    .tool:hover::after{opacity:1}
     .tool-sep{width:28px;height:1px;background:var(--border);margin:.2rem 0}
 
     /* CANVAS AREA */
@@ -355,6 +357,7 @@ C.addEventListener('touchmove',e=>{e.preventDefault();const t=e.touches[0];if(la
 C.addEventListener('touchend',e=>{e.preventDefault();onUp({});lastTouch=null},{passive:false});
 
 function onDown(e){
+  if(!e||e.clientX===undefined)return;
   const r=C.getBoundingClientRect();const mx=e.clientX-r.left,my=e.clientY-r.top;
   const cp=s2c(mx,my);
 
@@ -405,6 +408,7 @@ function onDown(e){
 }
 
 function onMove(e){
+  if(!e||e.clientX===undefined)return;
   const r=C.getBoundingClientRect();const mx=e.clientX-r.left,my=e.clientY-r.top;
   const cp=s2c(mx,my);
   document.getElementById('cursorInfo').textContent=`X: ${Math.round(cp.x)} Y: ${Math.round(cp.y)}`;
