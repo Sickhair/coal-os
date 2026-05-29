@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>CodeForge — Live Code Editor</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;600;700&display=swap');
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:#0d1117;color:#c9d1d9;font-family:'Inter',sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+    .topbar{display:flex;justify-content:space-between;align-items:center;padding:.3rem .5rem;background:#161b22;border-bottom:1px solid #30363d;font-size:.7rem}
+    .topbar .logo{font-weight:700;color:#58a6ff;letter-spacing:1px;font-size:.8rem}
+    .tabs{display:flex;gap:0;background:#161b22;border-bottom:1px solid #30363d}
+    .tab{padding:.35rem .7rem;font-size:.65rem;color:#8b949e;cursor:pointer;border-bottom:2px solid transparent;background:transparent;border:none;font-family:inherit}
+    .tab:hover{color:#c9d1d9}.tab.active{color:#f0f6fc;background:#0d1117;border-bottom-color:#58a6ff}
+    .tab .dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:.3rem}
+    .main{flex:1;display:flex;overflow:hidden}
+    .editor-wrap{flex:1;display:flex;overflow:hidden;position:relative}
+    .line-numbers{padding:.5rem .3rem .5rem .5rem;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.5;color:#484f58;background:#0d1117;border-right:1px solid #21262d;user-select:none;overflow:hidden;min-width:35px}
+    textarea{width:100%;height:100%;background:transparent;color:transparent;caret-color:#58a6ff;border:none;outline:none;resize:none;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.5;padding:.5rem;position:absolute;top:0;left:35px;z-index:2;tab-size:2;white-space:pre;overflow:auto}
+    .highlight{position:absolute;top:0;left:35px;right:0;bottom:0;padding:.5rem;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.5;white-space:pre;overflow:auto;pointer-events:none;z-index:1}
+    .preview-wrap{flex:1;border-left:1px solid #30363d;display:flex;flex-direction:column;overflow:hidden}
+    .preview-header{padding:.3rem .5rem;background:#161b22;border-bottom:1px solid #30363d;font-size:.6rem;color:#8b949e;display:flex;justify-content:space-between}
+    iframe{flex:1;border:none;background:#fff;width:100%}
+    .statusbar{display:flex;justify-content:space-between;padding:.2rem .5rem;background:#161b22;border-top:1px solid #30363d;font-size:.6rem;color:#484f58}
+    .btn{padding:.25rem .5rem;background:#21262d;border:1px solid #30363d;color:#c9d1d9;border-radius:4px;cursor:pointer;font-family:inherit;font-size:.65rem}
+    .btn:hover{background:#30363d;border-color:#8b949e}
+    .btn.primary{background:#238636;border-color:#238636;color:#fff}.btn.primary:hover{background:#2ea043}
+    .splitter{width:4px;background:#21262d;cursor:col-resize;transition:background .15s}.splitter:hover{background:#58a6ff}
+    /* Syntax colors */
+    .hl-tag{color:#7ee787}.hl-attr{color:#79c0ff}.hl-str{color:#a5d6ff}.hl-comment{color:#8b949e;font-style:italic}
+    .hl-keyword{color:#ff7b72}.hl-number{color:#79c0ff}.hl-func{color:#d2a8ff}.hl-prop{color:#79c0ff}
+    .hl-selector{color:#7ee787}.hl-value{color:#a5d6ff}.hl-punct{color:#c9d1d9}.hl-css-prop{color:#79c0ff}.hl-css-val{color:#a5d6ff}
+    @media(max-width:600px){.preview-wrap{display:none}.editor-wrap{width:100%}}
+  </style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">⚡ CODEFORGE</div>
+  <div style="display:flex;gap:.3rem">
+    <button class="btn" onclick="togglePreview()">👁 Preview</button>
+    <button class="btn" onclick="copyCode()">📋 Copy</button>
+    <button class="btn primary" onclick="downloadCode()">⬇ Download</button>
+  </div>
+</div>
+<div class="tabs" id="fileTabs">
+  <button class="tab active" onclick="switchFile('html')"><span class="dot" style="background:#e34c26"></span>index.html</button>
+  <button class="tab" onclick="switchFile('css')"><span class="dot" style="background:#563d7c"></span>style.css</button>
+  <button class="tab" onclick="switchFile('js')"><span class="dot" style="background:#f1e05a"></span>script.js</button>
+</div>
+<div class="main">
+  <div class="editor-wrap" id="editorWrap">
+    <div class="line-numbers" id="lineNums">1</div>
+    <pre class="highlight" id="highlight"></pre>
+    <textarea id="editor" spellcheck="false" oninput="onInput()" onscroll="syncScroll()" onkeydown="handleKeys(event)"></textarea>
+  </div>
+  <div class="splitter" id="splitter"></div>
+  <div class="preview-wrap" id="previewWrap">
+    <div class="preview-header"><span>LIVE PREVIEW</span><button class="btn" onclick="refreshPreview()" style="font-size:.55rem;padding:.1rem .4rem">↻ Refresh</button></div>
+    <iframe id="preview" sandbox="allow-scripts allow-same-origin"></iframe>
+  </div>
+</div>
+<div class="statusbar">
+  <span id="statusPos">Ln 1, Col 1</span>
+  <span id="statusInfo">HTML | UTF-8</span>
+</div>
+
+<script>
+const editor=document.getElementById('editor');
+const highlight=document.getElementById('highlight');
+const lineNums=document.getElementById('lineNums');
+const preview=document.getElementById('preview');
+let currentFile='html';
+let files={
+html:`<!DOCTYPE html>
+<html>
+<head>
+  <title>My Page</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Hello World</h1>
+    <p>Edit this code and see live preview!</p>
+    <button onclick="greet()">Click Me</button>
+    <div id="output"></div>
+  </div>
+  <script src="script.js"><\/script>
+</body>
+</html>`,
+css:`/* Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: system-ui, sans-serif;
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #e2e8f0;
+}
+
+.container {
+  text-align: center;
+  padding: 2rem;
+  background: rgba(255,255,255,0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+h1 {
+  font-size: 2rem;
+  margin-bottom: .5rem;
+  background: linear-gradient(90deg, #3b82f6, #a855f7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+p {
+  color: #94a3b8;
+  margin-bottom: 1rem;
+}
+
+button {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: .6rem 1.5rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background .2s;
+}
+
+button:hover {
+  background: #2563eb;
+}
+
+#output {
+  margin-top: 1rem;
+  font-size: 1.2rem;
+  color: #22c55e;
+}`,
+js:`// JavaScript
+let count = 0;
+
+function greet() {
+  count++;
+  const output = document.getElementById('output');
+  output.innerHTML = 'Clicked ' + count + ' time' + (count > 1 ? 's' : '') + '! 🎉';
+  
+  // Add a little animation
+  output.style.transform = 'scale(1.2)';
+  setTimeout(() => {
+    output.style.transform = 'scale(1)';
+    output.style.transition = 'transform 0.2s';
+  }, 100);
+}
+
+console.log('Script loaded!');`
+};
+
+// Init
+editor.value=files.html;
+onInput();
+
+function switchFile(f){
+  files[currentFile]=editor.value;
+  currentFile=f;
+  editor.value=files[f];
+  document.querySelectorAll('.tab').forEach((t,i)=>{t.classList.toggle('active',['html','css','js'][i]===f)});
+  document.getElementById('statusInfo').textContent={html:'HTML | UTF-8',css:'CSS | UTF-8',js:'JavaScript | UTF-8'}[f];
+  onInput();
+}
+
+function onInput(){
+  files[currentFile]=editor.value;
+  highlightCode();
+  updateLineNums();
+  updateCursor();
+  debouncedPreview();
+}
+
+function highlightCode(){
+  const code=editor.value;
+  let html;
+  if(currentFile==='html')html=highlightHTML(code);
+  else if(currentFile==='css')html=highlightCSS(code);
+  else html=highlightJS(code);
+  highlight.innerHTML=html+'\n'; // trailing newline for scroll sync
+}
+
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+function highlightHTML(code){
+  return code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/(&lt;!--[\s\S]*?--&gt;)/g,'<span class="hl-comment">$1</span>')
+    .replace(/(&lt;\/?)([\w-]+)/g,'$1<span class="hl-tag">$2</span>')
+    .replace(/([\w-]+)(=)/g,'<span class="hl-attr">$1</span>$2')
+    .replace(/(".*?")/g,'<span class="hl-str">$1</span>')
+    .replace(/('.*?')/g,'<span class="hl-str">$1</span>');
+}
+
+function highlightCSS(code){
+  return code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/(\/\*[\s\S]*?\*\/)/g,'<span class="hl-comment">$1</span>')
+    .replace(/([\w-]+)\s*:/g,'<span class="hl-css-prop">$1</span>:')
+    .replace(/(#[0-9a-fA-F]{3,8})/g,'<span class="hl-value">$1</span>')
+    .replace(/(\d+\.?\d*)(px|rem|em|%|vh|vw|deg|s|ms)/g,'<span class="hl-number">$1$2</span>')
+    .replace(/(@[\w-]+)/g,'<span class="hl-keyword">$1</span>');
+}
+
+function highlightJS(code){
+  return code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/(\/\/.*$)/gm,'<span class="hl-comment">$1</span>')
+    .replace(/(\/\*[\s\S]*?\*\/)/g,'<span class="hl-comment">$1</span>')
+    .replace(/('(?:[^'\\]|\\.)*')/g,'<span class="hl-str">$1</span>')
+    .replace(/("(?:[^"\\]|\\.)*")/g,'<span class="hl-str">$1</span>')
+    .replace(/(`(?:[^`\\]|\\.)*`)/g,'<span class="hl-str">$1</span>')
+    .replace(/\b(const|let|var|function|return|if|else|for|while|do|switch|case|break|continue|new|this|class|extends|import|export|default|from|async|await|try|catch|throw|typeof|instanceof|true|false|null|undefined)\b/g,'<span class="hl-keyword">$1</span>')
+    .replace(/\b(\d+\.?\d*)\b/g,'<span class="hl-number">$1</span>')
+    .replace(/\b([a-zA-Z_$][\w$]*)\s*\(/g,'<span class="hl-func">$1</span>(');
+}
+
+function updateLineNums(){
+  const lines=editor.value.split('\n').length;
+  lineNums.innerHTML=Array.from({length:lines},(_,i)=>i+1).join('<br>');
+}
+
+function updateCursor(){
+  const pos=editor.selectionStart;
+  const text=editor.value.substring(0,pos);
+  const lines=text.split('\n');
+  const ln=lines.length;
+  const col=lines[lines.length-1].length+1;
+  document.getElementById('statusPos').textContent=`Ln ${ln}, Col ${col}`;
+}
+
+function syncScroll(){
+  highlight.scrollTop=editor.scrollTop;
+  highlight.scrollLeft=editor.scrollLeft;
+  lineNums.scrollTop=editor.scrollTop;
+}
+
+function handleKeys(e){
+  if(e.key==='Tab'){
+    e.preventDefault();
+    const start=editor.selectionStart;
+    const end=editor.selectionEnd;
+    editor.value=editor.value.substring(0,start)+'  '+editor.value.substring(end);
+    editor.selectionStart=editor.selectionEnd=start+2;
+    onInput();
+  }
+  if(e.ctrlKey&&e.key==='s'){e.preventDefault();refreshPreview()}
+  if(e.ctrlKey&&e.key==='Enter'){e.preventDefault();refreshPreview()}
+}
+
+// Live preview
+let previewTimeout;
+function debouncedPreview(){clearTimeout(previewTimeout);previewTimeout=setTimeout(refreshPreview,800)}
+
+function refreshPreview(){
+  const html=files.html;
+  const css=files.css;
+  const js=files.js;
+  
+  let fullHtml=html;
+  // Inject CSS inline
+  fullHtml=fullHtml.replace('</head>',`<style>${css}</style></head>`);
+  // Inject JS inline
+  fullHtml=fullHtml.replace(/<script[^>]*src=["']script\.js["'][^>]*><\/script>/,`<script>${js}<\/script>`);
+  // Remove the stylesheet link since we injected inline
+  fullHtml=fullHtml.replace(/<link[^>]*href=["']style\.css["'][^>]*>/,'');
+  
+  const blob=new Blob([fullHtml],{type:'text/html'});
+  preview.src=URL.createObjectURL(blob);
+}
+
+function togglePreview(){
+  const pw=document.getElementById('previewWrap');
+  pw.style.display=pw.style.display==='none'?'flex':'none';
+}
+
+function copyCode(){
+  navigator.clipboard.writeText(editor.value).then(()=>{document.getElementById('statusInfo').textContent='Copied!';setTimeout(()=>document.getElementById('statusInfo').textContent={html:'HTML | UTF-8',css:'CSS | UTF-8',js:'JavaScript | UTF-8'}[currentFile],1500)});
+}
+
+function downloadCode(){
+  const names={html:'index.html',css:'style.css',js:'script.js'};
+  const types={html:'text/html',css:'text/css',js:'application/javascript'};
+  const blob=new Blob([editor.value],{type:types[currentFile]});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=names[currentFile];a.click();
+}
+
+// Splitter drag
+const splitter=document.getElementById('splitter');
+let dragging=false;
+splitter.addEventListener('mousedown',()=>dragging=true);
+window.addEventListener('mousemove',e=>{
+  if(!dragging)return;
+  const main=document.querySelector('.main');
+  const rect=main.getBoundingClientRect();
+  const pct=(e.clientX-rect.left)/rect.width*100;
+  document.getElementById('editorWrap').style.flex=`0 0 ${Math.max(20,Math.min(80,pct))}%`;
+});
+window.addEventListener('mouseup',()=>dragging=false);
+
+// Initial preview
+refreshPreview();
+</script>
+</body>
+</html>
