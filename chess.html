@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Coal Chess</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+body{background:#1a1a2e;display:flex;flex-direction:column;align-items:center;min-height:100vh;font-family:'Inter',sans-serif;color:#e2e8f0;padding-top:10px}
+.top{display:flex;gap:1rem;align-items:center;margin-bottom:8px;font-size:.75rem}
+.top .turn{font-weight:700;padding:.25rem .7rem;border-radius:4px}
+.top .turn.white{background:#e2e8f0;color:#1a1a2e}.top .turn.black{background:#475569;color:#fff}
+.btn{background:#334155;border:1px solid #475569;color:#e2e8f0;padding:.3rem .8rem;border-radius:4px;font-family:inherit;font-size:.7rem;cursor:pointer}
+.btn:hover{background:#475569}
+.board-wrap{position:relative}
+.board{display:grid;grid-template-columns:repeat(8,1fr);border:2px solid #475569;border-radius:4px;overflow:hidden}
+.sq{width:min(11vw,50px);height:min(11vw,50px);display:flex;align-items:center;justify-content:center;font-size:min(8vw,36px);cursor:pointer;position:relative;transition:background .1s}
+.sq.light{background:#e8d5b5}.sq.dark{background:#b58863}
+.sq.selected{background:#7fc97f!important}.sq.last-move{background:#aad4aa!important}
+.sq.can-move::after{content:'';width:28%;height:28%;background:rgba(0,0,0,.25);border-radius:50%;position:absolute}
+.sq.can-capture{box-shadow:inset 0 0 0 3px rgba(0,0,0,.25)}
+.sq.in-check{background:#ef4444!important}
+.captured{display:flex;gap:1px;min-height:24px;font-size:16px;flex-wrap:wrap;max-width:min(88vw,400px);margin:4px 0}
+.captured span{opacity:.7}
+.status{font-size:.7rem;color:#94a3b8;margin-top:4px;min-height:18px;text-align:center}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="turn white" id="turnLabel">White's Turn</div>
+  <button class="btn" onclick="newGame()">New Game</button>
+  <button class="btn" onclick="undoMove()">↩ Undo</button>
+</div>
+<div class="captured" id="capturedW"></div>
+<div class="board-wrap"><div class="board" id="board"></div></div>
+<div class="captured" id="capturedB"></div>
+<div class="status" id="status"></div>
+<script>
+const PIECES={K:'♔',Q:'♕',R:'♖',B:'♗',N:'♘',P:'♙',k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟'};
+const VAL={p:100,n:320,b:330,r:500,q:900,k:20000};
+let board,turn,selected,legal,history,capturedW,capturedB,gameOver,enPassant,castleRights;
+
+function newGame(){
+  board=[
+    ['r','n','b','q','k','b','n','r'],
+    ['p','p','p','p','p','p','p','p'],
+    [,,,,,,,,],[,,,,,,,,],[,,,,,,,,],[,,,,,,,,],
+    ['P','P','P','P','P','P','P','P'],
+    ['R','N','B','Q','K','B','N','R']
+  ];
+  turn='w';selected=null;legal=[];history=[];capturedW=[];capturedB=[];gameOver=false;
+  enPassant=null;castleRights={wk:true,wq:true,bk:true,bq:true};
+  document.getElementById('status').textContent='';
+  render();
+}
+
+function isWhite(p){return p&&p===p.toUpperCase()}
+function isBlack(p){return p&&p===p.toLowerCase()}
+function color(p){if(!p)return null;return isWhite(p)?'w':'b'}
+function inBounds(r,c){return r>=0&&r<8&&c>=0&&c<8}
+function cloneBoard(){return board.map(r=>[...r])}
+
+function pseudoLegal(b,r,c,ep){
+  const p=b[r][c];if(!p)return[];
+  const moves=[];const col=color(p);const t=p.toLowerCase();
+  const add=(tr,tc,special)=>{if(inBounds(tr,tc)&&color(b[tr][tc])!==col)moves.push({fr:r,fc:c,tr,tc,special})};
+  
+  if(t==='p'){
+    const dir=col==='w'?-1:1;const start=col==='w'?6:1;
+    if(inBounds(r+dir,c)&&!b[r+dir][c]){
+      moves.push({fr:r,fc:c,tr:r+dir,tc:c,special:r+dir===0||r+dir===7?'promote':null});
+      if(r===start&&!b[r+2*dir][c])moves.push({fr:r,fc:c,tr:r+2*dir,tc:c,special:'double'});
+    }
+    for(const dc of[-1,1]){
+      if(inBounds(r+dir,c+dc)){
+        if(b[r+dir][c+dc]&&color(b[r+dir][c+dc])!==col)moves.push({fr:r,fc:c,tr:r+dir,tc:c+dc,special:r+dir===0||r+dir===7?'promote':null});
+        if(ep&&ep.r===r+dir&&ep.c===c+dc)moves.push({fr:r,fc:c,tr:r+dir,tc:c+dc,special:'enpassant'});
+      }
+    }
+  }
+  if(t==='n'){for(const[dr,dc]of[[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]])add(r+dr,c+dc)}
+  if(t==='b'||t==='q'){for(const[dr,dc]of[[-1,-1],[-1,1],[1,-1],[1,1]])for(let i=1;i<8;i++){if(!inBounds(r+dr*i,c+dc*i))break;add(r+dr*i,c+dc*i);if(b[r+dr*i][c+dc*i])break}}
+  if(t==='r'||t==='q'){for(const[dr,dc]of[[-1,0],[1,0],[0,-1],[0,1]])for(let i=1;i<8;i++){if(!inBounds(r+dr*i,c+dc*i))break;add(r+dr*i,c+dc*i);if(b[r+dr*i][c+dc*i])break}}
+  if(t==='k'){
+    for(const[dr,dc]of[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]])add(r+dr,c+dc);
+  }
+  return moves;
+}
+
+function findKing(b,col){
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++)if(b[r][c]&&color(b[r][c])===col&&b[r][c].toLowerCase()==='k')return{r,c};
+  return null;
+}
+
+function inCheck(b,col){
+  const k=findKing(b,col);if(!k)return true;
+  const opp=col==='w'?'b':'w';
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    if(b[r][c]&&color(b[r][c])===opp){
+      const mvs=pseudoLegal(b,r,c);
+      if(mvs.some(m=>m.tr===k.r&&m.tc===k.c))return true;
+    }
+  }
+  return false;
+}
+
+function applyMove(b,m){
+  const nb=cloneBoard();const p=nb[m.fr][m.fc];
+  nb[m.tr][m.tc]=p;nb[m.fr][m.fc]=null;
+  if(m.special==='enpassant')nb[m.fr][m.tc]=null;
+  if(m.special==='promote')nb[m.tr][m.tc]=color(p)==='w'?'Q':'q';
+  if(m.special==='castleK'){nb[m.fr][5]=nb[m.fr][7];nb[m.fr][7]=null}
+  if(m.special==='castleQ'){nb[m.fr][3]=nb[m.fr][0];nb[m.fr][0]=null}
+  return nb;
+}
+
+function allLegal(col){
+  const moves=[];
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    if(board[r][c]&&color(board[r][c])===col){
+      const pm=pseudoLegal(board,r,c,enPassant);
+      // Add castling
+      const p=board[r][c].toLowerCase();
+      if(p==='k'){
+        const row=col==='w'?7:0;
+        if(r===row&&c===4){
+          // Kingside
+          const ck=col==='w'?castleRights.wk:castleRights.bk;
+          if(ck&&!board[row][5]&&!board[row][6]&&board[row][7]){
+            if(!inCheck(board,col)&&!inCheck(applyMove(board,{fr:row,fc:4,tr:row,tc:5}),col)){
+              pm.push({fr:row,fc:4,tr:row,tc:6,special:'castleK'});
+            }
+          }
+          // Queenside
+          const cq=col==='w'?castleRights.wq:castleRights.bq;
+          if(cq&&!board[row][3]&&!board[row][2]&&!board[row][1]&&board[row][0]){
+            if(!inCheck(board,col)&&!inCheck(applyMove(board,{fr:row,fc:4,tr:row,tc:3}),col)){
+              pm.push({fr:row,fc:4,tr:row,tc:2,special:'castleQ'});
+            }
+          }
+        }
+      }
+      for(const m of pm){
+        const nb=applyMove(board,m);
+        if(!inCheck(nb,col))moves.push(m);
+      }
+    }
+  }
+  return moves;
+}
+
+function makeMove(m,promoteTo){
+  if(gameOver)return;
+  const p=board[m.fr][m.fc];
+  // Save state
+  history.push({board:cloneBoard(),turn,enPassant,castleRights:{...castleRights},capturedW:[...capturedW],capturedB:[...capturedB]});
+  
+  // Capture
+  if(board[m.tr][m.tc]){
+    if(isWhite(board[m.tr][m.tc]))capturedW.push(board[m.tr][m.tc]);
+    else capturedB.push(board[m.tr][m.tc]);
+  }
+  if(m.special==='enpassant'){
+    const cap=board[m.fr][m.tc];
+    if(isWhite(cap))capturedW.push(cap);else capturedB.push(cap);
+  }
+  
+  // Apply
+  board[m.tr][m.tc]=p;board[m.fr][m.fc]=null;
+  if(m.special==='enpassant')board[m.fr][m.tc]=null;
+  if(m.special==='promote')board[m.tr][m.tc]=promoteTo||(isWhite(p)?'Q':'q');
+  if(m.special==='castleK'){board[m.fr][5]=board[m.fr][7];board[m.fr][7]=null}
+  if(m.special==='castleQ'){board[m.fr][3]=board[m.fr][0];board[m.fr][0]=null}
+  
+  // En passant
+  enPassant=m.special==='double'?{r:(m.fr+m.tr)/2,tc:m.tc}:null;
+  
+  // Castle rights
+  if(p==='K'){castleRights.wk=false;castleRights.wq=false}
+  if(p==='k'){castleRights.bk=false;castleRights.bq=false}
+  if(p==='R'&&m.fr===7&&m.fc===0)castleRights.wq=false;
+  if(p==='R'&&m.fr===7&&m.fc===7)castleRights.wk=false;
+  if(p==='r'&&m.fr===0&&m.fc===0)castleRights.bq=false;
+  if(p==='r'&&m.fr===0&&m.fc===7)castleRights.bk=false;
+  
+  turn=turn==='w'?'b':'w';
+  selected=null;legal=[];
+  
+  // Check game state
+  const moves=allLegal(turn);
+  if(moves.length===0){
+    gameOver=true;
+    if(inCheck(board,turn)){
+      document.getElementById('status').textContent=`Checkmate! ${turn==='w'?'Black':'White'} wins!`;
+    }else{
+      document.getElementById('status').textContent='Stalemate! Draw.';
+    }
+  }else if(inCheck(board,turn)){
+    document.getElementById('status').textContent='Check!';
+  }else{
+    document.getElementById('status').textContent='';
+  }
+  
+  render();
+  
+  // AI move
+  if(turn==='b'&&!gameOver){
+    document.getElementById('status').textContent='Thinking...';
+    setTimeout(aiMove,100);
+  }
+}
+
+function aiMove(){
+  const moves=allLegal('b');
+  if(!moves.length)return;
+  
+  let bestMove=null,bestScore=-Infinity;
+  for(const m of moves){
+    const nb=applyMove(board,m);
+    let score=evaluate(nb);
+    // Add some randomness
+    score+=Math.random()*20-10;
+    if(score>bestScore){bestScore=score;bestMove=m}
+  }
+  if(bestMove)makeMove(bestMove);
+}
+
+function evaluate(b){
+  let score=0;
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    const p=b[r][c];if(!p)continue;
+    const v=VAL[p.toLowerCase()]||0;
+    // Position bonus
+    let posB=0;
+    if(p.toLowerCase()==='p'){
+      const center=Math.abs(3.5-c);posB=(4-center)*5;
+      if(isWhite(p))posB+=(6-r)*3;else posB+=r*3;
+    }
+    if(p.toLowerCase()==='n'||p.toLowerCase()==='b'){
+      const center=Math.abs(3.5-r)+Math.abs(3.5-c);posB=(7-center)*3;
+    }
+    score+=isWhite(p)?(v+posB):-(v+posB);
+  }
+  if(inCheck(b,'b'))score+=50;
+  if(inCheck(b,'w'))score-=50;
+  return score;
+}
+
+function undoMove(){
+  if(history.length<2)return; // Undo both player and AI move
+  const h=history.pop();const h2=history.pop();
+  board=h2.board;turn=h2.turn;enPassant=h2.enPassant;castleRights=h2.castleRights;
+  capturedW=h2.capturedW;capturedB=h2.capturedB;gameOver=false;
+  selected=null;legal=[];
+  document.getElementById('status').textContent='';
+  render();
+}
+
+function render(){
+  const boardEl=document.getElementById('board');
+  boardEl.innerHTML='';
+  const lastMove=history.length?history[history.length-1]:null;
+  
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    const sq=document.createElement('div');
+    sq.className='sq '+((r+c)%2===0?'light':'dark');
+    if(selected&&selected.r===r&&selected.c===c)sq.classList.add('selected');
+    
+    // Check highlight
+    if(board[r][c]&&board[r][c].toLowerCase()==='k'&&color(board[r][c])===turn&&inCheck(board,turn)){
+      sq.classList.add('in-check');
+    }
+    
+    // Legal move indicators
+    const isLegal=legal.some(m=>m.tr===r&&m.tc===c);
+    if(isLegal){
+      if(board[r][c])sq.classList.add('can-capture');
+      else sq.classList.add('can-move');
+    }
+    
+    if(board[r][c]){
+      const span=document.createElement('span');
+      span.textContent=PIECES[board[r][c]];
+      sq.appendChild(span);
+    }
+    
+    sq.onclick=()=>onClick(r,c);
+    boardEl.appendChild(sq);
+  }
+  
+  const tl=document.getElementById('turnLabel');
+  tl.textContent=turn==='w'?"White's Turn":"Black's Turn";
+  tl.className='turn '+(turn==='w'?'white':'black');
+  
+  document.getElementById('capturedW').innerHTML=capturedW.map(p=>'<span>'+PIECES[p]+'</span>').join('');
+  document.getElementById('capturedB').innerHTML=capturedB.map(p=>'<span>'+PIECES[p]+'</span>').join('');
+}
+
+function onClick(r,c){
+  if(gameOver||turn!=='w')return;
+  
+  // If clicking a legal move target
+  if(selected){
+    const m=legal.find(m=>m.tr===r&&m.tc===c);
+    if(m){
+      if(m.special==='promote'){
+        // Auto-queen for simplicity
+        makeMove(m,'Q');
+      }else{
+        makeMove(m);
+      }
+      return;
+    }
+  }
+  
+  // Select piece
+  if(board[r][c]&&color(board[r][c])==='w'){
+    selected={r,c};
+    legal=allLegal('w').filter(m=>m.fr===r&&m.fc===c);
+    render();
+  }else{
+    selected=null;legal=[];render();
+  }
+}
+
+newGame();
+</script>
+</body>
+</html>
