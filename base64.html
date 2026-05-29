@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>COAL OS — Base64 Lab</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:#000a14;display:flex;flex-direction:column;align-items:center;min-height:100vh;font-family:'Courier New',monospace;color:#00d4ff;padding:1rem}
+    h1{font-size:.8rem;letter-spacing:3px;text-shadow:0 0 20px #00d4ff;margin-bottom:1rem}
+    .panel{width:100%;max-width:420px;background:#000d1a;border:1px solid #00d4ff33;border-radius:6px;padding:.75rem;margin-bottom:.75rem}
+    .panel-title{font-size:.55rem;letter-spacing:3px;color:#475569;text-transform:uppercase;margin-bottom:.4rem}
+    textarea{width:100%;background:#0a1628;border:1px solid #00d4ff33;color:#00d4ff;font-family:'Courier New',monospace;font-size:.8rem;padding:.5rem;outline:none;border-radius:3px;resize:vertical}
+    textarea:focus{border-color:#00d4ff;box-shadow:0 0 15px #00d4ff22}
+    .output{background:#0a1628;border:1px solid #00d4ff33;border-radius:3px;padding:.5rem;font-size:.8rem;min-height:3rem;word-break:break-all;color:#e2e8f0}
+    .controls{display:flex;gap:.5rem;margin-top:.5rem;flex-wrap:wrap}
+    .controls button{background:transparent;border:1px solid #00d4ff44;color:#00d4ff;font-family:'Courier New',monospace;font-size:.65rem;padding:.3rem .6rem;cursor:pointer;border-radius:3px}
+    .controls button:hover{background:#00d4ff22}
+    .mode-tabs{display:flex;gap:0;margin-bottom:.5rem}
+    .mode-tabs button{background:transparent;border:1px solid #00d4ff33;color:#475569;font-family:'Courier New',monospace;font-size:.65rem;padding:.3rem .8rem;cursor:pointer}
+    .mode-tabs button.active{background:#00d4ff22;color:#00d4ff;border-color:#00d4ff}
+    .info{font-size:.55rem;color:#334155;margin-top:.3rem}
+    .back-link{margin-top:.5rem;font-size:.7rem}
+    .back-link a{color:#475569;text-decoration:none}
+  </style>
+</head>
+<body>
+  <h1>◆ BASE64 LAB ◆</h1>
+  <div class="panel">
+    <div class="mode-tabs">
+      <button class="active" id="tab-enc" onclick="setMode('enc')">ENCODE</button>
+      <button id="tab-dec" onclick="setMode('dec')">DECODE</button>
+      <button id="tab-url" onclick="setMode('url')">URL ENC</button>
+      <button id="tab-html" onclick="setMode('html')">HTML ENT</button>
+    </div>
+    <textarea id="input" rows="4" placeholder="Type or paste text..." oninput="convert()">COAL OS Online</textarea>
+  </div>
+  <div class="panel">
+    <div class="panel-title">⬡ Output</div>
+    <div class="output" id="output">--</div>
+    <div class="controls">
+      <button onclick="copyOut()">COPY</button>
+      <button onclick="swap()">⇄ SWAP</button>
+      <button onclick="document.getElementById('input').value='';document.getElementById('output').textContent='--'">CLEAR</button>
+    </div>
+    <div class="info" id="info">--</div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">⬡ URL Tools</div>
+    <div class="controls" style="margin-top:0">
+      <button onclick="urlTool('encode')">URL ENCODE</button>
+      <button onclick="urlTool('decode')">URL DECODE</button>
+      <button onclick="urlTool('params')">PARSE PARAMS</button>
+    </div>
+    <div class="output" id="urlOutput" style="margin-top:.4rem;font-size:.7rem;min-height:2rem">--</div>
+  </div>
+  <div class="back-link"><a href="index.html">← BACK</a></div>
+
+  <script>
+    let mode='enc';
+    function setMode(m){
+      mode=m;
+      document.querySelectorAll('.mode-tabs button').forEach(b=>b.classList.remove('active'));
+      document.getElementById('tab-'+m).classList.add('active');
+      convert();
+    }
+    function convert(){
+      const text=document.getElementById('input').value;
+      let out='';
+      try{
+        switch(mode){
+          case'enc':out=btoa(unescape(encodeURIComponent(text)));break;
+          case'dec':out=decodeURIComponent(escape(atob(text)));break;
+          case'url':out=encodeURIComponent(text);break;
+          case'html':out=text.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);break;
+        }
+      }catch(e){out='Error: '+e.message}
+      document.getElementById('output').textContent=out;
+      document.getElementById('info').textContent=`Input: ${text.length} chars → Output: ${out.length} chars`;
+    }
+    function copyOut(){navigator.clipboard.writeText(document.getElementById('output').textContent)}
+    function swap(){
+      const inp=document.getElementById('input'),out=document.getElementById('output');
+      inp.value=out.textContent;
+      if(mode==='enc')setMode('dec');else if(mode==='dec')setMode('enc');
+    }
+    function urlTool(action){
+      const text=document.getElementById('input').value;
+      let out='';
+      try{
+        switch(action){
+          case'encode':out=encodeURIComponent(text);break;
+          case'decode':out=decodeURIComponent(text);break;
+          case'params':
+            try{const u=new URL(text);out=Array.from(u.searchParams.entries()).map(([k,v])=>`${k}: ${v}`).join('\n')||'No params found';}
+            catch{const p=new URLSearchParams(text);out=Array.from(p.entries()).map(([k,v])=>`${k}: ${v}`).join('\n')||'No params found';}
+            break;
+        }
+      }catch(e){out='Error: '+e.message}
+      document.getElementById('urlOutput').textContent=out;
+    }
+    convert();
+  </script>
+</body>
+</html>
