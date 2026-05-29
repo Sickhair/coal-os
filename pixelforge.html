@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Pixel Forge — Pixel Art Editor</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+body{background:#0a0a1a;display:flex;flex-direction:column;align-items:center;min-height:100vh;font-family:'Inter',sans-serif;color:#e2e8f0;padding:.3rem}
+.top{display:flex;gap:.4rem;align-items:center;margin-bottom:.3rem;flex-wrap:wrap;justify-content:center}
+.logo{font-weight:800;font-size:.85rem;color:#ec4899;letter-spacing:2px;margin-right:.5rem}
+.btn{background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:.3rem .6rem;border-radius:4px;font-family:inherit;font-size:.65rem;cursor:pointer;font-weight:600}
+.btn:hover{border-color:#ec4899;color:#fff}.btn.active{border-color:#ec4899;color:#ec4899}
+.tools{display:flex;gap:.2rem;margin-bottom:.3rem;flex-wrap:wrap;justify-content:center}
+.tool{width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:#1e293b;border:1px solid #334155;border-radius:4px;cursor:pointer;font-size:1rem;color:#64748b;transition:all .1s}
+.tool:hover{color:#e2e8f0;border-color:#64748b}.tool.active{color:#ec4899;border-color:#ec4899}
+.canvas-wrap{position:relative;border:2px solid #334155;border-radius:4px;overflow:hidden;touch-action:none}
+canvas{display:block;cursor:crosshair;image-rendering:pixelated}
+.palette{display:flex;gap:2px;margin-top:.3rem;flex-wrap:wrap;justify-content:center;max-width:90vw}
+.pal-color{width:24px;height:24px;border-radius:3px;cursor:pointer;border:2px solid transparent;transition:all .1s}
+.pal-color:hover{transform:scale(1.2)}.pal-color.active{border-color:#fff;transform:scale(1.2)}
+.color-row{display:flex;gap:.3rem;align-items:center;margin-top:.3rem}
+.color-preview{width:32px;height:32px;border-radius:4px;border:2px solid #475569}
+.color-row input[type=color]{background:transparent;border:none;width:32px;height:32px;cursor:pointer}
+.info{font-size:.6rem;color:#64748b;margin-top:.3rem;text-align:center}
+.size-row{display:flex;gap:.3rem;margin-bottom:.3rem}
+.size-btn{background:#1e293b;border:1px solid #334155;color:#64748b;padding:.2rem .5rem;border-radius:3px;cursor:pointer;font-size:.6rem}
+.size-btn.active{color:#ec4899;border-color:#ec4899}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo">🎨 PIXEL FORGE</div>
+  <button class="btn" onclick="undo()">↩ Undo</button>
+  <button class="btn" onclick="redo()">↪ Redo</button>
+  <button class="btn" onclick="clearCanvas()">🗑 Clear</button>
+  <button class="btn" onclick="exportPNG()">⬇ PNG</button>
+  <div style="display:flex;gap:.2rem;align-items:center">
+    <span style="font-size:.6rem;color:#64748b">Grid</span>
+    <input type="checkbox" id="showGrid" checked onchange="render()">
+  </div>
+</div>
+<div class="size-row">
+  <span style="font-size:.6rem;color:#64748b;margin-right:.3rem">Canvas:</span>
+  <button class="size-btn active" onclick="setSize(16,this)">16×16</button>
+  <button class="size-btn" onclick="setSize(32,this)">32×32</button>
+  <button class="size-btn" onclick="setSize(48,this)">48×48</button>
+  <button class="size-btn" onclick="setSize(64,this)">64×64</button>
+</div>
+<div class="tools">
+  <div class="tool active" onclick="setTool('pencil',this)" title="Pencil">✏</div>
+  <div class="tool" onclick="setTool('eraser',this)" title="Eraser">🧹</div>
+  <div class="tool" onclick="setTool('fill',this)" title="Fill">🪣</div>
+  <div class="tool" onclick="setTool('picker',this)" title="Color Picker">💉</div>
+  <div class="tool" onclick="setTool('line',this)" title="Line">╱</div>
+  <div class="tool" onclick="setTool('rect',this)" title="Rectangle">▭</div>
+  <div class="tool" onclick="setTool('circle',this)" title="Circle">◯</div>
+</div>
+<div class="canvas-wrap"><canvas id="c"></canvas></div>
+<div class="color-row">
+  <div class="color-preview" id="colorPreview" style="background:#000"></div>
+  <input type="color" id="colorInput" value="#000000" onchange="setColor(this.value)">
+</div>
+<div class="palette" id="palette"></div>
+<div class="info" id="info">Tap to draw • Scroll to zoom</div>
+
+<script>
+const C=document.getElementById('c'),X=C.getContext('2d');
+let gridSize=16,pixelSize=20,currentColor='#000000',tool='pencil';
+let pixels,drawing=false,startPos=null,lastPos=null;
+let undoStack=[],redoStack=[],zoom=1;
+
+const PALETTE=[
+  '#000000','#ffffff','#9ca3af','#6b7280','#374151','#1f2937',
+  '#ef4444','#dc2626','#b91c1c','#f87171',
+  '#f97316','#ea580c','#c2410c','#fb923c',
+  '#f59e0b','#d97706','#b45309','#fbbf24',
+  '#84cc16','#65a30d','#4d7c0f','#a3e635',
+  '#22c55e','#16a34a','#15803d','#4ade80',
+  '#06b6d4','#0891b2','#0e7490','#22d3ee',
+  '#3b82f6','#2563eb','#1d4ed8','#60a5fa',
+  '#6366f1','#4f46e5','#4338ca','#818cf8',
+  '#a855f7','#9333ea','#7e22ce','#c084fc',
+  '#ec4899','#db2777','#be185d','#f472b6',
+  '#f43f5e','#e11d48','#be123c','#fb7185',
+  '#78350f','#92400e','#a16207','#d4d4d4',
+];
+
+function initPixels(){pixels=Array.from({length:gridSize},()=>Array(gridSize).fill(null))}
+
+function resizeCanvas(){
+  const maxPx=Math.min(window.innerWidth-20,500);
+  pixelSize=Math.floor(maxPx/gridSize);
+  C.width=gridSize*pixelSize;C.height=gridSize*pixelSize;
+  render();
+}
+
+function render(){
+  X.clearRect(0,0,C.width,C.height);
+  // Background (checkerboard)
+  for(let r=0;r<gridSize;r++)for(let c=0;c<gridSize;c++){
+    X.fillStyle=(r+c)%2===0?'#1e293b':'#162032';
+    X.fillRect(c*pixelSize,r*pixelSize,pixelSize,pixelSize);
+  }
+  // Pixels
+  for(let r=0;r<gridSize;r++)for(let c=0;c<gridSize;c++){
+    if(pixels[r][c]){
+      X.fillStyle=pixels[r][c];
+      X.fillRect(c*pixelSize,r*pixelSize,pixelSize,pixelSize);
+    }
+  }
+  // Grid
+  if(document.getElementById('showGrid').checked){
+    X.strokeStyle='#ffffff11';X.lineWidth=1;
+    for(let i=0;i<=gridSize;i++){
+      X.beginPath();X.moveTo(i*pixelSize,0);X.lineTo(i*pixelSize,C.height);X.stroke();
+      X.beginPath();X.moveTo(0,i*pixelSize);X.lineTo(C.width,i*pixelSize);X.stroke();
+    }
+  }
+}
+
+function getPixel(e){
+  const rect=C.getBoundingClientRect();
+  const sx=C.width/rect.width,sy=C.height/rect.height;
+  const x=(e.clientX-rect.left)*sx,y=(e.clientY-rect.top)*sy;
+  const c=Math.floor(x/pixelSize),r=Math.floor(y/pixelSize);
+  if(r>=0&&r<gridSize&&c>=0&&c<gridSize)return{r,c};
+  return null;
+}
+
+function saveState(){
+  undoStack.push(pixels.map(r=>[...r]));
+  if(undoStack.length>50)undoStack.shift();
+  redoStack=[];
+}
+
+function undo(){if(undoStack.length){redoStack.push(pixels.map(r=>[...r]));pixels=undoStack.pop();render()}}
+function redo(){if(redoStack.length){undoStack.push(pixels.map(r=>[...r]));pixels=redoStack.pop();render()}}
+
+function drawPixel(r,c,color){
+  if(r>=0&&r<gridSize&&c>=0&&c<gridSize)pixels[r][c]=color;
+}
+
+function floodFill(r,c,target,fill){
+  if(r<0||r>=gridSize||c<0||c>=gridSize)return;
+  if(pixels[r][c]!==target)return;
+  if(pixels[r][c]===fill)return;
+  pixels[r][c]=fill;
+  floodFill(r-1,c,target,fill);floodFill(r+1,c,target,fill);
+  floodFill(r,c-1,target,fill);floodFill(r,c+1,target,fill);
+}
+
+function drawLine(r0,c0,r1,c1,color){
+  const dr=Math.abs(r1-r0),dc=Math.abs(c1-c0);
+  const sr=r0<r1?1:-1,sc=c0<c1?1:-1;
+  let err=dr-dc;
+  while(true){
+    drawPixel(r0,c0,color);
+    if(r0===r1&&c0===c1)break;
+    const e2=2*err;
+    if(e2>-dc){err-=dc;r0+=sr}
+    if(e2<dr){err+=dr;c0+=sc}
+  }
+}
+
+function drawRect(r0,c0,r1,c1,color){
+  const minR=Math.min(r0,r1),maxR=Math.max(r0,r1);
+  const minC=Math.min(c0,c1),maxC=Math.max(c0,c1);
+  for(let c=minC;c<=maxC;c++){drawPixel(minR,c,color);drawPixel(maxR,c,color)}
+  for(let r=minR;r<=maxR;r++){drawPixel(r,minC,color);drawPixel(r,maxC,color)}
+}
+
+function drawCircle(r0,c0,r1,c1,color){
+  const cx=Math.round((c0+c1)/2),cy=Math.round((r0+r1)/2);
+  const rx=Math.abs(c1-c0)/2,ry=Math.abs(r1-r0)/2;
+  const r=Math.round(Math.max(rx,ry));
+  let x=r,y=0,err=1-r;
+  while(x>=y){
+    drawPixel(cy+y,cx+x,color);drawPixel(cy+y,cx-x,color);
+    drawPixel(cy-y,cx+x,color);drawPixel(cy-y,cx-x,color);
+    drawPixel(cy+x,cx+y,color);drawPixel(cy+x,cx-y,color);
+    drawPixel(cy-x,cx+y,color);drawPixel(cy-x,cx-y,color);
+    y++;if(err<0)err+=2*y+1;else{x--;err+=2*(y-x)+1}
+  }
+}
+
+// Input
+C.addEventListener('mousedown',e=>onDown(e));
+C.addEventListener('mousemove',e=>{if(drawing)onDrag(e)});
+C.addEventListener('mouseup',e=>onUp(e));
+C.addEventListener('touchstart',e=>{e.preventDefault();onDown(e.touches[0])},{passive:false});
+C.addEventListener('touchmove',e=>{e.preventDefault();onDrag(e.touches[0])},{passive:false});
+C.addEventListener('touchend',e=>{e.preventDefault();onUp({})},{passive:false});
+
+function onDown(e){
+  drawing=true;
+  const p=getPixel(e);if(!p)return;
+  startPos=p;lastPos=p;
+  
+  if(tool==='pencil'){saveState();drawPixel(p.r,p.c,currentColor);render()}
+  if(tool==='eraser'){saveState();drawPixel(p.r,p.c,null);render()}
+  if(tool==='fill'){saveState();floodFill(p.r,p.c,pixels[p.r][p.c],currentColor);render();drawing=false}
+  if(tool==='picker'){setColor(pixels[p.r][p.c]||'#000000');drawing=false}
+}
+
+function onDrag(e){
+  const p=getPixel(e);if(!p)return;
+  if(tool==='pencil'||tool==='eraser'){
+    const color=tool==='pencil'?currentColor:null;
+    if(lastPos){drawLine(lastPos.r,lastPos.c,p.r,p.c,color)}
+    else drawPixel(p.r,p.c,color);
+    lastPos=p;render();
+  }
+}
+
+function onUp(e){
+  if(!drawing)return;drawing=false;
+  if(!startPos)return;
+  // Shape tools finalize on up
+  if(tool==='line'||tool==='rect'||tool==='circle'){
+    // We need end position from the event if available
+    const p=e.clientX?getPixel(e):lastPos;
+    if(p){
+      saveState();
+      if(tool==='line')drawLine(startPos.r,startPos.c,p.r,p.c,currentColor);
+      if(tool==='rect')drawRect(startPos.r,startPos.c,p.r,p.c,currentColor);
+      if(tool==='circle')drawCircle(startPos.r,startPos.c,p.r,p.c,currentColor);
+      render();
+    }
+  }
+  startPos=null;lastPos=null;
+}
+
+function setTool(t,el){
+  tool=t;
+  document.querySelectorAll('.tool').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  C.style.cursor=t==='picker'?'crosshair':t==='eraser'?'cell':'crosshair';
+}
+
+function setColor(c){
+  currentColor=c;
+  document.getElementById('colorInput').value=c;
+  document.getElementById('colorPreview').style.background=c;
+  document.querySelectorAll('.pal-color').forEach(el=>el.classList.toggle('active',el.dataset.color===c));
+}
+
+function clearCanvas(){saveState();initPixels();render()}
+
+function setSize(s,el){
+  gridSize=s;initPixels();undoStack=[];redoStack=[];resizeCanvas();
+  document.querySelectorAll('.size-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function exportPNG(){
+  const scale=8;
+  const ec=document.createElement('canvas');ec.width=gridSize*scale;ec.height=gridSize*scale;
+  const ex=ec.getContext('2d');
+  // Transparent background
+  for(let r=0;r<gridSize;r++)for(let c=0;c<gridSize;c++){
+    if(pixels[r][c]){ex.fillStyle=pixels[r][c];ex.fillRect(c*scale,r*scale,scale,scale)}
+  }
+  const a=document.createElement('a');a.href=ec.toDataURL('image/png');a.download=`pixel-art-${gridSize}x${gridSize}.png`;a.click();
+}
+
+// Build palette
+const palEl=document.getElementById('palette');
+PALETTE.forEach(c=>{
+  const d=document.createElement('div');d.className='pal-color'+(c===currentColor?' active':'');d.style.background=c;d.dataset.color=c;
+  d.onclick=()=>setColor(c);palEl.appendChild(d);
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown',e=>{
+  if(e.ctrlKey&&e.key==='z'){e.preventDefault();undo()}
+  if(e.ctrlKey&&e.key==='y'){e.preventDefault();redo()}
+  if(e.key==='b')setTool('pencil',document.querySelector('.tool'));
+  if(e.key==='e')setTool('eraser',document.querySelectorAll('.tool')[1]);
+  if(e.key==='g')setTool('fill',document.querySelectorAll('.tool')[2]);
+  if(e.key==='i')setTool('picker',document.querySelectorAll('.tool')[3]);
+});
+
+initPixels();resizeCanvas();
+</script>
+</body>
+</html>
