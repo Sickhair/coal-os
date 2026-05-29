@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>COAL OS — Generative Art</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000a14;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Courier New', monospace;
+      color: #00d4ff;
+      padding: 0.5rem;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 0.5rem;
+    }
+    .header h1 {
+      font-size: 0.9rem;
+      letter-spacing: 3px;
+      text-shadow: 0 0 20px #00d4ff;
+    }
+    canvas {
+      border: 1px solid #00d4ff22;
+      display: block;
+      max-width: 100%;
+      border-radius: 4px;
+    }
+    .controls {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .controls button {
+      background: transparent;
+      border: 1px solid #00d4ff44;
+      color: #00d4ff;
+      font-family: 'Courier New', monospace;
+      font-size: 0.7rem;
+      padding: 0.3rem 0.8rem;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .controls button:hover, .controls button.active {
+      background: #00d4ff;
+      color: #000;
+    }
+    .info {
+      font-size: 0.6rem;
+      color: #334155;
+      margin-top: 0.4rem;
+      text-align: center;
+    }
+    .back-link {
+      margin-top: 0.5rem;
+      font-size: 0.7rem;
+    }
+    .back-link a { color: #475569; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="header"><h1>◆ NEURAL CANVAS ◆</h1></div>
+  <canvas id="art" width="360" height="360"></canvas>
+  <div class="controls">
+    <button onclick="setMode('nebula')" class="active" id="btn-nebula">NEBULA</button>
+    <button onclick="setMode('circuit')" id="btn-circuit">CIRCUIT</button>
+    <button onclick="setMode('waves')" id="btn-waves">WAVES</button>
+    <button onclick="setMode('matrix')" id="btn-matrix">MATRIX</button>
+    <button onclick="randomize()">RANDOMIZE</button>
+    <button onclick="saveArt()">SAVE</button>
+  </div>
+  <div class="info">Touch/click canvas to seed. Mode: <span id="modeName">NEBULA</span> | Particles: <span id="pCount">0</span></div>
+  <div class="back-link"><a href="index.html">← BACK TO COAL OS</a></div>
+
+  <script>
+    const canvas = document.getElementById('art');
+    const ctx = canvas.getContext('2d');
+    const W = 360, H = 360;
+    let particles = [];
+    let mode = 'nebula';
+    let time = 0;
+    let hue = 180;
+
+    class Particle {
+      constructor(x, y) {
+        this.x = x; this.y = y;
+        this.ox = x; this.oy = y;
+        this.vx = 0; this.vy = 0;
+        this.life = 200 + Math.random()*300;
+        this.maxLife = this.life;
+        this.size = 1 + Math.random()*2;
+        this.hue = hue + Math.random()*40 - 20;
+      }
+      update() {
+        this.life--;
+        switch(mode) {
+          case 'nebula':
+            this.vx += (Math.random()-0.5)*0.3;
+            this.vy += (Math.random()-0.5)*0.3;
+            this.vx *= 0.98; this.vy *= 0.98;
+            break;
+          case 'circuit':
+            if (Math.random() < 0.02) {
+              this.vx = Math.random() < 0.5 ? (Math.random() < 0.5 ? 1 : -1) : 0;
+              this.vy = this.vx === 0 ? (Math.random() < 0.5 ? 1 : -1) : 0;
+            }
+            break;
+          case 'waves':
+            this.vy = Math.sin(this.x*0.02 + time*0.05)*2;
+            this.vx = Math.cos(this.y*0.02 + time*0.03);
+            break;
+          case 'matrix':
+            this.vy = 1 + Math.random()*2;
+            this.vx = Math.sin(time*0.01 + this.ox*0.1)*0.5;
+            break;
+        }
+        this.x += this.vx;
+        this.y += this.vy;
+        // Wrap
+        if (this.x < 0) this.x = W;
+        if (this.x > W) this.x = 0;
+        if (this.y < 0) this.y = H;
+        if (this.y > H) this.y = 0;
+      }
+      draw() {
+        const alpha = Math.min(1, this.life / this.maxLife * 2);
+        ctx.fillStyle = `hsla(${this.hue}, 100%, 65%, ${alpha * 0.7})`;
+        ctx.fillRect(this.x, this.y, this.size, this.size);
+      }
+    }
+
+    function seed(x, y, count) {
+      for (let i = 0; i < count; i++) {
+        const px = x + (Math.random()-0.5)*30;
+        const py = y + (Math.random()-0.5)*30;
+        particles.push(new Particle(px, py));
+      }
+    }
+
+    function setMode(m) {
+      mode = m;
+      document.getElementById('modeName').textContent = m.toUpperCase();
+      document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+      const btn = document.getElementById('btn-'+m);
+      if (btn) btn.classList.add('active');
+      // Mode-specific reset
+      ctx.fillStyle = '#000a14';
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    function randomize() {
+      hue = Math.random()*360;
+      particles = [];
+      ctx.fillStyle = '#000a14';
+      ctx.fillRect(0, 0, W, H);
+      const modes = ['nebula','circuit','waves','matrix'];
+      setMode(modes[Math.floor(Math.random()*modes.length)]);
+      for (let i = 0; i < 5; i++) {
+        seed(Math.random()*W, Math.random()*H, 30);
+      }
+    }
+
+    function saveArt() {
+      const link = document.createElement('a');
+      link.download = 'coal-art-' + Date.now() + '.png';
+      link.href = canvas.toDataURL();
+      link.click();
+    }
+
+    // Input
+    canvas.addEventListener('click', e => {
+      const rect = canvas.getBoundingClientRect();
+      const scale = W / rect.width;
+      seed((e.clientX - rect.left)*scale, (e.clientY - rect.top)*scale, 40);
+    });
+    canvas.addEventListener('touchstart', e => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const scale = W / rect.width;
+      const t = e.touches[0];
+      seed((t.clientX - rect.left)*scale, (t.clientY - rect.top)*scale, 40);
+    });
+
+    // Auto-seed
+    function autoSeed() {
+      if (particles.length < 200 && Math.random() < 0.1) {
+        seed(Math.random()*W, Math.random()*H, 5);
+      }
+    }
+
+    // Main loop
+    function loop() {
+      requestAnimationFrame(loop);
+      time++;
+
+      // Fade
+      ctx.fillStyle = 'rgba(0, 10, 20, 0.03)';
+      ctx.fillRect(0, 0, W, H);
+
+      autoSeed();
+
+      // Draw connections in circuit mode
+      if (mode === 'circuit' && particles.length > 1) {
+        ctx.strokeStyle = 'rgba(0, 212, 255, 0.05)';
+        ctx.lineWidth = 0.5;
+        for (let i = 0; i < particles.length; i++) {
+          for (let j = i+1; j < Math.min(i+5, particles.length); j++) {
+            const dx = particles[i].x - particles[j].x;
+            const dy = particles[i].y - particles[j].y;
+            if (Math.abs(dx) < 40 && Math.abs(dy) < 40) {
+              ctx.beginPath();
+              ctx.moveTo(particles[i].x, particles[i].y);
+              ctx.lineTo(particles[j].x, particles[j].y);
+              ctx.stroke();
+            }
+          }
+        }
+      }
+
+      for (let i = particles.length-1; i >= 0; i--) {
+        particles[i].update();
+        particles[i].draw();
+        if (particles[i].life <= 0) particles.splice(i, 1);
+      }
+
+      if (time % 30 === 0) {
+        document.getElementById('pCount').textContent = particles.length;
+      }
+
+      // Slowly shift hue
+      hue = (hue + 0.1) % 360;
+    }
+
+    // Init
+    ctx.fillStyle = '#000a14';
+    ctx.fillRect(0, 0, W, H);
+    seed(W/2, H/2, 80);
+    loop();
+  </script>
+</body>
+</html>
