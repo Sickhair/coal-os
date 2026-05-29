@@ -146,10 +146,10 @@
   <!-- RIGHT PANEL -->
   <div class="panel">
     <div class="panel-tabs">
-      <div class="panel-tab active" onclick="showPanel('scale')">Scale</div>
-      <div class="panel-tab" onclick="showPanel('measurements')">Measures</div>
-      <div class="panel-tab" onclick="showPanel('materials')">Materials</div>
-      <div class="panel-tab" onclick="showPanel('summary')">Summary</div>
+      <div class="panel-tab active" onclick="showPanel('scale',this)">Scale</div>
+      <div class="panel-tab" onclick="showPanel('measurements',this)">Measures</div>
+      <div class="panel-tab" onclick="showPanel('materials',this)">Materials</div>
+      <div class="panel-tab" onclick="showPanel('summary',this)">Summary</div>
     </div>
     <div class="panel-content">
       <!-- SCALE -->
@@ -203,7 +203,9 @@
           </select>
         </div>
         <div id="measurementsList"></div>
-        <button class="btn sm" onclick="addManualMeasure()" style="margin-top:.5rem;width:100%">+ Add Manual</button>
+        <div style="display:flex;gap:.3rem;margin-top:.5rem">
+          <button class="btn sm" onclick="addManualMeasure()" style="flex:1">+ Manual</button>
+        </div>
       </div>
 
       <!-- MATERIALS -->
@@ -327,13 +329,13 @@ function setTool(t){
   document.querySelectorAll('.tool').forEach(el=>el.classList.remove('active'));
   const el=document.getElementById('tool-'+t);if(el)el.classList.add('active');
   C.style.cursor=t==='pointer'?'default':'crosshair';
-  if(t==='area'||t==='poly')showPanel('scale');
+  // Don't force panel switch on tool change
 }
 
-function showPanel(id){
+function showPanel(id,tabEl){
   document.querySelectorAll('.panel-tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.panel-section').forEach(s=>s.style.display='none');
-  event.target.classList.add('active');
+  if(tabEl)tabEl.classList.add('active');
   const el=document.getElementById('panel-'+id);if(el)el.style.display='block';
   if(id==='measurements')renderMeasurements();
   if(id==='materials')calcMaterials();
@@ -344,7 +346,7 @@ function showPanel(id){
 C.addEventListener('mousedown',onDown);
 C.addEventListener('mousemove',onMove);
 C.addEventListener('mouseup',onUp);
-C.addEventListener('wheel',e=>{e.preventDefault();const r=C.getBoundingClientRect();const mx=e.clientX-r.left,my=e.clientY-r.top;if(e.deltaY<0)zoomIn();else zoomOut();panX=mx-(mx-panX)*(zoom/(e.deltaY<0?zoom/1.25:zoom*1.25));panY=my-(my-panY)*(zoom/(e.deltaY<0?zoom/1.25:zoom*1.25));render()},{passive:false});
+C.addEventListener('wheel',e=>{e.preventDefault();const r=C.getBoundingClientRect();const mx=e.clientX-r.left,my=e.clientY-r.top;const oldZoom=zoom;const newZoom=e.deltaY<0?Math.min(oldZoom*1.15,10):Math.max(oldZoom/1.15,.1);panX=mx-(mx-panX)*(newZoom/oldZoom);panY=my-(my-panY)*(newZoom/oldZoom);zoom=newZoom;render()},{passive:false});
 
 // Touch
 let lastTouch=null;
@@ -500,6 +502,11 @@ function render(mouseCP){
 
   // Blueprint image
   if(img){X.drawImage(img,0,0)}
+  else{
+    // No blueprint loaded indicator
+    X.fillStyle='#ffffff0a';X.font=`${16/zoom}px Inter`;X.textAlign='center';
+    X.fillText('Load a PDF or image to begin',C.width/(2*zoom),C.height/(2*zoom));
+  }
 
   // Grid
   if(scale.set){
@@ -577,7 +584,7 @@ function render(mouseCP){
 
   // Enable set scale button if we have linear measurements
   const linearMs=measurements.filter(m=>m.type==='linear');
-  if(linearMs.length>0&&!scale.set){
+  if(linearMs.length>0){
     scaleLine={p1:linearMs[0].points[0],p2:linearMs[0].points[1]};
     document.getElementById('setScaleBtn').disabled=false;
   }
@@ -594,16 +601,20 @@ function renderMeasurements(){
     if(m.type==='linear'){const r=pxLenToReal(m.pxLen);val=`${r.value.toFixed(2)} ${r.unit}`}
     if(m.type==='rect'){const ra=pxAreaToReal(m.pxW*m.pxH);val=`${ra.value.toFixed(2)} ${ra.unit}`}
     if(m.type==='poly'||m.type==='area'||m.type==='freehand'){const ra=pxAreaToReal(m.pxArea);val=`${ra.value.toFixed(2)} ${ra.unit}`}
+    if(m.type==='manual-linear'){val=`${m.manualVal.toFixed(2)} ${scale.unit||'ft'}`}
+    if(m.type==='manual-rect'){val=`${m.manualW.toFixed(1)}x${m.manualH.toFixed(1)} = ${(m.manualW*m.manualH).toFixed(2)} sq ft`}
     if(m.type==='count')val=`Count: ${m.count||1}`;
     return`<div class="measure-item" onclick="selectMeasure(${m.id})" style="border-left:3px solid ${m.color}">
-      <div class="mi-head"><span class="mi-label">${m.label}</span><span class="mi-value">${val}</span></div>
-      <div class="mi-meta"><span>${m.type}</span><span>${m.layer}</span>
+      <div class="mi-head"><span class="mi-label" ondblclick="renameMeasure(${m.id})" title="Double-click to rename">${m.label}</span><span class="mi-value">${val}</span></div>
+      <div class="mi-meta"><span>${m.type}</span><span onclick="cycleLayer(${m.id})" style="cursor:pointer;text-decoration:underline dotted" title="Click to change layer">${m.layer}</span>
       <span class="mi-delete" onclick="event.stopPropagation();deleteMeasure(${m.id})">✕</span></div></div>`;
   }).join('')||'<div style="font-size:.7rem;color:var(--text3);text-align:center;padding:1rem">No measurements yet. Use the tools on the left.</div>';
 }
 
 function selectMeasure(id){selectedMeasure=id;render()}
 function deleteMeasure(id){measurements=measurements.filter(m=>m.id!==id);renderMeasurements();calcMaterials();render()}
+function renameMeasure(id){const m=measurements.find(x=>x.id===id);if(!m)return;const name=prompt('Rename:',m.label);if(name){m.label=name;renderMeasurements();render()}}
+function cycleLayer(id){const m=measurements.find(x=>x.id===id);if(!m)return;const layers=['flooring','baseboard','tile','carpet','hardwood','vinyl','count'];const idx=layers.indexOf(m.layer);m.layer=layers[(idx+1)%layers.length];renderMeasurements();calcMaterials();render()}
 
 function addManualMeasure(){
   const type=prompt('Type (linear/rect/count):','linear');if(!type)return;
@@ -716,6 +727,8 @@ function exportReport(){
     if(m.type==='linear'){const r=pxLenToReal(m.pxLen);val=`${r.value.toFixed(2)} ${r.unit}`}
     if(m.type==='rect'){const ra=pxAreaToReal(m.pxW*m.pxH);val=`${ra.value.toFixed(2)} ${ra.unit}`}
     if(m.type==='poly'||m.type==='area'||m.type==='freehand'){const ra=pxAreaToReal(m.pxArea);val=`${ra.value.toFixed(2)} ${ra.unit}`}
+    if(m.type==='manual-linear'){val=`${m.manualVal.toFixed(2)} ${scale.unit||'ft'}`}
+    if(m.type==='manual-rect'){val=`${(m.manualW*m.manualH).toFixed(2)} sq ft`}
     if(m.type==='count')val=`Count: ${m.count||1}`;
     text+=`  ${m.label.padEnd(20)} | ${val.padEnd(15)} | ${m.layer} | ${m.type}\n`;
   });
@@ -732,6 +745,8 @@ function exportCSV(){
     if(m.type==='linear'){const r=pxLenToReal(m.pxLen);val=r.value.toFixed(2);unit=r.unit}
     if(m.type==='rect'){const ra=pxAreaToReal(m.pxW*m.pxH);val=ra.value.toFixed(2);unit=ra.unit}
     if(m.type==='poly'||m.type==='area'||m.type==='freehand'){const ra=pxAreaToReal(m.pxArea);val=ra.value.toFixed(2);unit=ra.unit}
+    if(m.type==='manual-linear'){val=m.manualVal.toFixed(2);unit=scale.unit||'ft'}
+    if(m.type==='manual-rect'){val=(m.manualW*m.manualH).toFixed(2);unit='sq ft'}
     if(m.type==='count'){val=m.count||1;unit='ea'}
     rows.push([m.id,m.label,m.type,m.layer,val,unit]);
   });
@@ -742,6 +757,18 @@ function exportCSV(){
 
 function undoLast(){if(measurements.length){measurements.pop();renderMeasurements();calcMaterials();render()}}
 function clearAll(){if(measurements.length===0||confirm('Clear all measurements?')){measurements=[];renderMeasurements();calcMaterials();render()}}
+
+// Keyboard shortcuts
+document.addEventListener('keydown',e=>{
+  if(e.ctrlKey&&e.key==='z'){e.preventDefault();undoLast()}
+  if(e.key==='Escape'){toolState='idle';points=[];freehandPts=[];render()}
+  if(e.key==='1')setTool('pointer')
+  if(e.key==='2')setTool('linear')
+  if(e.key==='3')setTool('rect')
+  if(e.key==='4')setTool('count')
+  if(e.key==='5')setTool('poly')
+  if(e.key==='6')setTool('freehand')
+});
 </script>
 </body>
 </html>
