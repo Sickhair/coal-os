@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>ATOCS — Active Takeoff Control System</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0a0a0a">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{--bg:#0a0a0a;--surface:#111;--surface2:#1a1a1a;--border:#222;--text:#e0e0e0;--text2:#888;--text3:#555;
+      --green:#00ff41;--red:#ff3333;--yellow:#ffaa00;--cyan:#00d4ff;--blue:#3b82f6;--purple:#a855f7;
+      --r:4px}
+    body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;font-size:13px}
+    
+    /* TOP BAR */
+    .topbar{display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+    .topbar .mission-name{font-weight:700;font-size:.85rem;color:var(--cyan);letter-spacing:1px}
+    .topbar .mission-name span{color:var(--text3);font-weight:400;font-size:.65rem;margin-left:.5rem}
+    .topbar .clock{font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--text2)}
+    .topbar .mission-status{display:flex;align-items:center;gap:.4rem}
+    .status-light{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 2s infinite}
+    .status-light.red{background:var(--red);box-shadow:0 0 8px var(--red)}
+    .status-light.yellow{background:var(--yellow);box-shadow:0 0 8px var(--yellow)}
+    .status-light.off{background:var(--text3);box-shadow:none;animation:none}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.5}}
+    .status-text{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:1px}
+
+    /* TABS */
+    .tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto}
+    .tab{padding:.5rem .75rem;font-size:.7rem;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;font-weight:500}
+    .tab:hover{color:var(--text2)}.tab.active{color:var(--cyan);border-bottom-color:var(--cyan)}
+
+    /* PAGES */
+    .page{display:none;padding:.75rem;max-width:1200px;margin:0 auto}.page.active{display:block}
+
+    /* COUNTDOWN */
+    .countdown-display{text-align:center;padding:1.5rem 0}
+    .countdown-time{font-family:'JetBrains Mono',monospace;font-size:3rem;font-weight:700;letter-spacing:4px;text-shadow:0 0 30px currentColor}
+    .countdown-time.t-minus{color:var(--green)}.countdown-time.hold{color:var(--yellow)}.countdown-time.liftoff{color:var(--cyan)}
+    .countdown-label{font-size:.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:2px;margin-top:.25rem}
+    .countdown-btns{display:flex;gap:.5rem;justify-content:center;margin-top:1rem;flex-wrap:wrap}
+    .cbtn{padding:.5rem 1.2rem;border-radius:var(--r);font-family:inherit;font-size:.75rem;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text2);transition:all .15s}
+    .cbtn:hover{border-color:var(--cyan);color:var(--text)}
+    .cbtn.go{background:#003300;border-color:var(--green);color:var(--green)}
+    .cbtn.hold{background:#332200;border-color:var(--yellow);color:var(--yellow)}
+    .cbtn.abort{background:#330000;border-color:var(--red);color:var(--red)}
+
+    /* CARDS */
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.65rem;margin-bottom:.5rem}
+    .card-title{font-size:.6rem;font-weight:600;letter-spacing:1.5px;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem}
+    .card-row{display:flex;justify-content:space-between;align-items:center;padding:.2rem 0;font-size:.75rem}
+    .card-row .label{color:var(--text2);font-size:.7rem}
+    .card-row .value{font-family:'JetBrains Mono',monospace;font-weight:600}
+    .card-row .value.green{color:var(--green)}.card-row .value.red{color:var(--red)}.card-row .value.yellow{color:var(--yellow)}.card-row .value.cyan{color:var(--cyan)}
+
+    /* GRID */
+    .grid{display:grid;gap:.5rem}
+    .grid-2{grid-template-columns:1fr 1fr}.grid-3{grid-template-columns:1fr 1fr 1fr}.grid-4{grid-template-columns:1fr 1fr 1fr 1fr}
+    @media(max-width:700px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr 1fr}}
+
+    /* CHECKLIST */
+    .check-item{display:flex;align-items:center;gap:.5rem;padding:.3rem 0;font-size:.75rem;border-bottom:1px solid #111}
+    .check-status{width:18px;height:18px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:.65rem;cursor:pointer}
+    .check-status.pass{background:#003300;color:var(--green);border:1px solid var(--green)}
+    .check-status.fail{background:#330000;color:var(--red);border:1px solid var(--red)}
+    .check-status.pending{background:#1a1a00;color:var(--yellow);border:1px solid var(--yellow)}
+    .check-status.skip{background:#111;color:var(--text3);border:1px solid var(--border)}
+    .check-name{flex:1}.check-val{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text2)}
+
+    /* TELEMETRY */
+    .telem-big{text-align:center;padding:.5rem}
+    .telem-big .val{font-family:'JetBrains Mono',monospace;font-size:1.8rem;font-weight:700}
+    .telem-big .unit{font-size:.65rem;color:var(--text3)}
+    .telem-big .label{font-size:.55rem;color:var(--text3);text-transform:uppercase;letter-spacing:1px}
+
+    /* GAUGE */
+    .gauge{position:relative;width:100%;height:8px;background:#111;border-radius:4px;overflow:hidden;margin-top:.2rem}
+    .gauge-fill{height:100%;border-radius:4px;transition:width .3s}
+
+    /* TRAJECTORY CANVAS */
+    #trajCanvas{width:100%;height:250px;background:#050505;border:1px solid var(--border);border-radius:var(--r)}
+
+    /* LOG */
+    .log{font-family:'JetBrains Mono',monospace;font-size:.65rem;max-height:200px;overflow-y:auto;background:#050505;border:1px solid var(--border);border-radius:var(--r);padding:.5rem;line-height:1.5}
+    .log .time{color:var(--text3)}.log .info{color:var(--cyan)}.log .warn{color:var(--yellow)}.log .err{color:var(--red)}.log .event{color:var(--green)}
+
+    /* EVENT TIMELINE */
+    .timeline-item{display:flex;gap:.5rem;padding:.3rem 0;font-size:.7rem;border-bottom:1px solid #111}
+    .timeline-item .t-time{color:var(--text3);font-family:'JetBrains Mono',monospace;min-width:80px}
+    .timeline-item .t-event{flex:1}
+    .timeline-item.done .t-event{color:var(--green)}.timeline-item.next .t-event{color:var(--yellow)}
+
+    /* ALERTS */
+    .alert-bar{background:#330000;border:1px solid var(--red);color:var(--red);padding:.4rem .75rem;font-size:.75rem;font-weight:600;text-align:center;display:none;border-radius:var(--r);margin-bottom:.5rem}
+    .alert-bar.show{display:block}
+
+    /* FLIGHT EVENT NOTIFICATION */
+    .flight-event{position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--surface);border:2px solid var(--green);color:var(--green);padding:.6rem 1.5rem;border-radius:var(--r);font-weight:700;font-size:.85rem;z-index:200;display:none;text-align:center;animation:fadeInOut 3s forwards}
+    @keyframes fadeInOut{0%{opacity:0;transform:translateX(-50%) translateY(-10px)}10%{opacity:1;transform:translateX(-50%) translateY(0)}80%{opacity:1}100%{opacity:0}}
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="mission-name">ATOCS <span>ACTIVE TAKEOFF CONTROL SYSTEM</span></div>
+  <div class="mission-status"><div class="status-light" id="statusLight"></div><span class="status-text" id="statusText">NOMINAL</span></div>
+  <div class="clock" id="clock">--:--:--</div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('overview')">Overview</div>
+  <div class="tab" onclick="showTab('countdown')">Countdown</div>
+  <div class="tab" onclick="showTab('checklist')">Checklist</div>
+  <div class="tab" onclick="showTab('telemetry')">Telemetry</div>
+  <div class="tab" onclick="showTab('trajectory')">Trajectory</div>
+  <div class="tab" onclick="showTab('propulsion')">Propulsion</div>
+  <div class="tab" onclick="showTab('weather')">Weather</div>
+  <div class="tab" onclick="showTab('safety')">Range Safety</div>
+  <div class="tab" onclick="showTab('log')">Flight Log</div>
+</div>
+
+<div class="alert-bar" id="alertBar"></div>
+<div class="flight-event" id="flightEvent"></div>
+
+<!-- OVERVIEW -->
+<div class="page active" id="page-overview">
+  <div class="grid grid-4" id="overviewStats"></div>
+  <div class="grid grid-2">
+    <div class="card"><div class="card-title">Mission Timeline</div><div id="miniTimeline"></div></div>
+    <div class="card"><div class="card-title">Vehicle Status</div><div id="vehicleStatus"></div></div>
+  </div>
+</div>
+
+<!-- COUNTDOWN -->
+<div class="page" id="page-countdown">
+  <div class="countdown-display">
+    <div class="countdown-time t-minus" id="cdTime">T-10:00:00</div>
+    <div class="countdown-label" id="cdLabel">COUNTDOWN HOLD — AWAITING GO FOR CLOCK</div>
+    <div class="countdown-btns">
+      <button class="cbtn go" onclick="startCountdown()">▶ RESUME CLOCK</button>
+      <button class="cbtn hold" onclick="holdCountdown()">⏸ HOLD</button>
+      <button class="cbtn abort" onclick="abortMission()">⛔ ABORT</button>
+      <button class="cbtn" onclick="resetMission()">↺ RESET</button>
+    </div>
+  </div>
+  <div class="card"><div class="card-title">Countdown Hold Points</div>
+    <div class="check-item"><div class="check-status pending" onclick="cycleCheck(this)">TBD</div><div class="check-name">T-10m — Weather Go/No-Go</div><div class="check-val" id="cd-10m">PENDING</div></div>
+    <div class="check-item"><div class="check-status pending" onclick="cycleCheck(this)">TBD</div><div class="check-name">T-5m — Final Range Safety Check</div><div class="check-val" id="cd-5m">PENDING</div></div>
+    <div class="check-item"><div class="check-status pending" onclick="cycleCheck(this)">TBD</div><div class="check-name">T-2m — GO/NO-GO Poll (All Stations)</div><div class="check-val" id="cd-2m">PENDING</div></div>
+    <div class="check-item"><div class="check-status pending" onclick="cycleCheck(this)">TBD</div><div class="check-name">T-1m — Auto Sequence Start</div><div class="check-val" id="cd-1m">PENDING</div></div>
+    <div class="check-item"><div class="check-status pending" onclick="cycleCheck(this)">TBD</div><div class="check-name">T-30s — Ignition Sequence</div><div class="check-val" id="cd-30s">PENDING</div></div>
+    <div class="check-item"><div class="check-status pending" onclick="cycleCheck(this)">TBD</div><div class="check-name">T-0 — LIFTOFF</div><div class="check-val" id="cd-0">PENDING</div></div>
+  </div>
+</div>
+
+<!-- CHECKLIST -->
+<div class="page" id="page-checklist">
+  <div class="grid grid-2">
+    <div class="card"><div class="card-title">Vehicle Systems</div><div id="cl-vehicle"></div></div>
+    <div class="card"><div class="card-title">Ground Systems</div><div id="cl-ground"></div></div>
+    <div class="card"><div class="card-title">Payload</div><div class="check-item"><div class="check-status pass" onclick="cycleCheck(this)">✓</div><div class="check-name">Payload fairing sealed</div><div class="check-val">PASS</div></div>
+      <div class="check-item"><div class="check-status pass" onclick="cycleCheck(this)">✓</div><div class="check-name">Payload power confirmed</div><div class="check-val">PASS</div></div>
+      <div class="check-item"><div class="check-status pass" onclick="cycleCheck(this)">✓</div><div class="check-name">Telemetry link active</div><div class="check-val">PASS</div></div>
+      <div class="check-item"><div class="check-status pass" onclick="cycleCheck(this)">✓</div><div class="check-name">Flight computer loaded</div><div class="check-val">PASS</div></div>
+    </div>
+    <div class="card"><div class="card-title">Range & Safety</div><div id="cl-range"></div></div>
+  </div>
+</div>
+
+<!-- TELEMETRY -->
+<div class="page" id="page-telemetry">
+  <div class="grid grid-4">
+    <div class="card telem-big"><div class="label">Altitude</div><div class="val cyan" id="t-alt">0</div><div class="unit">km</div></div>
+    <div class="card telem-big"><div class="label">Velocity</div><div class="val cyan" id="t-vel">0</div><div class="unit">m/s</div></div>
+    <div class="card telem-big"><div class="label">Acceleration</div><div class="val yellow" id="t-accel">0</div><div class="unit">m/s²</div></div>
+    <div class="card telem-big"><div class="label">Downrange</div><div class="val green" id="t-down">0</div><div class="unit">km</div></div>
+  </div>
+  <div class="grid grid-2">
+    <div class="card"><div class="card-title">Flight Dynamics</div>
+      <div class="card-row"><span class="label">Mach Number</span><span class="value cyan" id="t-mach">0.00</span></div>
+      <div class="card-row"><span class="label">Max-Q</span><span class="value yellow" id="t-maxq">0 kPa</span></div>
+      <div class="card-row"><span class="label">Angle of Attack</span><span class="value" id="t-aoa">0.0°</span></div>
+      <div class="card-row"><span class="label">Pitch Angle</span><span class="value" id="t-pitch">90.0°</span></div>
+      <div class="card-row"><span class="label">Roll</span><span class="value" id="t-roll">0.0°</span></div>
+      <div class="card-row"><span class="label">G-Load</span><span class="value yellow" id="t-gload">1.0 G</span></div>
+    </div>
+    <div class="card"><div class="card-title">Environment</div>
+      <div class="card-row"><span class="label">Dynamic Pressure</span><span class="value" id="t-dynp">0 kPa</span></div>
+      <div class="card-row"><span class="label">Ambient Pressure</span><span class="value" id="t-ambp">101.3 kPa</span></div>
+      <div class="card-row"><span class="label">Ambient Temp</span><span class="value" id="t-ambt">288 K</span></div>
+      <div class="card-row"><span class="label">Wind Speed</span><span class="value" id="t-wind">5.2 m/s</span></div>
+      <div class="card-row"><span class="label">Vehicle Surface Temp</span><span class="value" id="t-surft">293 K</span></div>
+      <div class="card-row"><span class="label">Structural Load Margin</span><span class="value green" id="t-margin">100%</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- TRAJECTORY -->
+<div class="page" id="page-trajectory">
+  <canvas id="trajCanvas"></canvas>
+  <div class="grid grid-2">
+    <div class="card"><div class="card-title">Nominal vs Actual</div>
+      <div class="card-row"><span class="label">Altitude Error</span><span class="value green" id="traj-err">+0.0 m</span></div>
+      <div class="card-row"><span class="label">Downrange Error</span><span class="value green" id="traj-derr">+0.0 m</span></div>
+      <div class="card-row"><span class="label">Target Orbit</span><span class="value">185 km LEO</span></div>
+      <div class="card-row"><span class="label">Orbital Velocity Req.</span><span class="value">7,793 m/s</span></div>
+    </div>
+    <div class="card"><div class="card-title">Mission Events</div><div id="missionEvents"></div></div>
+  </div>
+</div>
+
+<!-- PROPULSION -->
+<div class="page" id="page-propulsion">
+  <div class="grid grid-2">
+    <div class="card"><div class="card-title">Stage 1 — Main Engines (x9)</div>
+      <div class="card-row"><span class="label">Thrust</span><span class="value cyan" id="p-s1thrust">0 kN</span></div>
+      <div class="card-row"><span class="label">ISP</span><span class="value">311 s (sea level)</span></div>
+      <div class="card-row"><span class="label">Fuel (LOX/RP-1)</span><span class="value green" id="p-s1fuel">100%</span></div>
+      <div class="gauge"><div class="gauge-fill" id="p-s1fuelBar" style="width:100%;background:var(--green)"></div></div>
+      <div class="card-row"><span class="label">Chamber Pressure</span><span class="value" id="p-s1chamber">0 MPa</span></div>
+      <div class="card-row"><span class="label">Turbopump RPM</span><span class="value" id="p-s1rpm">0</span></div>
+      <div class="card-row"><span class="label">Engine Temp</span><span class="value" id="p-s1temp">288 K</span></div>
+      <div class="card-row"><span class="label">Status</span><span class="value green" id="p-s1status">STANDBY</span></div>
+    </div>
+    <div class="card"><div class="card-title">Stage 2 — Vacuum Engine (x1)</div>
+      <div class="card-row"><span class="label">Thrust</span><span class="value cyan" id="p-s2thrust">0 kN</span></div>
+      <div class="card-row"><span class="label">ISP</span><span class="value">348 s (vacuum)</span></div>
+      <div class="card-row"><span class="label">Fuel (LOX/RP-1)</span><span class="value green" id="p-s2fuel">100%</span></div>
+      <div class="gauge"><div class="gauge-fill" id="p-s2fuelBar" style="width:100%;background:var(--green)"></div></div>
+      <div class="card-row"><span class="label">Chamber Pressure</span><span class="value" id="p-s2chamber">0 MPa</span></div>
+      <div class="card-row"><span class="label">Status</span><span class="value" id="p-s2status">STANDBY</span></div>
+    </div>
+  </div>
+  <div class="card"><div class="card-title">Propellant Summary</div>
+    <div class="grid grid-4">
+      <div class="telem-big"><div class="label">Total Fuel</div><div class="val green" id="p-total">100%</div></div>
+      <div class="telem-big"><div class="label">S1 Burn Time</div><div class="val" id="p-s1burn">162s</div></div>
+      <div class="telem-big"><div class="label">S2 Burn Time</div><div class="val" id="p-s2burn">397s</div></div>
+      <div class="telem-big"><div class="label">ΔV Budget</div><div class="val cyan" id="p-dv">9,240 m/s</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- WEATHER -->
+<div class="page" id="page-weather">
+  <div class="grid grid-2">
+    <div class="card"><div class="card-title">Surface Conditions</div>
+      <div class="card-row"><span class="label">Temperature</span><span class="value" id="w-temp">24°C</span></div>
+      <div class="card-row"><span class="label">Wind Speed</span><span class="value green" id="w-wind">5.2 m/s</span></div>
+      <div class="card-row"><span class="label">Wind Direction</span><span class="value">NW 315°</span></div>
+      <div class="card-row"><span class="label">Humidity</span><span class="value">62%</span></div>
+      <div class="card-row"><span class="label">Visibility</span><span class="value green">18 km</span></div>
+      <div class="card-row"><span class="label">Cloud Ceiling</span><span class="value green">4,200 m</span></div>
+    </div>
+    <div class="card"><div class="card-title">Upper Atmosphere</div>
+      <div class="card-row"><span class="label">5 km Wind</span><span class="value green">12 m/s W</span></div>
+      <div class="card-row"><span class="label">10 km Wind</span><span class="value green">18 m/s W</span></div>
+      <div class="card-row"><span class="label">Jet Stream</span><span class="value yellow">42 m/s at 11.3 km</span></div>
+      <div class="card-row"><span class="label">Tropopause</span><span class="value">16.8 km</span></div>
+      <div class="card-row"><span class="label">Stratosphere Temp</span><span class="value">-56°C</span></div>
+    </div>
+  </div>
+  <div class="card"><div class="card-title">Lightning & Electrics</div>
+    <div class="card-row"><span class="label">Cloud-to-Ground (30km)</span><span class="value green">0 strikes/5min</span></div>
+    <div class="card-row"><span class="label">Electric Field Mill</span><span class="value green">120 V/m (NOMINAL)</span></div>
+    <div class="card-row"><span class="label">Lightning Launch Commit Criteria</span><span class="value green">✓ GO</span></div>
+  </div>
+  <div class="card"><div class="card-title">Weather Go/No-Go Criteria</div>
+    <div class="check-item"><div class="check-status pass">✓</div><div class="check-name">Wind < 18 m/s at pad level</div><div class="check-val">5.2 m/s ✓</div></div>
+    <div class="check-item"><div class="check-status pass">✓</div><div class="check-name">No lightning within 30 km (past 30 min)</div><div class="check-val">0 strikes ✓</div></div>
+    <div class="check-item"><div class="check-status pass">✓</div><div class="check-name">Cloud ceiling > 2,400 m</div><div class="check-val">4,200 m ✓</div></div>
+    <div class="check-item"><div class="check-status pass">✓</div><div class="check-name">Temperature within limits (2°C - 35°C)</div><div class="check-val">24°C ✓</div></div>
+    <div class="check-item"><div class="check-status pass">✓</div><div class="check-name">No precipitation within 10 km</div><div class="check-val">CLEAR ✓</div></div>
+  </div>
+</div>
+
+<!-- RANGE SAFETY -->
+<div class="page" id="page-safety">
+  <div class="grid grid-2">
+    <div class="card"><div class="card-title">Flight Termination System (FTS)</div>
+      <div class="card-row"><span class="label">FTS Status</span><span class="value green">ARMED</span></div>
+      <div class="card-row"><span class="label">Batteries</span><span class="value green">100%</span></div>
+      <div class="card-row"><span class="label">Command Receiver</span><span class="value green">LINKED</span></div>
+      <div class="card-row"><span class="label">Ordnance</span><span class="value green">SAFE — ARM AT T-0</span></div>
+      <div style="margin-top:.5rem"><button class="cbtn abort" onclick="ftcTerminate()">⚠ TERMINATE FLIGHT</button></div>
+    </div>
+    <div class="card"><div class="card-title">Abort Modes</div>
+      <div class="check-item"><div class="check-status skip">—</div><div class="check-name">Mode 0: Pad Abort (T-0 to +5s)</div><div class="check-val">Engine shutdown, tower clear</div></div>
+      <div class="check-item"><div class="check-status skip">—</div><div class="check-name">Mode 1: Active Abort (+5s to staging)</div><div class="check-val">FTS destruct, debris tracking</div></div>
+      <div class="check-item"><div class="check-status skip">—</div><div class="check-name">Mode 2: Downrange Abort (S2)</div><div class="check-val">Engine shutdown, ballistic trajectory</div></div>
+      <div class="check-item"><div class="check-status skip">—</div><div class="check-name">Mode 3: Orbit Abort</div><div class="check-val">Deorbit burn, re-entry corridor</div></div>
+    </div>
+  </div>
+  <div class="card"><div class="card-title">No-Fly Zone & Impact Corridors</div>
+    <div class="card-row"><span class="label">NFZ Status</span><span class="value green">ACTIVE — 10nm radius</span></div>
+    <div class="card-row"><span class="label">Stage 1 Impact Zone</span><span class="value">260 km downrange, ±5 km</span></div>
+    <div class="card-row"><span class="label">Fairing Impact Zone</span><span class="value">340 km downrange, ±8 km</span></div>
+    <div class="card-row"><span class="label">Debris Tracking</span><span class="value green">RADAR ACTIVE</span></div>
+    <div class="card-row"><span class="label">Ships/Personnel Clear</span><span class="value green">✓ ALL CLEAR</span></div>
+  </div>
+</div>
+
+<!-- FLIGHT LOG -->
+<div class="page" id="page-log">
+  <div class="card"><div class="card-title">Mission Event Log</div><div class="log" id="flightLog"></div></div>
+</div>
+
+<script>
+// === SIMULATION ENGINE ===
+const SIM={
+  state:'prelaunch', // prelaunch, countdown, flight, orbit, abort
+  countdownSec:600, // T-10:00
+  countdownRunning:false,
+  missionTime:0, // seconds since T-0
+  maxQReached:false,
+  maxQ:0,
+  s1Sep:false,
+  fairingSep:false,
+  s2Ignite:false,
+  seco:false,
+  orbit:false,
+  altitude:0,
+  velocity:0,
+  acceleration:0,
+  downrange:0,
+  pitch:90,
+  mach:0,
+  gLoad:1,
+  s1Fuel:100,
+  s2Fuel:100,
+  s1Thrust:0,
+  s2Thrust:0,
+  s1Chamber:0,
+  s2Chamber:0,
+  s1RPM:0,
+  s1Temp:288,
+  surfTemp:288,
+  dynPressure:0,
+  ambPressure:101.3,
+  ambTemp:288,
+  windSpeed:5.2,
+  structMargin:100,
+  dvBudget:9240,
+  trajData:[],
+  events:[
+    {t:0,name:'LIFTOFF — IGNITION',done:false},
+    {t:5,name:'Tower Clear',done:false},
+    {t:12,name:'Roll Program',done:false},
+    {t:60,name:'Max-Q',done:false},
+    {t:162,name:'MECO — Main Engine Cutoff',done:false},
+    {t:165,name:'Stage 1 Separation',done:false},
+    {t:167,name:'Stage 2 Ignition',done:false},
+    {t:210,name:'Fairing Separation',done:false},
+    {t:540,name:'SECO — Second Engine Cutoff',done:false},
+    {t:545,name:'ORBIT INSERTION — 185 km LEO',done:false},
+  ],
+  logEntries:[],
+  simInterval:null,
+};
+
+// === TAB NAV ===
+function showTab(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  event.target.classList.add('active');
+  if(id==='trajectory')drawTrajectory();
+}
+
+// === CLOCK ===
+setInterval(()=>{
+  const now=new Date();
+  document.getElementById('clock').textContent=now.toUTCString().slice(17,25)+' UTC';
+},1000);
+
+// === COUNTDOWN ===
+function startCountdown(){
+  if(SIM.state==='flight'||SIM.state==='orbit')return;
+  if(SIM.state==='prelaunch'){SIM.state='countdown'}
+  SIM.countdownRunning=true;
+  if(!SIM.simInterval)SIM.simInterval=setInterval(simTick,100);
+  addLog('Countdown clock resumed','info');
+  updateStatus('NOMINAL','green');
+}
+
+function holdCountdown(){
+  SIM.countdownRunning=false;
+  addLog('COUNTDOWN HOLD','warn');
+  updateStatus('HOLD','yellow');
+}
+
+function abortMission(){
+  SIM.countdownRunning=false;
+  SIM.state='abort';
+  clearInterval(SIM.simInterval);
+  addLog('*** MISSION ABORT ***','err');
+  updateStatus('ABORT','red');
+  showAlert('⛔ MISSION ABORT — All systems safing');
+}
+
+function resetMission(){
+  clearInterval(SIM.simInterval);
+  SIM.state='prelaunch';SIM.countdownSec=600;SIM.countdownRunning=false;
+  SIM.missionTime=0;SIM.altitude=0;SIM.velocity=0;SIM.acceleration=0;SIM.downrange=0;
+  SIM.s1Fuel=100;SIM.s2Fuel=100;SIM.s1Thrust=0;SIM.s2Thrust=0;SIM.pitch=90;
+  SIM.maxQReached=false;SIM.s1Sep=false;SIM.fairingSep=false;SIM.s2Ignite=false;SIM.seco=false;SIM.orbit=false;
+  SIM.trajData=[];SIM.gLoad=1;SIM.surfTemp=288;SIM.structMargin=100;SIM.dynPressure=0;SIM.dvBudget=9240;
+  SIM.events.forEach(e=>e.done=false);SIM.logEntries=[];
+  SIM.simInterval=null;
+  updateStatus('NOMINAL','green');
+  document.getElementById('alertBar').classList.remove('show');
+  renderAll();
+}
+
+function ftcTerminate(){
+  if(!confirm('CONFIRM FLIGHT TERMINATION?'))return;
+  SIM.state='abort';SIM.countdownRunning=false;clearInterval(SIM.simInterval);
+  addLog('*** FLIGHT TERMINATION COMMAND SENT ***','err');
+  addLog('FTS ordnance detonated — vehicle destroyed','err');
+  updateStatus('FTS TERMINATED','red');
+  showAlert('💥 FLIGHT TERMINATED — Vehicle destroyed');
+}
+
+// === SIMULATION TICK (100ms) ===
+function simTick(){
+  // Countdown phase
+  if(SIM.state==='countdown'&&SIM.countdownRunning){
+    SIM.countdownSec-=0.1;
+    if(SIM.countdownSec<=0){
+      SIM.countdownSec=0;SIM.state='flight';SIM.missionTime=0;
+      SIM.s1Thrust=7600;SIM.s1Chamber=6.8;SIM.s1RPM=35000;SIM.s1Temp=850;
+      addLog('🔴 IGNITION — LIFTOFF!','event');
+      updateStatus('FLIGHT','green');
+      showFlightEvent('🚀 LIFTOFF!');
+    }
+    renderCountdown();return;
+  }
+
+  // Flight phase
+  if(SIM.state==='flight'){
+    SIM.missionTime+=0.1;
+    const t=SIM.missionTime;
+
+    if(!SIM.s1Sep){
+      // Stage 1 burn
+      const fuelRate=0.617; // %/sec
+      SIM.s1Fuel=Math.max(0,SIM.s1Fuel-fuelRate*0.1);
+      SIM.s1Thrust=7600*(SIM.s1Fuel>0?1:0);
+      SIM.s1Chamber=6.8*(SIM.s1Fuel>0?1:0);
+      SIM.s1RPM=35000*(SIM.s1Fuel>0?1:0);
+      SIM.acceleration=SIM.s1Thrust*1000/549054; // mass ~549t at start
+      SIM.acceleration+=9.81; // add gravity
+      const dv=SIM.acceleration*0.1;
+      SIM.velocity+=dv;
+      SIM.s1Temp=850+Math.min(t*2,400);
+
+      // Pitch program: gravity turn starting at t=12
+      if(t>12)SIM.pitch=Math.max(5,90-(t-12)*0.5);
+      const pitchRad=SIM.pitch*Math.PI/180;
+      SIM.altitude+=SIM.velocity*Math.sin(pitchRad)*0.1/1000;
+      SIM.downrange+=SIM.velocity*Math.cos(pitchRad)*0.1/1000;
+
+      // Dynamic pressure
+      const altM=SIM.altitude*1000;
+      SIM.ambPressure=101.3*Math.exp(-altM/8500);
+      SIM.ambTemp=Math.max(220,288-altM*0.0065);
+      const rho=SIM.ambPressure*1000/(287*SIM.ambTemp);
+      SIM.dynPressure=0.5*rho*SIM.velocity*SIM.velocity/1000;
+
+      if(SIM.dynPressure>SIM.maxQ)SIM.maxQ=SIM.dynPressure;
+      SIM.mach=SIM.velocity/340;
+      SIM.gLoad=SIM.acceleration/9.81;
+      SIM.surfTemp=288+Math.min(SIM.velocity*0.015,800);
+      SIM.structMargin=Math.max(20,100-SIM.dynPressure*0.8);
+      SIM.dvBudget=Math.max(0,SIM.dvBudget-dv);
+
+      if(SIM.s1Fuel<=0&&!SIM.s1Sep){
+        SIM.s1Sep=true;SIM.s1Thrust=0;SIM.s1Chamber=0;SIM.s1RPM=0;
+        addLog('MECO — Main Engine Cutoff','event');showFlightEvent('⚡ MECO');
+        setTimeout(()=>{SIM.s2Ignite=true;SIM.s2Thrust=981;SIM.s2Chamber=3.5;addLog('Stage 2 Ignition','event');showFlightEvent('🔥 S2 Ignition')},300);
+      }
+    }else if(SIM.s2Ignite&&!SIM.seco){
+      // Stage 2 burn
+      SIM.s2Fuel=Math.max(0,SIM.s2Fuel-0.252*0.1);
+      SIM.s2Thrust=981*(SIM.s2Fuel>0?1:0);
+      SIM.s2Chamber=3.5*(SIM.s2Fuel>0?1:0);
+      const mass=111000; // ~111t
+      SIM.acceleration=SIM.s2Thrust*1000/mass;
+      const dv=SIM.acceleration*0.1;
+      SIM.velocity+=dv;
+      SIM.pitch=Math.max(0,SIM.pitch-0.1);
+      const pitchRad=Math.max(SIM.pitch*Math.PI/180,0.05);
+      SIM.altitude+=SIM.velocity*Math.sin(pitchRad)*0.1/1000;
+      SIM.downrange+=SIM.velocity*Math.cos(pitchRad)*0.1/1000;
+      SIM.ambPressure=101.3*Math.exp(-SIM.altitude*1000/8500);
+      SIM.ambTemp=Math.max(220,288-SIM.altitude*1000*0.0065);
+      SIM.mach=SIM.velocity/340;SIM.gLoad=SIM.acceleration/9.81;
+      SIM.dvBudget=Math.max(0,SIM.dvBudget-dv);
+      SIM.surfTemp=288+Math.min(SIM.velocity*0.01,600);
+      SIM.structMargin=Math.max(50,100-SIM.dynPressure*0.3);
+
+      if(SIM.s2Fuel<=0&&!SIM.seco){
+        SIM.seco=true;SIM.s2Thrust=0;SIM.s2Chamber=0;
+        SIM.acceleration=0;SIM.gLoad=0;
+        addLog('SECO — Second Engine Cutoff','event');showFlightEvent('✅ SECO');
+        setTimeout(()=>{
+          SIM.orbit=true;SIM.state='orbit';
+          addLog('🎯 ORBIT INSERTION CONFIRMED — 185 km LEO','event');
+          showFlightEvent('🛰 ORBIT!');
+          updateStatus('ORBIT ACHIEVED','cyan');
+        },500);
+      }
+    }
+
+    // Trajectory data
+    if(SIM.trajData.length===0||SIM.trajData.length<Math.floor(t/2)){
+      SIM.trajData.push({alt:SIM.altitude,down:SIM.downrange,t});
+    }
+
+    // Events
+    SIM.events.forEach(e=>{
+      if(!e.done&&t>=e.t){e.done=true;addLog(e.name,'event');if(!['LIFTOFF — IGNITION'].includes(e.name))showFlightEvent(e.name)}
+    });
+
+    renderFlight();
+  }
+}
+
+// === RENDER ===
+function renderAll(){renderCountdown();renderOverview();renderChecklist();renderFlight();renderPropulsion();renderLog();renderEvents()}
+
+function renderCountdown(){
+  const el=document.getElementById('cdTime');
+  const label=document.getElementById('cdLabel');
+  if(SIM.state==='flight'||SIM.state==='orbit'){
+    el.textContent='T+'+formatTime(SIM.missionTime);el.className='countdown-time liftoff';
+    label.textContent=SIM.orbit?'ORBIT ACHIEVED':'ACTIVE FLIGHT';
+  }else{
+    const s=Math.max(0,SIM.countdownSec);
+    el.textContent='T-'+formatTime(s);
+    el.className='countdown-time '+(SIM.countdownRunning?'t-minus':'hold');
+    label.textContent=SIM.countdownRunning?'COUNTDOWN IN PROGRESS':'COUNTDOWN HOLD';
+  }
+}
+
+function formatTime(s){const m=Math.floor(s/60);const sec=Math.floor(s%60);return String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0')}
+
+function renderOverview(){
+  document.getElementById('overviewStats').innerHTML=`
+    <div class="card telem-big"><div class="label">Mission Time</div><div class="val ${SIM.state==='flight'?'cyan':'yellow'}" style="font-size:1.4rem">${SIM.state==='prelaunch'?'T-'+formatTime(SIM.countdownSec):'T+'+formatTime(SIM.missionTime)}</div></div>
+    <div class="card telem-big"><div class="label">Altitude</div><div class="val cyan">${SIM.altitude.toFixed(1)}</div><div class="unit">km</div></div>
+    <div class="card telem-big"><div class="label">Velocity</div><div class="val cyan">${Math.floor(SIM.velocity)}</div><div class="unit">m/s</div></div>
+    <div class="card telem-big"><div class="label">Fuel</div><div class="val green">${(SIM.s1Sep?SIM.s2Fuel:SIM.s1Fuel).toFixed(0)}%</div></div>`;
+
+  document.getElementById('miniTimeline').innerHTML=SIM.events.map(e=>`<div class="timeline-item ${e.done?'done':(!SIM.events.find(x=>!x.done&&x!==e)?'next':'')}"><div class="t-time">T${e.t===0?'±0':e.t<0?'-'+e.t:'+'+e.t}s</div><div class="t-event">${e.done?'✓ ':''} ${e.name}</div></div>`).join('');
+
+  document.getElementById('vehicleStatus').innerHTML=`
+    <div class="card-row"><span class="label">Stage 1</span><span class="value ${SIM.s1Sep?'red':'green'}">${SIM.s1Sep?'SEPARATED':'ACTIVE'}</span></div>
+    <div class="card-row"><span class="label">Stage 2</span><span class="value ${SIM.s2Ignite?'green':'yellow'}">${SIM.s2Ignite?'ACTIVE':SIM.s1Sep?'PENDING':'STANDBY'}</span></div>
+    <div class="card-row"><span class="label">Fairing</span><span class="value ${SIM.fairingSep?'yellow':'green'}">${SIM.fairingSep?'JETTISONED':'ATTACHED'}</span></div>
+    <div class="card-row"><span class="label">Guidance</span><span class="value green">NOMINAL</span></div>
+    <div class="card-row"><span class="label">Telemetry</span><span class="value green">LINKED</span></div>`;
+}
+
+function renderFlight(){
+  document.getElementById('t-alt').textContent=SIM.altitude.toFixed(1);
+  document.getElementById('t-vel').textContent=Math.floor(SIM.velocity);
+  document.getElementById('t-accel').textContent=SIM.acceleration.toFixed(1);
+  document.getElementById('t-down').textContent=SIM.downrange.toFixed(1);
+  document.getElementById('t-mach').textContent=SIM.mach.toFixed(2);
+  document.getElementById('t-maxq').textContent=SIM.maxQ.toFixed(1)+' kPa';
+  document.getElementById('t-aoa').textContent=(Math.random()*.2-.1).toFixed(1)+'°';
+  document.getElementById('t-pitch').textContent=SIM.pitch.toFixed(1)+'°';
+  document.getElementById('t-roll').textContent=(Math.random()*.5-.25).toFixed(1)+'°';
+  document.getElementById('t-gload').textContent=SIM.gLoad.toFixed(1)+' G';
+  document.getElementById('t-dynp').textContent=SIM.dynPressure.toFixed(1)+' kPa';
+  document.getElementById('t-ambp').textContent=SIM.ambPressure.toFixed(1)+' kPa';
+  document.getElementById('t-ambt').textContent=Math.floor(SIM.ambTemp)+' K';
+  document.getElementById('t-wind').textContent=SIM.windSpeed.toFixed(1)+' m/s';
+  document.getElementById('t-surft').textContent=Math.floor(SIM.surfTemp)+' K';
+  document.getElementById('t-margin').textContent=Math.floor(SIM.structMargin)+'%';
+  document.getElementById('t-margin').className='value '+(SIM.structMargin<40?'red':'green');
+}
+
+function renderPropulsion(){
+  document.getElementById('p-s1thrust').textContent=SIM.s1Thrust+' kN';
+  document.getElementById('p-s1fuel').textContent=SIM.s1Fuel.toFixed(1)+'%';
+  document.getElementById('p-s1fuelBar').style.width=SIM.s1Fuel+'%';
+  document.getElementById('p-s1fuelBar').style.background=SIM.s1Fuel<20?'var(--red)':'var(--green)';
+  document.getElementById('p-s1chamber').textContent=SIM.s1Chamber+' MPa';
+  document.getElementById('p-s1rpm').textContent=SIM.s1RPM?SIM.s1RPM.toLocaleString():'0';
+  document.getElementById('p-s1temp').textContent=Math.floor(SIM.s1Temp)+' K';
+  document.getElementById('p-s1status').textContent=SIM.s1Sep?'SEPARATED':SIM.s1Thrust>0?'FIRING':'STANDBY';
+  document.getElementById('p-s1status').className='value '+(SIM.s1Sep?'red':SIM.s1Thrust>0?'green':'yellow');
+
+  document.getElementById('p-s2thrust').textContent=SIM.s2Thrust+' kN';
+  document.getElementById('p-s2fuel').textContent=SIM.s2Fuel.toFixed(1)+'%';
+  document.getElementById('p-s2fuelBar').style.width=SIM.s2Fuel+'%';
+  document.getElementById('p-s2fuelBar').style.background=SIM.s2Fuel<20?'var(--red)':'var(--green)';
+  document.getElementById('p-s2chamber').textContent=SIM.s2Chamber+' MPa';
+  document.getElementById('p-s2status').textContent=SIM.seco?'CUTOFF':SIM.s2Ignite?'FIRING':'STANDBY';
+  document.getElementById('p-s2status').className='value '+(SIM.seco?'red':SIM.s2Ignite?'green':'yellow');
+
+  document.getElementById('p-total').textContent=(SIM.s1Sep?SIM.s2Fuel:SIM.s1Fuel).toFixed(0)+'%';
+  document.getElementById('p-dv').textContent=Math.floor(SIM.dvBudget)+' m/s';
+}
+
+function renderLog(){
+  document.getElementById('flightLog').innerHTML=SIM.logEntries.map(e=>`<div><span class="time">[${e.time}]</span> <span class="${e.type}">${e.msg}</span></div>`).join('');
+  const el=document.getElementById('flightLog');el.scrollTop=el.scrollHeight;
+}
+
+function renderEvents(){
+  document.getElementById('missionEvents').innerHTML=SIM.events.map(e=>`<div class="timeline-item ${e.done?'done':(!SIM.events.find(x=>!x.done&&x!==e)?'next':'')}"><div class="t-time">T${e.t>=0?'+':''}${e.t}s</div><div class="t-event">${e.done?'✓ ':''} ${e.name}</div></div>`).join('');
+}
+
+function renderChecklist(){
+  const vehicleChecks=[
+    {name:'Flight computers (triple redundant)',val:'PASS'},
+    {name:'Inertial navigation system',val:'ALIGNED'},
+    {name:'GPS receiver lock',val:'12 SATS'},
+    {name:'Hydraulic systems',val:'3000 PSI'},
+    {name:'Engine gimbal actuators',val:'RESPONSIVE'},
+    {name:'LOX tank pressure',val:'2.41 MPa ✓'},
+    {name:'RP-1 tank pressure',val:'0.28 MPa ✓'},
+    {name:'Stage separation ordnance',val:'SAFE → ARM'},
+    {name:'Fairing separation ordnance',val:'SAFE → ARM'},
+    {name:'S2 engine igniter',val:'READY'},
+  ];
+  const groundChecks=[
+    {name:'Launch mount structural',val:'PASS'},
+    {name:'Umbilical connections',val:'CONNECTED'},
+    {name:'Pad water deluge',val:'READY'},
+    {name:'Sound suppression water',val:'LOADED'},
+    {name:'Flame trench clear',val:'CLEAR'},
+    {name:'GSE (Ground Support Equip.)',val:'NOMINAL'},
+    {name:'Propellant loading complete',val:'CONFIRMED'},
+    {name:'Pad cleared of personnel',val:'ALL CLEAR'},
+  ];
+  const rangeChecks=[
+    {name:'Range safety radar',val:'ACTIVE'},
+    {name:'FTS command transmitter',val:'LINKED'},
+    {name:'Impact zones cleared',val:'ALL CLEAR'},
+    {name:'NOTAM issued',val:'ACTIVE'},
+    {name:'NOTMAR issued',val:'ACTIVE'},
+    {name:'Tracking cameras',val:'8/8 READY'},
+  ];
+  const render=(items)=>items.map(c=>`<div class="check-item"><div class="check-status pass" onclick="cycleCheck(this)">✓</div><div class="check-name">${c.name}</div><div class="check-val">${c.val}</div></div>`).join('');
+  document.getElementById('cl-vehicle').innerHTML=render(vehicleChecks);
+  document.getElementById('cl-ground').innerHTML=render(groundChecks);
+  document.getElementById('cl-range').innerHTML=render(rangeChecks);
+}
+
+function drawTrajectory(){
+  const c=document.getElementById('trajCanvas');
+  const ctx=c.getContext('2d');
+  c.width=c.offsetWidth;c.height=c.offsetHeight;
+  const w=c.width,h=c.height;
+
+  ctx.fillStyle='#050505';ctx.fillRect(0,0,w,h);
+
+  // Grid
+  ctx.strokeStyle='#111';ctx.lineWidth=1;
+  for(let i=0;i<10;i++){const y=i*h/10;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}
+  for(let i=0;i<10;i++){const x=i*w/10;ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}
+
+  // Labels
+  ctx.fillStyle='#333';ctx.font='10px Inter';ctx.textAlign='left';
+  ctx.fillText('200 km',4,20);ctx.fillText('100 km',4,h/2-5);ctx.fillText('0 km',4,h-5);
+  ctx.textAlign='right';ctx.fillText('500 km downrange',w-4,h-5);
+
+  if(!SIM.trajData.length)return;
+
+  // Scale
+  const maxAlt=200;const maxDown=500;
+  const sx=x=>(x/maxDown)*(w-20)+10;
+  const sy=y=>h-10-(y/maxAlt)*(h-20);
+
+  // Nominal trajectory (approximation)
+  ctx.strokeStyle='#ffffff22';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+  ctx.beginPath();
+  for(let t=0;t<540;t+=2){
+    const alt=Math.min(185,t*0.6-0.0004*t*t+0.0000005*t*t*t);
+    const down=t*0.8;
+    if(alt<0)continue;
+    const px=sx(down),py=sy(Math.max(0,alt));
+    t===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+  }
+  ctx.stroke();ctx.setLineDash([]);
+
+  // Actual trajectory
+  ctx.strokeStyle='#00d4ff';ctx.lineWidth=2;ctx.shadowColor='#00d4ff';ctx.shadowBlur=4;
+  ctx.beginPath();
+  SIM.trajData.forEach((d,i)=>{
+    const px=sx(d.down),py=sy(d.alt);
+    i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+  });
+  ctx.stroke();ctx.shadowBlur=0;
+
+  // Current position
+  if(SIM.trajData.length){
+    const last=SIM.trajData[SIM.trajData.length-1];
+    const px=sx(last.down),py=sy(last.alt);
+    ctx.fillStyle='#00d4ff';ctx.beginPath();ctx.arc(px,py,4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(px,py,2,0,Math.PI*2);ctx.fill();
+  }
+}
+
+// === HELPERS ===
+function addLog(msg,type='info'){
+  const t=SIM.state==='flight'||SIM.state==='orbit'?'T+'+formatTime(SIM.missionTime):'T-'+formatTime(SIM.countdownSec);
+  SIM.logEntries.push({time:t,msg,type});
+  renderLog();
+}
+
+function updateStatus(text,color){
+  document.getElementById('statusText').textContent=text;
+  const light=document.getElementById('statusLight');
+  light.className='status-light'+(color==='red'?' red':color==='yellow'?' yellow':'');
+}
+
+function showAlert(msg){
+  const el=document.getElementById('alertBar');el.textContent=msg;el.classList.add('show');
+}
+
+function showFlightEvent(msg){
+  const el=document.getElementById('flightEvent');el.textContent=msg;el.style.display='block';
+  el.style.animation='none';el.offsetHeight;el.style.animation='fadeInOut 3s forwards';
+  setTimeout(()=>{el.style.display='none'},3100);
+}
+
+function cycleCheck(el){
+  const states=['pass','fail','pending','skip'];
+  const icons={pass:'✓',fail:'✗',pending:'?',skip:'—'};
+  const current=states.indexOf([...el.classList].find(c=>states.includes(c))||'skip');
+  const next=(current+1)%states.length;
+  el.className='check-status '+states[next];
+  el.textContent=icons[states[next]];
+}
+
+// Init
+renderAll();
+</script>
+</body>
+</html>
