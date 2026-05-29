@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>COAL OS — Hash Forge</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000a14; display: flex; flex-direction: column;
+      align-items: center; min-height: 100vh;
+      font-family: 'Courier New', monospace; color: #00d4ff; padding: 1rem;
+    }
+    h1 { font-size: 0.8rem; letter-spacing: 3px; text-shadow: 0 0 20px #00d4ff; margin-bottom: 1rem; }
+    .panel {
+      width: 100%; max-width: 420px;
+      background: #000d1a; border: 1px solid #00d4ff33; border-radius: 6px;
+      padding: 0.75rem; margin-bottom: 0.75rem;
+    }
+    .panel-title { font-size: 0.55rem; letter-spacing: 3px; color: #475569; text-transform: uppercase; margin-bottom: 0.4rem; }
+    textarea {
+      width: 100%; background: #0a1628; border: 1px solid #00d4ff33;
+      color: #00d4ff; font-family: 'Courier New', monospace; font-size: 0.85rem;
+      padding: 0.5rem; outline: none; border-radius: 3px; resize: vertical;
+    }
+    textarea:focus { border-color: #00d4ff; box-shadow: 0 0 15px #00d4ff22; }
+    .hash-row {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.4rem 0; border-bottom: 1px solid #0a1628;
+    }
+    .hash-algo { font-size: 0.7rem; color: #64748b; width: 50px; flex-shrink: 0; }
+    .hash-val {
+      font-size: 0.65rem; color: #e2e8f0; word-break: break-all; flex: 1;
+      background: #0a1628; padding: 0.3rem; border-radius: 3px;
+    }
+    .copy-btn {
+      background: none; border: none; color: #475569; cursor: pointer;
+      font-size: 0.6rem; flex-shrink: 0;
+    }
+    .copy-btn:hover { color: #00d4ff; }
+    .back-link { margin-top: 0.5rem; font-size: 0.7rem; }
+    .back-link a { color: #475569; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <h1>◆ HASH FORGE ◆</h1>
+  <div class="panel">
+    <div class="panel-title">⬡ Input</div>
+    <textarea id="input" rows="3" placeholder="Type anything..." oninput="hash()">COAL OS</textarea>
+  </div>
+  <div class="panel">
+    <div class="panel-title">⬡ Hashes</div>
+    <div id="hashes"></div>
+  </div>
+  <div class="back-link"><a href="index.html">← BACK</a></div>
+
+  <script>
+    const algos = ['SHA-1','SHA-256','SHA-384','SHA-512'];
+
+    async function hash() {
+      const text = document.getElementById('input').value;
+      const encoder = new TextEncoder();
+      const data = encoder.encode(text);
+      const container = document.getElementById('hashes');
+      container.innerHTML = '';
+
+      for (const algo of algos) {
+        const buf = await crypto.subtle.digest(algo, data);
+        const arr = Array.from(new Uint8Array(buf));
+        const hex = arr.map(b => b.toString(16).padStart(2,'0')).join('');
+        container.innerHTML += `
+          <div class="hash-row">
+            <span class="hash-algo">${algo}</span>
+            <span class="hash-val" id="h-${algo}">${hex}</span>
+            <button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('h-${algo}').textContent)">COPY</button>
+          </div>`;
+      }
+    }
+    hash();
+  </script>
+</body>
+</html>
