@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>COAL OS — Morse Encoder</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000a14;
+      display: flex; flex-direction: column; align-items: center;
+      min-height: 100vh;
+      font-family: 'Courier New', monospace;
+      color: #00d4ff;
+      padding: 1rem;
+    }
+    h1 { font-size: 0.9rem; letter-spacing: 3px; text-shadow: 0 0 20px #00d4ff; margin-bottom: 1rem; }
+    .panel {
+      width: 100%; max-width: 400px;
+      background: #000d1a; border: 1px solid #00d4ff33; border-radius: 6px;
+      padding: 1rem; margin-bottom: 0.75rem;
+    }
+    .panel-title {
+      font-size: 0.55rem; letter-spacing: 3px; color: #475569;
+      text-transform: uppercase; margin-bottom: 0.5rem;
+    }
+    textarea, input {
+      width: 100%; background: #0a1628; border: 1px solid #00d4ff33;
+      color: #00d4ff; font-family: 'Courier New', monospace; font-size: 0.85rem;
+      padding: 0.5rem; outline: none; border-radius: 3px; resize: vertical;
+    }
+    textarea:focus, input:focus { border-color: #00d4ff; box-shadow: 0 0 15px #00d4ff22; }
+    .output {
+      background: #0a1628; border: 1px solid #00d4ff33; border-radius: 3px;
+      padding: 0.75rem; font-size: 1rem; letter-spacing: 2px;
+      min-height: 3rem; word-break: break-all; color: #e2e8f0;
+    }
+    .buttons { display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap; }
+    .buttons button {
+      background: transparent; border: 1px solid #00d4ff44; color: #00d4ff;
+      font-family: 'Courier New', monospace; font-size: 0.7rem;
+      padding: 0.3rem 0.8rem; cursor: pointer; transition: all 0.3s; border-radius: 3px;
+    }
+    .buttons button:hover { background: #00d4ff; color: #000; }
+    .visual { display: flex; gap: 2px; flex-wrap: wrap; margin-top: 0.5rem; align-items: center; }
+    .dot { width: 6px; height: 6px; background: #00d4ff; border-radius: 50%; box-shadow: 0 0 6px #00d4ff; }
+    .dash { width: 18px; height: 6px; background: #00d4ff; border-radius: 3px; box-shadow: 0 0 6px #00d4ff; }
+    .space { width: 10px; }
+    .word-space { width: 20px; }
+    .back-link { margin-top: 1rem; font-size: 0.7rem; }
+    .back-link a { color: #475569; text-decoration: none; }
+    .reference { font-size: 0.6rem; color: #334155; margin-top: 0.25rem; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <h1>◆ MORSE ENCODER ◆</h1>
+
+  <div class="panel">
+    <div class="panel-title">⬡ Input Text</div>
+    <textarea id="input" rows="3" placeholder="Type your message..." oninput="encode()">COAL OS ONLINE</textarea>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">⬡ Morse Code</div>
+    <div class="output" id="morseOutput">-.-. --- .- .-.. / --- ... / --- -. .-.. .. -. .</div>
+    <div class="visual" id="visual"></div>
+    <div class="buttons">
+      <button onclick="playMorse()">▶ PLAY</button>
+      <button onclick="copyMorse()">COPY</button>
+      <button onclick="decode()">← DECODE</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">⬡ Quick Reference</div>
+    <div class="reference" id="ref"></div>
+  </div>
+
+  <div class="back-link"><a href="index.html">← BACK TO COAL OS</a></div>
+
+  <script>
+    const MORSE = {
+      'A':'.-','B':'-...','C':'-.-.','D':'-..','E':'.','F':'..-.','G':'--.','H':'....',
+      'I':'..','J':'.---','K':'-.-','L':'.-..','M':'--','N':'-.','O':'---','P':'.--.',
+      'Q':'--.-','R':'.-.','S':'...','T':'-','U':'..-','V':'...-','W':'.--','X':'-..-',
+      'Y':'-.--','Z':'--..','0':'-----','1':'.----','2':'..---','3':'...--','4':'....-',
+      '5':'.....','6':'-....','7':'--...','8':'---..','9':'----.', ' ':'/'
+    };
+    const REVERSE = {};
+    for (const [k,v] of Object.entries(MORSE)) REVERSE[v] = k;
+
+    // Reference
+    let refHTML = '';
+    for (const [k,v] of Object.entries(MORSE)) {
+      refHTML += `<span style="color:#00d4ff">${k}</span>:${v} &nbsp;`;
+    }
+    document.getElementById('ref').innerHTML = refHTML;
+
+    function encode() {
+      const text = document.getElementById('input').value.toUpperCase();
+      const morse = text.split('').map(c => MORSE[c] || '').filter(Boolean).join(' ');
+      document.getElementById('morseOutput').textContent = morse;
+      renderVisual(morse);
+    }
+
+    function renderVisual(morse) {
+      const div = document.getElementById('visual');
+      div.innerHTML = '';
+      for (const ch of morse) {
+        if (ch === '.') div.innerHTML += '<div class="dot"></div>';
+        else if (ch === '-') div.innerHTML += '<div class="dash"></div>';
+        else if (ch === '/') div.innerHTML += '<div class="word-space"></div>';
+        else if (ch === ' ') div.innerHTML += '<div class="space"></div>';
+      }
+    }
+
+    function decode() {
+      const morse = document.getElementById('morseOutput').textContent;
+      const text = morse.split(' / ').map(word =>
+        word.split(' ').map(code => REVERSE[code] || '?').join('')
+      ).join(' ');
+      document.getElementById('input').value = text;
+    }
+
+    function copyMorse() {
+      navigator.clipboard.writeText(document.getElementById('morseOutput').textContent);
+    }
+
+    function playMorse() {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const morse = document.getElementById('morseOutput').textContent;
+      let t = audioCtx.currentTime;
+      const dotDur = 0.08;
+
+      for (const ch of morse) {
+        if (ch === '.') {
+          beep(audioCtx, t, dotDur);
+          t += dotDur + dotDur;
+        } else if (ch === '-') {
+          beep(audioCtx, t, dotDur * 3);
+          t += dotDur * 3 + dotDur;
+        } else if (ch === '/') {
+          t += dotDur * 7;
+        } else if (ch === ' ') {
+          t += dotDur * 3;
+        }
+      }
+    }
+
+    function beep(ctx, start, dur) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 680;
+      gain.gain.value = 0.15;
+      osc.start(start);
+      osc.stop(start + dur);
+    }
+
+    // Init
+    encode();
+  </script>
+</body>
+</html>
