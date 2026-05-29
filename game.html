@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>COAL OS — Diamond Runner</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000a14;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: 'Courier New', monospace;
+      color: #00d4ff;
+      overflow: hidden;
+    }
+    canvas {
+      border: 1px solid #00d4ff33;
+      display: block;
+      max-width: 100%;
+      touch-action: none;
+    }
+    .game-header {
+      text-align: center;
+      margin-bottom: 0.5rem;
+    }
+    .game-header h1 {
+      font-size: 1rem;
+      letter-spacing: 3px;
+      text-shadow: 0 0 20px #00d4ff;
+    }
+    .score-bar {
+      display: flex;
+      justify-content: space-between;
+      width: 320px;
+      max-width: 100%;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.8rem;
+      color: #64748b;
+    }
+    .score-bar span { color: #00d4ff; }
+    .game-over {
+      position: absolute;
+      text-align: center;
+      display: none;
+    }
+    .game-over h2 { font-size: 1.2rem; color: #ef4444; letter-spacing: 3px; }
+    .game-over p { color: #64748b; font-size: 0.8rem; margin-top: 0.5rem; }
+    .game-over button {
+      margin-top: 1rem;
+      background: transparent;
+      border: 1px solid #00d4ff;
+      color: #00d4ff;
+      font-family: 'Courier New', monospace;
+      padding: 0.4rem 1rem;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .back-link {
+      margin-top: 0.5rem;
+      font-size: 0.7rem;
+    }
+    .back-link a { color: #475569; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="game-header"><h1>◆ DIAMOND RUNNER ◆</h1></div>
+  <div class="score-bar">
+    <div>SCORE: <span id="score">0</span></div>
+    <div>HIGH: <span id="highScore">0</span></div>
+  </div>
+  <canvas id="game" width="320" height="480"></canvas>
+  <div class="game-over" id="gameOver">
+    <h2>SYSTEM CRASH</h2>
+    <p>Score: <span id="finalScore">0</span></p>
+    <button onclick="startGame()">REBOOT</button>
+  </div>
+  <div class="back-link"><a href="index.html">← BACK TO COAL OS</a></div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const W = 320, H = 480;
+
+    let player, obstacles, gems, particles, score, speed, running, animId;
+    let highScore = parseInt(localStorage.getItem('coalHighScore') || '0');
+    document.getElementById('highScore').textContent = highScore;
+
+    class Particle {
+      constructor(x, y, color) {
+        this.x = x; this.y = y;
+        this.vx = (Math.random()-0.5)*4;
+        this.vy = (Math.random()-0.5)*4;
+        this.life = 30;
+        this.color = color;
+      }
+      update() { this.x+=this.vx; this.y+=this.vy; this.life--; }
+      draw() {
+        ctx.globalAlpha = this.life/30;
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x-1, this.y-1, 2, 2);
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    function startGame() {
+      document.getElementById('gameOver').style.display = 'none';
+      player = { x: W/2-10, y: H-60, w: 20, h: 20, color: '#00d4ff' };
+      obstacles = [];
+      gems = [];
+      particles = [];
+      score = 0;
+      speed = 2;
+      running = true;
+      document.getElementById('score').textContent = '0';
+      if (animId) cancelAnimationFrame(animId);
+      loop();
+    }
+
+    function spawnObstacle() {
+      const w = 30 + Math.random()*60;
+      obstacles.push({
+        x: Math.random()*(W-w), y: -20, w: w, h: 12,
+        color: '#ef4444'
+      });
+    }
+
+    function spawnGem() {
+      gems.push({
+        x: Math.random()*(W-10), y: -10, w: 10, h: 10,
+        glow: 0
+      });
+    }
+
+    function collides(a, b) {
+      return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y;
+    }
+
+    let frame = 0;
+    function loop() {
+      if (!running) return;
+      animId = requestAnimationFrame(loop);
+      frame++;
+
+      // Spawn
+      if (frame % 40 === 0) spawnObstacle();
+      if (frame % 60 === 0) spawnGem();
+
+      // Speed up
+      if (frame % 300 === 0) speed += 0.3;
+
+      // Clear
+      ctx.fillStyle = '#000a14';
+      ctx.fillRect(0, 0, W, H);
+
+      // Grid lines
+      ctx.strokeStyle = '#00d4ff08';
+      for (let y = (frame*speed)%40; y < H; y += 40) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+      }
+
+      // Move & draw obstacles
+      for (let i = obstacles.length-1; i >= 0; i--) {
+        const o = obstacles[i];
+        o.y += speed;
+        if (o.y > H) { obstacles.splice(i, 1); continue; }
+        ctx.fillStyle = o.color;
+        ctx.shadowColor = o.color;
+        ctx.shadowBlur = 8;
+        ctx.fillRect(o.x, o.y, o.w, o.h);
+        ctx.shadowBlur = 0;
+        if (collides(player, o)) {
+          // Crash
+          for (let j = 0; j < 30; j++) particles.push(new Particle(player.x+10, player.y+10, '#ef4444'));
+          running = false;
+          if (score > highScore) {
+            highScore = score;
+            localStorage.setItem('coalHighScore', highScore);
+            document.getElementById('highScore').textContent = highScore;
+          }
+          document.getElementById('finalScore').textContent = score;
+          document.getElementById('gameOver').style.display = 'block';
+          deathLoop();
+          return;
+        }
+      }
+
+      // Move & draw gems
+      for (let i = gems.length-1; i >= 0; i--) {
+        const g = gems[i];
+        g.y += speed * 0.8;
+        g.glow = (g.glow + 0.1) % (Math.PI*2);
+        if (g.y > H) { gems.splice(i, 1); continue; }
+        ctx.save();
+        ctx.translate(g.x+5, g.y+5);
+        ctx.rotate(Math.PI/4);
+        ctx.fillStyle = '#e2e8f0';
+        ctx.shadowColor = '#00d4ff';
+        ctx.shadowBlur = 10 + Math.sin(g.glow)*5;
+        ctx.fillRect(-5, -5, 10, 10);
+        ctx.shadowBlur = 0;
+        ctx.restore();
+        if (collides(player, g)) {
+          score += 10;
+          document.getElementById('score').textContent = score;
+          for (let j = 0; j < 10; j++) particles.push(new Particle(g.x+5, g.y+5, '#00d4ff'));
+          gems.splice(i, 1);
+        }
+      }
+
+      // Draw player (diamond shape)
+      ctx.save();
+      ctx.translate(player.x+10, player.y+10);
+      ctx.rotate(Math.PI/4);
+      ctx.fillStyle = player.color;
+      ctx.shadowColor = player.color;
+      ctx.shadowBlur = 15;
+      ctx.fillRect(-8, -8, 16, 16);
+      ctx.shadowBlur = 0;
+      ctx.restore();
+
+      // Particles
+      for (let i = particles.length-1; i >= 0; i--) {
+        particles[i].update();
+        particles[i].draw();
+        if (particles[i].life <= 0) particles.splice(i, 1);
+      }
+
+      // Score ticks from surviving
+      if (frame % 10 === 0) {
+        score++;
+        document.getElementById('score').textContent = score;
+      }
+    }
+
+    function deathLoop() {
+      ctx.fillStyle = 'rgba(0,10,20,0.05)';
+      ctx.fillRect(0, 0, W, H);
+      for (let i = particles.length-1; i >= 0; i--) {
+        particles[i].update();
+        particles[i].draw();
+        if (particles[i].life <= 0) particles.splice(i, 1);
+      }
+      if (particles.length > 0) requestAnimationFrame(deathLoop);
+    }
+
+    // Controls
+    let touching = false;
+    canvas.addEventListener('touchstart', e => { e.preventDefault(); touching = true; handleInput(e.touches[0]); });
+    canvas.addEventListener('touchmove', e => { e.preventDefault(); if (touching) handleInput(e.touches[0]); });
+    canvas.addEventListener('touchend', () => touching = false);
+    canvas.addEventListener('mousemove', e => { if (!('ontouchstart' in window)) handleInput(e); });
+
+    function handleInput(e) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = W / rect.width;
+      const x = (e.clientX - rect.left) * scaleX;
+      player.x = Math.max(0, Math.min(W - player.w, x - player.w/2));
+    }
+
+    // Keyboard
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowLeft') player.x = Math.max(0, player.x - 15);
+      if (e.key === 'ArrowRight') player.x = Math.min(W - player.w, player.x + 15);
+    });
+
+    startGame();
+  </script>
+</body>
+</html>

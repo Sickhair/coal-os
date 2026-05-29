@@ -1,0 +1,28 @@
+[debug] [2026-05-29T02:09:25.395Z] ----------------------------------------------------------------------
+[debug] [2026-05-29T02:09:25.396Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Mathew\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js projects:create coal-os-hud
+[debug] [2026-05-29T02:09:25.397Z] CLI Version:   15.5.1
+[debug] [2026-05-29T02:09:25.397Z] Platform:      win32
+[debug] [2026-05-29T02:09:25.397Z] Node Version:  v24.13.0
+[debug] [2026-05-29T02:09:25.397Z] Time:          Thu May 28 2026 22:09:25 GMT-0400 (Eastern Daylight Time)
+[debug] [2026-05-29T02:09:25.397Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-05-29T02:09:25.498Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-05-29T02:09:25.498Z] > authorizing via signed-in user (mathewderecichei@gmail.com)
+[debug] [2026-05-29T02:09:25.500Z] Checked if tokens are valid: true, expires at: 1780024122499
+[debug] [2026-05-29T02:09:25.500Z] Checked if tokens are valid: true, expires at: 1780024122499
+[debug] [2026-05-29T02:09:25.501Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects [none]
+[debug] [2026-05-29T02:09:25.501Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects {"projectId":"coal-os-hud","name":"coal-os-hud"}
+[debug] [2026-05-29T02:09:25.768Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects 200
+[debug] [2026-05-29T02:09:25.768Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects {"name":"operations/create_project.global.6698079211338057966"}
+[debug] [2026-05-29T02:09:25.768Z] Checked if tokens are valid: true, expires at: 1780024122499
+[debug] [2026-05-29T02:09:25.768Z] Checked if tokens are valid: true, expires at: 1780024122499
+[debug] [2026-05-29T02:09:25.768Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/operations/create_project.global.6698079211338057966 [none]
+[debug] [2026-05-29T02:09:25.924Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/operations/create_project.global.6698079211338057966 200
+[debug] [2026-05-29T02:09:25.924Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/operations/create_project.global.6698079211338057966 {"name":"operations/create_project.global.6698079211338057966","metadata":{"@type":"type.googleapis.com/google.cloudresourcemanager.v1.ProjectCreationStatus","ready":true},"done":true,"error":{"code":8,"message":"The project cannot be created because you have exceeded your allotted project quota.","details":[{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"description":"The project cannot be created because you have exceeded your allotted project quota."}]}]}}
+[debug] [2026-05-29T02:09:26.087Z] FirebaseError: The project cannot be created because you have exceeded your allotted project quota.
+    at OperationPoller.poll (C:\Users\Mathew\AppData\Roaming\npm\node_modules\firebase-tools\lib\operation-poller.js:25:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async createCloudProject (C:\Users\Mathew\AppData\Roaming\npm\node_modules\firebase-tools\lib\management\projects.js:237:29)
+    at async createFirebaseProjectAndLog (C:\Users\Mathew\AppData\Roaming\npm\node_modules\firebase-tools\lib\management\projects.js:102:9)
+[error] 
+[error] Error: Failed to create project. See firebase-debug.log for more info.
