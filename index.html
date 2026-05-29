@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>COAL OS — Jarvis Interface</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#000a14">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --cyan: #00d4ff;
+      --cyan-dim: #00d4ff44;
+      --cyan-glow: #00d4ff22;
+      --blue: #3b82f6;
+      --red: #ef4444;
+      --green: #22c55e;
+      --yellow: #eab308;
+      --bg: #000a14;
+      --panel-bg: #000d1a;
+      --border: #00d4ff33;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--cyan);
+      font-family: 'Rajdhani', -apple-system, sans-serif;
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+      overflow-x: hidden;
+      cursor: crosshair;
+    }
+
+    html { height: -webkit-fill-available; }
+
+    /* Subtle scanline */
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,212,255,0.012) 2px, rgba(0,212,255,0.012) 4px);
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* === TOP BAR === */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.6rem 1rem;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, #00102088, transparent);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+    }
+
+    .top-bar-left { display: flex; align-items: center; gap: 0.75rem; }
+
+    .logo-text {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-shadow: 0 0 20px var(--cyan), 0 0 40px var(--cyan-dim);
+    }
+    .logo-text .diamond { color: #fff; text-shadow: 0 0 20px #fff; }
+
+    .status-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse-dot 2s infinite;
+    }
+
+    @keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+
+    .top-bar-right {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.75rem;
+      text-align: right;
+      text-shadow: 0 0 10px var(--cyan-dim);
+    }
+    .top-bar-right .date-line { font-size: 0.6rem; color: #475569; }
+
+    /* === MOBILE-FIRST GRID === */
+    .main-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      max-width: 1800px;
+      margin: 0 auto;
+    }
+
+    /* Panel base */
+    .panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.75rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .panel::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    }
+
+    .panel-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.55rem;
+      font-weight: 600;
+      letter-spacing: 3px;
+      color: #475569;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+
+    /* === ARC REACTOR === */
+    .arc-reactor-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1.5rem 0.75rem;
+    }
+
+    .arc-reactor {
+      position: relative;
+      width: 180px;
+      height: 180px;
+    }
+
+    .arc-ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid var(--cyan-dim);
+    }
+
+    .arc-ring-1 {
+      width: 180px; height: 180px; top: 0; left: 0;
+      border-width: 2px; border-color: var(--cyan);
+      animation: spin 20s linear infinite;
+    }
+    .arc-ring-2 {
+      width: 150px; height: 150px; top: 15px; left: 15px;
+      animation: spin 15s linear infinite reverse;
+    }
+    .arc-ring-3 {
+      width: 120px; height: 120px; top: 30px; left: 30px;
+      border-width: 2px;
+      animation: spin 10s linear infinite;
+    }
+
+    .arc-core {
+      position: absolute;
+      width: 80px; height: 80px; top: 50px; left: 50px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--cyan) 0%, #003050 40%, transparent 70%);
+      box-shadow: 0 0 60px var(--cyan), 0 0 120px var(--cyan-dim);
+      animation: core-pulse 3s ease-in-out infinite;
+    }
+
+    .arc-core-text {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.3rem; font-weight: 900; color: #fff;
+      text-shadow: 0 0 20px var(--cyan);
+    }
+
+    .arc-core-sub {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, calc(-50% + 16px));
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.5rem; color: var(--cyan); letter-spacing: 2px;
+    }
+
+    .arc-ring-1::after {
+      content: ''; position: absolute; top: -1px; left: 50%;
+      width: 3px; height: 3px; background: #fff;
+      border-radius: 50%; box-shadow: 0 0 10px #fff;
+    }
+
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes core-pulse {
+      0%,100% { box-shadow: 0 0 60px var(--cyan), 0 0 120px var(--cyan-dim); }
+      50% { box-shadow: 0 0 80px var(--cyan), 0 0 160px var(--cyan-dim); }
+    }
+
+    /* Voice */
+    .voice-section { margin-top: 1rem; text-align: center; width: 100%; }
+
+    .voice-btn {
+      background: transparent;
+      border: 1px solid var(--cyan);
+      color: var(--cyan);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.6rem; letter-spacing: 2px;
+      padding: 0.5rem 1.25rem;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      -webkit-user-select: none;
+    }
+    .voice-btn:hover, .voice-btn.listening {
+      background: var(--cyan); color: #000;
+      box-shadow: 0 0 30px var(--cyan-dim);
+    }
+    .voice-btn.listening { animation: v-pulse 1s infinite; }
+    @keyframes v-pulse {
+      0%,100% { box-shadow: 0 0 30px var(--cyan-dim); }
+      50% { box-shadow: 0 0 60px var(--cyan); }
+    }
+
+    .voice-text {
+      margin-top: 0.5rem;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.7rem; color: #475569;
+      min-height: 1rem;
+    }
+    .voice-text.active { color: var(--cyan); text-shadow: 0 0 10px var(--cyan-dim); }
+
+    /* === QUICK STATS ROW === */
+    .quick-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+    }
+
+    .stat-card { text-align: center; }
+    .stat-card .stat-val {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1rem; font-weight: 700;
+      text-shadow: 0 0 10px var(--cyan-dim);
+    }
+    .stat-card .stat-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.55rem; color: #475569; margin-top: 0.15rem;
+    }
+
+    /* === TWO-COL ROWS === */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+
+    /* Stat rows */
+    .stat-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.3rem 0; border-bottom: 1px solid #0a1628;
+      font-size: 0.8rem;
+    }
+    .stat-row .stat-label {
+      color: #475569; font-family: 'Share Tech Mono', monospace; font-size: 0.65rem;
+    }
+    .stat-row .stat-value {
+      font-family: 'Share Tech Mono', monospace; font-size: 0.75rem;
+      text-shadow: 0 0 8px var(--cyan-dim);
+    }
+    .green { color: var(--green) !important; }
+    .red { color: var(--red) !important; }
+    .up { color: var(--green); }
+    .down { color: var(--red); }
+
+    /* Ticker */
+    .ticker-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.4rem 0; border-bottom: 1px solid #0a1628;
+    }
+    .ticker-symbol {
+      font-family: 'Orbitron', sans-serif; font-size: 0.65rem; font-weight: 600; width: 40px;
+    }
+    .ticker-price {
+      font-family: 'Share Tech Mono', monospace; font-size: 0.8rem; flex: 1; text-align: right;
+    }
+    .ticker-change {
+      font-family: 'Share Tech Mono', monospace; font-size: 0.7rem; width: 60px; text-align: right;
+    }
+
+    /* Weather */
+    .weather-temp {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.4rem; font-weight: 700; color: #fff;
+      text-shadow: 0 0 15px var(--cyan-dim);
+    }
+    .weather-desc { font-size: 0.75rem; color: #64748b; margin-top: 0.15rem; }
+    .weather-location {
+      font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; color: #475569; margin-top: 0.1rem;
+    }
+
+    /* Projects */
+    .project-item { margin-bottom: 0.6rem; }
+    .project-name { font-size: 0.8rem; font-weight: 600; color: #e2e8f0; margin-bottom: 0.2rem; }
+    .progress-bar {
+      width: 100%; height: 3px; background: #0a1628; border-radius: 2px; overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--cyan), var(--blue));
+      border-radius: 2px;
+      transition: width 1s ease;
+    }
+    .project-pct {
+      font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; color: #475569; margin-top: 0.1rem;
+    }
+
+    /* Cron */
+    .cron-item {
+      display: flex; justify-content: space-between;
+      padding: 0.3rem 0; border-bottom: 1px solid #0a1628; font-size: 0.75rem;
+    }
+    .cron-name { color: #94a3b8; font-size: 0.75rem; }
+    .cron-next {
+      font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: var(--cyan);
+    }
+
+    /* Chat */
+    .chat-messages {
+      max-height: 120px; overflow-y: auto; margin-bottom: 0.5rem;
+      padding-right: 0.25rem;
+    }
+    .chat-messages::-webkit-scrollbar { width: 2px; }
+    .chat-messages::-webkit-scrollbar-track { background: #0a1628; }
+    .chat-messages::-webkit-scrollbar-thumb { background: var(--cyan-dim); }
+
+    .chat-msg { margin-bottom: 0.35rem; font-size: 0.75rem; }
+    .chat-msg .sender {
+      font-family: 'Orbitron', sans-serif; font-size: 0.5rem; color: #475569; letter-spacing: 1px;
+    }
+    .chat-msg .text { color: #94a3b8; }
+
+    .chat-input-row { display: flex; gap: 0.4rem; }
+    .chat-input {
+      flex: 1; background: #0a1628; border: 1px solid var(--border);
+      color: var(--cyan); font-family: 'Share Tech Mono', monospace;
+      font-size: 0.8rem; padding: 0.4rem 0.6rem; outline: none;
+      border-radius: 3px;
+    }
+    .chat-input:focus { border-color: var(--cyan); box-shadow: 0 0 15px var(--cyan-dim); }
+    .chat-send {
+      background: transparent; border: 1px solid var(--cyan); color: var(--cyan);
+      font-family: 'Orbitron', sans-serif; font-size: 0.5rem; letter-spacing: 2px;
+      padding: 0 0.75rem; cursor: pointer; transition: all 0.3s; border-radius: 3px;
+    }
+    .chat-send:hover { background: var(--cyan); color: #000; }
+
+    /* Bottom */
+    .bottom-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.4rem 1rem; border-top: 1px solid var(--border);
+      font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; color: #1e293b;
+      margin-top: 0.5rem;
+    }
+
+    /* Refresh indicator */
+    .refresh-indicator {
+      display: flex; align-items: center; gap: 0.3rem;
+      font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #334155;
+    }
+    .refresh-dot {
+      width: 4px; height: 4px; border-radius: 50%; background: var(--green);
+    }
+
+    /* Desktop layout */
+    @media (min-width: 900px) {
+      .main-grid {
+        display: grid;
+        grid-template-columns: 1fr 1.5fr 1fr;
+        gap: 1rem;
+        padding: 1.25rem 2rem;
+      }
+      .arc-reactor-panel { grid-column: 2; grid-row: 1 / 3; }
+      .quick-stats-wrapper { grid-column: 1 / 4; }
+      .chat-panel { grid-column: 1 / 4; }
+      .two-col-desktop { display: contents; }
+    }
+
+    /* Loading shimmer */
+    .loading {
+      background: linear-gradient(90deg, #0a1628 25%, #0f1d35 50%, #0a1628 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 3px;
+      min-width: 40px;
+      display: inline-block;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  </style>
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <div class="logo-text">COAL <span class="diamond">◆</span> OS</div>
+      <div class="status-dot"></div>
+    </div>
+    <div class="top-bar-right">
+      <div id="clock">--:--:--</div>
+      <div class="date-line" id="date">----</div>
+    </div>
+  </div>
+
+  <div class="main-grid">
+
+    <!-- System Stats -->
+    <div class="panel">
+      <div class="panel-title">⬡ System Status</div>
+      <div class="stat-row"><span class="stat-label">HOST</span><span class="stat-value">DESKTOP-NHCADFO</span></div>
+      <div class="stat-row"><span class="stat-label">UPTIME</span><span class="stat-value" id="uptime">--</span></div>
+      <div class="stat-row"><span class="stat-label">MODEL</span><span class="stat-value">zai/glm-5.1</span></div>
+      <div class="stat-row"><span class="stat-label">HEARTBEAT</span><span class="stat-value green">30m</span></div>
+      <div class="stat-row"><span class="stat-label">CRONS</span><span class="stat-value green">3 ACTIVE</span></div>
+    </div>
+
+    <!-- Arc Reactor -->
+    <div class="panel arc-reactor-panel">
+      <div class="panel-title">⬡ Core Interface</div>
+      <div class="arc-reactor">
+        <div class="arc-ring arc-ring-1"></div>
+        <div class="arc-ring arc-ring-2"></div>
+        <div class="arc-ring arc-ring-3"></div>
+        <div class="arc-core">
+          <div class="arc-core-text">COAL</div>
+          <div class="arc-core-sub">ONLINE</div>
+        </div>
+      </div>
+      <div class="voice-section">
+        <button class="voice-btn" id="voiceBtn" onclick="toggleVoice()">🎤 Voice</button>
+        <div class="voice-text" id="voiceText">Tap to speak</div>
+      </div>
+    </div>
+
+    <!-- Market Ticker -->
+    <div class="panel">
+      <div class="panel-title">⬡ Market Feed</div>
+      <div class="ticker-item">
+        <span class="ticker-symbol">USO</span>
+        <span class="ticker-price" id="usoPrice"><span class="loading">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></span>
+        <span class="ticker-change" id="usoChange">--</span>
+      </div>
+      <div class="ticker-item">
+        <span class="ticker-symbol">BTC</span>
+        <span class="ticker-price" id="btcPrice"><span class="loading">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></span>
+        <span class="ticker-change" id="btcChange">--</span>
+      </div>
+      <div class="ticker-item">
+        <span class="ticker-symbol">XRP</span>
+        <span class="ticker-price" id="xrpPrice"><span class="loading">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></span>
+        <span class="ticker-change" id="xrpChange">--</span>
+      </div>
+      <div style="margin-top: 0.5rem; display: flex; justify-content: space-between;">
+        <span class="stat-label">UPDATED</span>
+        <span class="stat-value" id="marketTime" style="font-size:0.65rem;">--</span>
+      </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="panel quick-stats-wrapper" style="grid-column: 1 / -1;">
+      <div class="quick-stats">
+        <div class="stat-card">
+          <div class="stat-val" id="weatherTemp"><span class="loading">&nbsp;&nbsp;&nbsp;</span></div>
+          <div class="stat-label" id="weatherDesc">LOADING</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" id="nextCron">--</div>
+          <div class="stat-label">NEXT CRON</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val green" id="projectCount">4</div>
+          <div class="stat-label">ACTIVE PROJECTS</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Projects -->
+    <div class="panel">
+      <div class="panel-title">⬡ Projects</div>
+      <div id="projectsList">
+        <div class="project-item">
+          <div class="project-name">Foreclosure Feed</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:80%"></div></div>
+          <div class="project-pct">80% — Live, ToS done</div>
+        </div>
+        <div class="project-item">
+          <div class="project-name">Dere Digital</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:65%"></div></div>
+          <div class="project-pct">65% — Templates pending</div>
+        </div>
+        <div class="project-item">
+          <div class="project-name">QuickFix</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:70%"></div></div>
+          <div class="project-pct">70% — Security fixes</div>
+        </div>
+        <div class="project-item">
+          <div class="project-name">Harvest Time</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:55%"></div></div>
+          <div class="project-pct">55% — Frontend wiring</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Weather Detail -->
+    <div class="panel">
+      <div class="panel-title">⬡ Weather</div>
+      <div class="weather-temp" id="weatherTempFull"><span class="loading">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
+      <div class="weather-desc" id="weatherDescFull">Loading...</div>
+      <div class="weather-location">Shelby Township, MI 48315</div>
+      <div style="margin-top: 0.5rem;">
+        <div class="stat-row"><span class="stat-label">WIND</span><span class="stat-value" id="weatherWind">--</span></div>
+        <div class="stat-row"><span class="stat-label">HUMIDITY</span><span class="stat-value" id="weatherHumid">--</span></div>
+        <div class="stat-row"><span class="stat-label">FEELS LIKE</span><span class="stat-value" id="weatherFeel">--</span></div>
+      </div>
+    </div>
+
+    <!-- Crons -->
+    <div class="panel">
+      <div class="panel-title">⬡ Scheduled Tasks</div>
+      <div class="cron-item"><span class="cron-name">Daily Journal</span><span class="cron-next">9 PM</span></div>
+      <div class="cron-item"><span class="cron-name">Memory Maint.</span><span class="cron-next">Sun 3 AM</span></div>
+      <div class="cron-item"><span class="cron-name">Health Check</span><span class="cron-next">6 AM</span></div>
+    </div>
+
+    <!-- Chat -->
+    <div class="panel chat-panel" style="grid-column: 1 / -1;">
+      <div class="panel-title">⬡ Direct Interface</div>
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-msg"><div class="sender">COAL</div><div class="text">Systems online. All panels operational.</div></div>
+      </div>
+      <div class="chat-input-row">
+        <input class="chat-input" id="chatInput" placeholder="Type a command..." onkeydown="if(event.key==='Enter')sendChat()">
+        <button class="chat-send" onclick="sendChat()">EXEC</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom -->
+  <div class="bottom-bar">
+    <span>COAL OS v1.0</span>
+    <div class="refresh-indicator"><div class="refresh-dot"></div><span id="lastRefresh">--</span></div>
+    <span>QUICKFIX LLC</span>
+  </div>
+
+  <script>
+    const BOOT_TIME = Date.now();
+
+    // Clock
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('clock').textContent = now.toLocaleTimeString('en-US',{hour12:true,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      document.getElementById('date').textContent = now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Uptime
+    function updateUptime() {
+      const ms = Date.now() - BOOT_TIME;
+      const s = Math.floor(ms/1000);
+      const h = Math.floor(s/3600);
+      const m = Math.floor((s%3600)/60);
+      document.getElementById('uptime').textContent = h+'h '+m+'m';
+    }
+    setInterval(updateUptime, 60000);
+    updateUptime();
+
+    // Next cron
+    function updateNextCron() {
+      const now = new Date();
+      const h = now.getHours();
+      // Health check at 6, Journal at 21
+      let next = 6;
+      if (h >= 21) next = 6; // next day 6am
+      else if (h >= 6) next = 21;
+      const diff = next > h ? (next-h) : (24-h+next);
+      document.getElementById('nextCron').textContent = diff+'h';
+    }
+    updateNextCron();
+    setInterval(updateNextCron, 60000);
+
+    // === LIVE MARKET DATA ===
+    async function fetchMarket() {
+      try {
+        // USO from Finnhub
+        const usoResp = await fetch('https://finnhub.io/api/v1/quote?symbol=USO&token=d7l47n1r01qm7o0aef50d7l47n1r01qm7o0aef5g');
+        const usoData = await usoResp.json();
+        if (usoData.c) {
+          document.getElementById('usoPrice').textContent = '$'+usoData.c.toFixed(2);
+          const ch = usoData.dp;
+          const chEl = document.getElementById('usoChange');
+          chEl.textContent = (ch>=0?'+':'')+ch.toFixed(2)+'%';
+          chEl.className = 'ticker-change '+(ch>=0?'up':'down');
+        }
+
+        // BTC + XRP from CoinGecko
+        const cgResp = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ripple&vs_currencies=usd&include_24hr_change=true');
+        const cgData = await cgResp.json();
+        if (cgData.bitcoin) {
+          document.getElementById('btcPrice').textContent = '$'+cgData.bitcoin.usd.toLocaleString();
+          const bch = cgData.bitcoin.usd_24h_change;
+          const bchEl = document.getElementById('btcChange');
+          bchEl.textContent = (bch>=0?'+':'')+bch.toFixed(1)+'%';
+          bchEl.className = 'ticker-change '+(bch>=0?'up':'down');
+        }
+        if (cgData.ripple) {
+          document.getElementById('xrpPrice').textContent = '$'+cgData.ripple.usd.toFixed(2);
+          const xch = cgData.ripple.usd_24h_change;
+          const xchEl = document.getElementById('xrpChange');
+          xchEl.textContent = (xch>=0?'+':'')+xch.toFixed(1)+'%';
+          xchEl.className = 'ticker-change '+(xch>=0?'up':'down');
+        }
+
+        document.getElementById('marketTime').textContent = new Date().toLocaleTimeString('en-US',{hour12:true,hour:'2-digit',minute:'2-digit'});
+      } catch(e) {
+        console.error('Market fetch error:', e);
+      }
+    }
+
+    // === LIVE WEATHER ===
+    async function fetchWeather() {
+      try {
+        const resp = await fetch('https://wttr.in/Shelby+Township+MI?format=j1');
+        const data = await resp.json();
+        const cur = data.current_condition[0];
+        const tempF = cur.temp_F;
+        const desc = cur.weatherDesc[0].value;
+        const wind = cur.windspeedMiles+' mph';
+        const humid = cur.humidity+'%';
+        const feels = cur.FeelsLikeF+'°F';
+
+        document.getElementById('weatherTemp').textContent = tempF+'°F';
+        document.getElementById('weatherDesc').textContent = desc;
+        document.getElementById('weatherTempFull').textContent = tempF+'°F';
+        document.getElementById('weatherDescFull').textContent = desc;
+        document.getElementById('weatherWind').textContent = wind;
+        document.getElementById('weatherHumid').textContent = humid;
+        document.getElementById('weatherFeel').textContent = feels;
+      } catch(e) {
+        console.error('Weather fetch error:', e);
+        document.getElementById('weatherDesc').textContent = 'Error';
+        document.getElementById('weatherDescFull').textContent = 'Fetch error';
+      }
+    }
+
+    // Initial fetch
+    fetchMarket();
+    fetchWeather();
+
+    // Auto-refresh every 60s
+    setInterval(() => {
+      fetchMarket();
+      fetchWeather();
+      document.getElementById('lastRefresh').textContent = new Date().toLocaleTimeString('en-US',{hour12:true,hour:'2-digit',minute:'2-digit'});
+    }, 60000);
+
+    document.getElementById('lastRefresh').textContent = new Date().toLocaleTimeString('en-US',{hour12:true,hour:'2-digit',minute:'2-digit'});
+
+    // === VOICE ===
+    let recognition = null;
+    let isListening = false;
+
+    function toggleVoice() {
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        document.getElementById('voiceText').textContent = 'Voice not supported';
+        return;
+      }
+      if (isListening) { recognition.stop(); return; }
+
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SR();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => {
+        isListening = true;
+        document.getElementById('voiceBtn').classList.add('listening');
+        document.getElementById('voiceText').textContent = 'Listening...';
+        document.getElementById('voiceText').classList.add('active');
+      };
+      recognition.onresult = (e) => {
+        const t = e.results[0][0].transcript;
+        document.getElementById('voiceText').textContent = '"'+t+'"';
+        if (e.results[0].isFinal) processCommand(t.toLowerCase());
+      };
+      recognition.onend = () => {
+        isListening = false;
+        document.getElementById('voiceBtn').classList.remove('listening');
+        document.getElementById('voiceText').classList.remove('active');
+      };
+      recognition.onerror = (e) => {
+        document.getElementById('voiceText').textContent = 'Error: '+e.error;
+        isListening = false;
+        document.getElementById('voiceBtn').classList.remove('listening');
+      };
+      recognition.start();
+    }
+
+    function processCommand(cmd) {
+      const r = {
+        'status': 'All systems operational. Gateway online.',
+        'time': 'Current time is '+new Date().toLocaleTimeString('en-US',{hour12:true}),
+        'hello': 'Hello Mathew. All systems at your disposal.',
+        'projects': '4 active projects. Foreclosure at 80%, Dere at 65%, QuickFix at 70%, Harvest at 55%.',
+        'market': 'Fetching latest market data now.',
+        'uso': 'Checking USO price now.',
+        'weather': 'Current conditions loaded.',
+      };
+      let resp = null;
+      for (const [k,v] of Object.entries(r)) { if (cmd.includes(k)) { resp=v; break; } }
+      if (!resp) resp = 'Command received: "'+cmd+'". Processing...';
+      document.getElementById('voiceText').textContent = resp;
+
+      if ('speechSynthesis' in window) {
+        const u = new SpeechSynthesisUtterance(resp);
+        u.rate=1.1; u.pitch=0.9; u.volume=0.8;
+        speechSynthesis.speak(u);
+      }
+    }
+
+    // === CHAT ===
+    function sendChat() {
+      const input = document.getElementById('chatInput');
+      const msg = input.value.trim();
+      if (!msg) return;
+      const div = document.getElementById('chatMessages');
+      div.innerHTML += '<div class="chat-msg"><div class="sender">USER</div><div class="text">'+msg+'</div></div>';
+      input.value = '';
+      setTimeout(() => {
+        const rs = ['Affirmative. Processing.','Command acknowledged.','Running diagnostics.','On it. Stand by.','Systems check complete.','Working on it.'];
+        div.innerHTML += '<div class="chat-msg"><div class="sender">COAL</div><div class="text">'+rs[Math.floor(Math.random()*rs.length)]+'</div></div>';
+        div.scrollTop = div.scrollHeight;
+      }, 600);
+      div.scrollTop = div.scrollHeight;
+    }
+  </script>
+</body>
+</html>
