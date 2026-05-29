@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>COAL OS — Binary Clock</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000a14;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 100vh;
+      font-family: 'Courier New', monospace;
+      color: #00d4ff;
+      padding: 1rem;
+    }
+    h1 { font-size: 0.8rem; letter-spacing: 3px; text-shadow: 0 0 20px #00d4ff; margin-bottom: 1.5rem; }
+    .clock-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 6px;
+      margin-bottom: 1rem;
+    }
+    .bit {
+      width: 32px; height: 32px;
+      border: 1px solid #00d4ff22;
+      border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem;
+      transition: all 0.3s;
+    }
+    .bit.on {
+      background: #00d4ff;
+      color: #000;
+      box-shadow: 0 0 15px #00d4ff66;
+    }
+    .bit.off {
+      background: #0a1628;
+      color: #1e293b;
+    }
+    .labels {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 6px;
+      margin-bottom: 1.5rem;
+    }
+    .label {
+      text-align: center;
+      font-size: 0.5rem;
+      letter-spacing: 2px;
+      color: #475569;
+    }
+    .decimal {
+      font-size: 2rem;
+      letter-spacing: 6px;
+      text-shadow: 0 0 30px #00d4ff44;
+      margin-bottom: 0.5rem;
+    }
+    .date-line {
+      font-size: 0.7rem;
+      color: #334155;
+      margin-bottom: 1rem;
+    }
+    .hex-time {
+      font-size: 0.8rem;
+      color: #64748b;
+      letter-spacing: 2px;
+    }
+    .back-link { margin-top: 1.5rem; font-size: 0.7rem; }
+    .back-link a { color: #475569; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <h1>◆ BINARY CLOCK ◆</h1>
+  <div class="decimal" id="decimal">--:--:--</div>
+  <div class="clock-grid" id="bits"></div>
+  <div class="labels">
+    <div class="label">H10</div><div class="label">H1</div>
+    <div class="label">M10</div><div class="label">M1</div>
+    <div class="label">S10</div><div class="label">S1</div>
+  </div>
+  <div class="date-line" id="dateLine">----</div>
+  <div class="hex-time" id="hexTime">HEX: ------</div>
+  <div class="back-link"><a href="index.html">← BACK TO COAL OS</a></div>
+
+  <script>
+    // 6 columns: H10(2bits), H1(4bits), M10(3bits), M1(4bits), S10(3bits), S1(4bits)
+    const COLS = [2, 4, 3, 4, 3, 4]; // max bits per column
+    const TOTAL = COLS.reduce((a,b)=>a+b, 0);
+    const container = document.getElementById('bits');
+
+    // Create bit cells
+    const maxBits = Math.max(...COLS); // 4 rows
+    const cells = [];
+    for (let row = maxBits - 1; row >= 0; row--) {
+      for (let col = 0; col < 6; col++) {
+        const div = document.createElement('div');
+        div.className = 'bit off';
+        const bitPos = COLS[col] - 1 - row;
+        if (bitPos >= 0) {
+          div.dataset.col = col;
+          div.dataset.bit = bitPos;
+        } else {
+          div.style.visibility = 'hidden';
+        }
+        container.appendChild(div);
+        if (bitPos >= 0) cells.push(div);
+      }
+    }
+
+    function update() {
+      const now = new Date();
+      const h = now.getHours();
+      const m = now.getMinutes();
+      const s = now.getSeconds();
+
+      const digits = [
+        Math.floor(h / 10), h % 10,
+        Math.floor(m / 10), m % 10,
+        Math.floor(s / 10), s % 10
+      ];
+
+      cells.forEach(cell => {
+        const col = parseInt(cell.dataset.col);
+        const bit = parseInt(cell.dataset.bit);
+        const on = (digits[col] >> bit) & 1;
+        cell.className = 'bit ' + (on ? 'on' : 'off');
+        cell.textContent = on ? '1' : '0';
+      });
+
+      document.getElementById('decimal').textContent =
+        String(h).padStart(2,'0') + ':' +
+        String(m).padStart(2,'0') + ':' +
+        String(s).padStart(2,'0');
+
+      document.getElementById('dateLine').textContent =
+        now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+      // Hex time
+      const hex = digits.map(d => d.toString(16).toUpperCase()).join('');
+      document.getElementById('hexTime').textContent = 'HEX: 0x' + hex;
+
+      requestAnimationFrame(update);
+    }
+    update();
+  </script>
+</body>
+</html>
