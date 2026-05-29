@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>TakeOff Pro — Blueprint Active Takeoff System</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0f172a">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    :root{--bg:#0f172a;--surface:#1e293b;--surface2:#334155;--border:#475569;--text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;
+      --blue:#3b82f6;--cyan:#06b6d4;--green:#22c55e;--red:#ef4444;--yellow:#f59e0b;--orange:#f97316;--purple:#a855f7;--pink:#ec4899;--r:6px}
+    body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;overflow:hidden;height:100vh;display:flex;flex-direction:column}
+    
+    .topbar{display:flex;justify-content:space-between;align-items:center;padding:.4rem .6rem;background:#0c1222;border-bottom:1px solid var(--border)}
+    .topbar .logo{font-weight:800;font-size:.85rem;color:var(--cyan);letter-spacing:1px}
+    .topbar .logo span{color:var(--text3);font-weight:400;font-size:.6rem}
+    .topbar-actions{display:flex;gap:.3rem;align-items:center}
+    
+    .btn{padding:.35rem .7rem;border-radius:var(--r);font-family:inherit;font-size:.7rem;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text2);transition:all .15s;display:inline-flex;align-items:center;gap:.3rem}
+    .btn:hover{border-color:var(--cyan);color:var(--text)}
+    .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+    .btn.success{background:#059669;border-color:#059669;color:#fff}
+    .btn.danger{background:var(--red);border-color:var(--red);color:#fff}
+    .btn.sm{padding:.25rem .5rem;font-size:.65rem}
+    .btn.active{border-color:var(--cyan);color:var(--cyan);background:var(--surface)}
+
+    .main{flex:1;display:flex;overflow:hidden}
+    
+    /* LEFT TOOLBAR */
+    .toolbar{width:48px;background:#0c1222;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:.3rem 0;gap:.15rem}
+    .tool{width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:var(--r);cursor:pointer;font-size:1rem;color:var(--text3);border:1px solid transparent;transition:all .15s}
+    .tool:hover{color:var(--text);background:var(--surface)}.tool.active{color:var(--cyan);border-color:var(--cyan);background:var(--surface)}
+    .tool-sep{width:28px;height:1px;background:var(--border);margin:.2rem 0}
+
+    /* CANVAS AREA */
+    .canvas-wrap{flex:1;position:relative;overflow:hidden;background:#0a0f1a}
+    #blueprint{display:block;cursor:crosshair}
+    .canvas-info{position:absolute;bottom:0;left:0;right:0;display:flex;justify-content:space-between;padding:.25rem .5rem;background:#0c1222cc;font-size:.6rem;color:var(--text3);font-family:'JetBrains Mono',monospace}
+
+    /* RIGHT PANEL */
+    .panel{width:280px;background:#0c1222;border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+    .panel-tabs{display:flex;border-bottom:1px solid var(--border)}
+    .panel-tab{flex:1;padding:.4rem;text-align:center;font-size:.65rem;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent}
+    .panel-tab:hover{color:var(--text2)}.panel-tab.active{color:var(--cyan);border-bottom-color:var(--cyan)}
+    .panel-content{flex:1;overflow-y:auto;padding:.5rem}
+    .panel-section{margin-bottom:.75rem}
+    .panel-title{font-size:.55rem;font-weight:600;letter-spacing:1.5px;color:var(--text3);text-transform:uppercase;margin-bottom:.4rem}
+
+    /* MEASUREMENT ITEMS */
+    .measure-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.4rem .5rem;margin-bottom:.35rem;cursor:pointer;transition:all .15s}
+    .measure-item:hover{border-color:var(--cyan)}.measure-item.selected{border-color:var(--cyan);box-shadow:0 0 8px #3b82f633}
+    .measure-item .mi-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:.2rem}
+    .measure-item .mi-label{font-size:.7rem;font-weight:600}
+    .measure-item .mi-value{font-family:'JetBrains Mono',monospace;font-size:.75rem;font-weight:700;color:var(--cyan)}
+    .measure-item .mi-meta{font-size:.55rem;color:var(--text3);display:flex;gap:.5rem}
+    .measure-item .mi-delete{color:var(--text3);cursor:pointer;font-size:.7rem}.measure-item .mi-delete:hover{color:var(--red)}
+    
+    /* MATERIAL ROW */
+    .mat-row{display:flex;justify-content:space-between;align-items:center;padding:.3rem 0;border-bottom:1px solid #1a2535;font-size:.7rem}
+    .mat-row .mat-name{color:var(--text2)}.mat-row .mat-qty{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--cyan)}
+    .mat-row .mat-unit{color:var(--text3);font-size:.6rem;margin-left:.2rem}
+    .mat-row .mat-cost{color:var(--green);font-weight:600}
+
+    /* SUMMARY */
+    .summary-total{display:flex;justify-content:space-between;padding:.5rem;background:var(--surface);border-radius:var(--r);margin-top:.5rem;border:1px solid var(--border)}
+    .summary-total .st-label{font-size:.75rem;font-weight:600}.summary-total .st-value{font-family:'JetBrains Mono',monospace;font-size:.85rem;font-weight:700;color:var(--green)}
+
+    /* SCALE BAR */
+    .scale-bar{display:flex;gap:.4rem;align-items:center;padding:.3rem .5rem;background:var(--surface);border-radius:var(--r);margin-bottom:.5rem}
+    .scale-bar input{background:#0a0f1a;border:1px solid var(--border);border-radius:4px;padding:.25rem .4rem;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:.7rem;width:60px}
+    .scale-bar label{font-size:.6rem;color:var(--text3)}
+
+    /* INPUT ROW */
+    .input-row{display:flex;gap:.3rem;align-items:center;margin-bottom:.3rem}
+    .input-row label{font-size:.6rem;color:var(--text3);min-width:55px}
+    .input-row input,.input-row select{flex:1;background:#0a0f1a;border:1px solid var(--border);border-radius:4px;padding:.25rem .4rem;color:var(--text);font-family:inherit;font-size:.7rem}
+
+    /* ZOOM CONTROLS */
+    .zoom-ctrl{position:absolute;bottom:30px;right:10px;display:flex;flex-direction:column;gap:.2rem}
+    .zoom-btn{width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);cursor:pointer;font-size:1rem;color:var(--text2)}
+    .zoom-btn:hover{border-color:var(--cyan);color:var(--text)}
+
+    /* COLOR PICKER */
+    .color-row{display:flex;gap:.2rem;margin:.3rem 0}
+    .color-dot{width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid transparent}
+    .color-dot.active{border-color:#fff}
+
+    /* MODAL */
+    .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:200}
+    .modal{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:1rem;width:90%;max-width:400px}
+    .modal h3{font-size:.9rem;margin-bottom:.75rem;color:var(--cyan)}
+    .modal .btn-row{display:flex;gap:.3rem;justify-content:flex-end;margin-top:.75rem}
+
+    /* PRINT */
+    @media print{.toolbar,.panel,.topbar-actions,.zoom-ctrl,.canvas-info{display:none!important}.panel{width:100%!important;border:none!important}.main{flex-direction:column!important}}
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">TAKEOFF PRO <span>Blueprint Measurement System</span></div>
+  <div class="topbar-actions">
+    <label class="btn" for="fileInput">📂 Load Blueprint</label>
+    <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="loadBlueprint(event)">
+    <button class="btn" onclick="undoLast()">↩ Undo</button>
+    <button class="btn" onclick="clearAll()">🗑 Clear</button>
+    <button class="btn primary" onclick="exportReport()">📊 Report</button>
+    <button class="btn success" onclick="exportCSV()">⬇ CSV</button>
+  </div>
+</div>
+
+<div class="main">
+  <!-- LEFT TOOLS -->
+  <div class="toolbar">
+    <div class="tool active" onclick="setTool('pointer')" title="Select" id="tool-pointer">🖱</div>
+    <div class="tool" onclick="setTool('linear')" title="Linear Measure" id="tool-linear">📏</div>
+    <div class="tool" onclick="setTool('area')" title="Area Measure" id="tool-area">📐</div>
+    <div class="tool" onclick="setTool('count')" title="Count Items" id="tool-count">🔢</div>
+    <div class="toolsep"></div>
+    <div class="tool" onclick="setTool('poly')" title="Polygon Area" id="tool-poly">⬡</div>
+    <div class="tool" onclick="setTool('rect')" title="Rectangle" id="tool-rect">▭</div>
+    <div class="tool" onclick="setTool('freehand')" title="Freehand Area" id="tool-freehand">✏</div>
+    <div class="tool-sep"></div>
+    <div class="tool" onclick="setTool('text')" title="Add Note" id="tool-text">T</div>
+  </div>
+
+  <!-- CANVAS -->
+  <div class="canvas-wrap" id="canvasWrap">
+    <canvas id="blueprint"></canvas>
+    <div class="zoom-ctrl">
+      <div class="zoom-btn" onclick="zoomIn()">+</div>
+      <div class="zoom-btn" onclick="zoomOut()">−</div>
+      <div class="zoom-btn" onclick="zoomFit()">⊡</div>
+    </div>
+    <div class="canvas-info">
+      <span id="cursorInfo">X: 0 Y: 0</span>
+      <span id="scaleInfo">Scale: Not set</span>
+      <span id="zoomInfo">Zoom: 100%</span>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="panel">
+    <div class="panel-tabs">
+      <div class="panel-tab active" onclick="showPanel('scale')">Scale</div>
+      <div class="panel-tab" onclick="showPanel('measurements')">Measures</div>
+      <div class="panel-tab" onclick="showPanel('materials')">Materials</div>
+      <div class="panel-tab" onclick="showPanel('summary')">Summary</div>
+    </div>
+    <div class="panel-content">
+      <!-- SCALE -->
+      <div class="panel-section" id="panel-scale">
+        <div class="panel-title">Set Scale</div>
+        <p style="font-size:.65rem;color:var(--text3);margin-bottom:.5rem">Draw a line on a known dimension, then enter its real-world length.</p>
+        <div id="scaleStatus" style="font-size:.65rem;color:var(--yellow);margin-bottom:.5rem">⚠ No scale set — draw a reference line first</div>
+        <div class="input-row">
+          <label>Length:</label>
+          <input type="number" id="scaleLength" placeholder="e.g. 10" value="">
+          <select id="scaleUnit" style="max-width:60px">
+            <option value="ft">ft</option>
+            <option value="in">in</option>
+            <option value="m">m</option>
+            <option value="cm">cm</option>
+          </select>
+        </div>
+        <button class="btn primary sm" onclick="setScale()" style="margin-top:.3rem" id="setScaleBtn" disabled>Set Scale</button>
+
+        <div style="margin-top:.75rem">
+          <div class="panel-title">Quick Scale (Blueprint)</div>
+          <div style="display:flex;gap:.3rem;flex-wrap:wrap">
+            <button class="btn sm" onclick="quickScale('1/4','in')">¼"=1'</button>
+            <button class="btn sm" onclick="quickScale('1/8','in')">⅛"=1'</button>
+            <button class="btn sm" onclick="quickScale('1/2','in')">½"=1'</button>
+            <button class="btn sm" onclick="quickScale('3/4','in')">¾"=1'</button>
+            <button class="btn sm" onclick="quickScale('1','in')">1"=1'</button>
+          </div>
+        </div>
+
+        <div style="margin-top:.75rem">
+          <div class="panel-title">Measurement Color</div>
+          <div class="color-row" id="colorRow"></div>
+        </div>
+      </div>
+
+      <!-- MEASUREMENTS -->
+      <div class="panel-section" id="panel-measurements" style="display:none">
+        <div class="panel-title">Measurements</div>
+        <div class="input-row">
+          <label>Layer:</label>
+          <select id="layerFilter" onchange="renderMeasurements()">
+            <option value="all">All</option>
+            <option value="flooring">Flooring</option>
+            <option value="baseboard">Baseboard</option>
+            <option value="tile">Tile</option>
+            <option value="carpet">Carpet</option>
+            <option value="hardwood">Hardwood</option>
+            <option value="vinyl">Vinyl / LVP</option>
+            <option value="count">Counts</option>
+          </select>
+        </div>
+        <div id="measurementsList"></div>
+        <button class="btn sm" onclick="addManualMeasure()" style="margin-top:.5rem;width:100%">+ Add Manual</button>
+      </div>
+
+      <!-- MATERIALS -->
+      <div class="panel-section" id="panel-materials" style="display:none">
+        <div class="panel-title">Material Takeoff</div>
+        <div class="input-row">
+          <label>Waste %:</label>
+          <input type="number" id="wastePct" value="10" min="0" max="50" style="width:50px" onchange="calcMaterials()">
+        </div>
+        <div id="materialsList"></div>
+      </div>
+
+      <!-- SUMMARY -->
+      <div class="panel-section" id="panel-summary" style="display:none">
+        <div class="panel-title">Project Summary</div>
+        <div class="input-row">
+          <label>Project:</label>
+          <input type="text" id="projectName" placeholder="Project name" value="">
+        </div>
+        <div class="input-row">
+          <label>Client:</label>
+          <input type="text" id="clientName" placeholder="Client name" value="">
+        </div>
+        <div id="summaryContent"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const C=document.getElementById('blueprint'),X=C.getContext('2d');
+const wrap=document.getElementById('canvasWrap');
+
+// STATE
+let img=null, zoom=1, panX=0, panY=0, dragging=false, dragStart={x:0,y:0}, panStart={x:0,y:0};
+let tool='pointer', toolState='idle'; // idle, drawing, placed
+let scale={set:false, pxPerFt:0, pxPerIn:0, unit:'ft'};
+let points=[], currentMeasure=null, measurements=[], selectedMeasure=-1;
+let measureColor='#3b82f6';
+const COLORS=['#3b82f6','#22c55e','#ef4444','#f59e0b','#a855f7','#06b6d4','#ec4899','#f97316'];
+let scaleLine=null; // {p1,p2} for scale reference line
+let freehandPts=[];
+let idCounter=1;
+
+// Init colors
+const colorRow=document.getElementById('colorRow');
+COLORS.forEach(c=>{const d=document.createElement('div');d.className='color-dot'+(c===measureColor?' active':'');d.style.background=c;d.onclick=()=>{measureColor=c;document.querySelectorAll('.color-dot').forEach(x=>x.classList.remove('active'));d.classList.add('active')};colorRow.appendChild(d)});
+
+function resize(){C.width=wrap.clientWidth;C.height=wrap.clientHeight;render()}
+window.addEventListener('resize',resize);resize();
+
+function loadBlueprint(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{const i=new Image();i.onload=()=>{img=i;zoomFit();render()};i.src=ev.target.result};
+  reader.readAsDataURL(file);
+}
+
+function zoomIn(){zoom=Math.min(zoom*1.25,10);render()}
+function zoomOut(){zoom=Math.max(zoom/1.25,.1);render()}
+function zoomFit(){if(!img)return;zoom=Math.min(C.width/img.width,C.height/img.height)*.9;panX=(C.width-img.width*zoom)/2;panY=(C.height-img.height*zoom)/2;render()}
+function zoomTo(z,x,y){const wx=(x-panX)/zoom;const wy=(y-panY)/zoom;zoom=z;panX=x-wx*zoom;panY=y-wy*zoom;render()}
+
+// Screen to canvas coords
+function s2c(sx,sy){return{x:(sx-panX)/zoom,y:(sy-panY)/zoom}}
+function c2s(cx,cy){return{x:cx*zoom+panX,y:cy*zoom+panY}}
+
+// TOOLS
+function setTool(t){
+  tool=t;toolState='idle';points=[];freehandPts=[];scaleLine=null;
+  document.querySelectorAll('.tool').forEach(el=>el.classList.remove('active'));
+  const el=document.getElementById('tool-'+t);if(el)el.classList.add('active');
+  C.style.cursor=t==='pointer'?'default':'crosshair';
+  if(t==='area'||t==='poly')showPanel('scale');
+}
+
+function showPanel(id){
+  document.querySelectorAll('.panel-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel-section').forEach(s=>s.style.display='none');
+  event.target.classList.add('active');
+  const el=document.getElementById('panel-'+id);if(el)el.style.display='block';
+  if(id==='measurements')renderMeasurements();
+  if(id==='materials')calcMaterials();
+  if(id==='summary')renderSummary();
+}
+
+// MOUSE/TOUCH EVENTS
+C.addEventListener('mousedown',onDown);
+C.addEventListener('mousemove',onMove);
+C.addEventListener('mouseup',onUp);
+C.addEventListener('wheel',e=>{e.preventDefault();const r=C.getBoundingClientRect();const mx=e.clientX-r.left,my=e.clientY-r.top;if(e.deltaY<0)zoomIn();else zoomOut();panX=mx-(mx-panX)*(zoom/(e.deltaY<0?zoom/1.25:zoom*1.25));panY=my-(my-panY)*(zoom/(e.deltaY<0?zoom/1.25:zoom*1.25));render()},{passive:false});
+
+// Touch
+let lastTouch=null;
+C.addEventListener('touchstart',e=>{e.preventDefault();const t=e.touches[0];lastTouch={x:t.clientX,y:t.clientY};onDown({clientX:t.clientX,clientY:t.clientY,button:0})},{passive:false});
+C.addEventListener('touchmove',e=>{e.preventDefault();const t=e.touches[0];if(lastTouch&&e.touches.length===1)onMove({clientX:t.clientX,clientY:t.clientY});if(e.touches.length===2){const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);if(lastTouch._pinch){const s=d/lastTouch._pinch;zoom*=s;render()}lastTouch._pinch=d}},{passive:false});
+C.addEventListener('touchend',e=>{e.preventDefault();onUp({});lastTouch=null},{passive:false});
+
+function onDown(e){
+  const r=C.getBoundingClientRect();const mx=e.clientX-r.left,my=e.clientY-r.top;
+  const cp=s2c(mx,my);
+
+  if(tool==='pointer'){dragging=true;dragStart={x:mx,y:my};panStart={x:panX,y:panY};return}
+
+  if(tool==='linear'){
+    if(toolState==='idle'){points=[cp];toolState='drawing'}
+    else if(toolState==='drawing'){
+      const dist=Math.hypot(cp.x-points[0].x,cp.y-points[0].y);
+      measurements.push({id:idCounter++,type:'linear',points:[points[0],{...cp}],pxLen:dist,color:measureColor,layer:getCurrentLayer(),label:'Length '+idCounter});
+      toolState='idle';points=[];renderMeasurements();calcMaterials();render();
+    }
+  }
+
+  if(tool==='rect'){
+    if(toolState==='idle'){points=[cp];toolState='drawing'}
+    else if(toolState==='drawing'){
+      const w=Math.abs(cp.x-points[0].x),h=Math.abs(cp.y-points[0].y);
+      measurements.push({id:idCounter++,type:'rect',points:[points[0],{...cp}],pxW:w,pxH:h,color:measureColor,layer:getCurrentLayer(),label:'Room '+idCounter});
+      toolState='idle';points=[];renderMeasurements();calcMaterials();render();
+    }
+  }
+
+  if(tool==='poly'){
+    points.push({...cp});toolState='drawing';
+    render();
+  }
+
+  if(tool==='area'){
+    points.push({...cp});toolState='drawing';render();
+  }
+
+  if(tool==='freehand'){
+    freehandPts=[cp];toolState='drawing';
+  }
+
+  if(tool==='count'){
+    measurements.push({id:idCounter++,type:'count',points:[{...cp}],color:measureColor,layer:'count',label:'Item '+idCounter,count:1});
+    renderMeasurements();calcMaterials();render();
+  }
+
+  if(tool==='text'){
+    const note=prompt('Enter note:');if(note){
+      measurements.push({id:idCounter++,type:'text',points:[{...cp}],color:measureColor,layer:'count',label:note});
+      render();renderMeasurements();
+    }
+  }
+}
+
+function onMove(e){
+  const r=C.getBoundingClientRect();const mx=e.clientX-r.left,my=e.clientY-r.top;
+  const cp=s2c(mx,my);
+  document.getElementById('cursorInfo').textContent=`X: ${Math.round(cp.x)} Y: ${Math.round(cp.y)}`;
+
+  if(dragging&&tool==='pointer'){panX=panStart.x+(mx-dragStart.x);panY=panStart.y+(my-dragStart.y);render();return}
+
+  if(tool==='freehand'&&toolState==='drawing'){freehandPts.push(cp);render();return}
+
+  if(toolState==='drawing')render(cp);
+}
+
+function onUp(e){
+  if(dragging){dragging=false;return}
+
+  if(tool==='freehand'&&toolState==='drawing'&&freehandPts.length>5){
+    // Calculate area using shoelace
+    let area=0;const pts=freehandPts;
+    for(let i=0;i<pts.length;i++){const j=(i+1)%pts.length;area+=pts[i].x*pts[j].y-pts[j].x*pts[i].y}
+    area=Math.abs(area/2);
+    measurements.push({id:idCounter++,type:'freehand',points:[...freehandPts],pxArea:area,color:measureColor,layer:getCurrentLayer(),label:'Area '+idCounter});
+    freehandPts=[];toolState='idle';renderMeasurements();calcMaterials();render();
+  }
+}
+
+// Double-click to close polygon
+C.addEventListener('dblclick',()=>{
+  if((tool==='poly'||tool==='area')&&toolState==='drawing'&&points.length>=3){
+    let area=0;const pts=points;
+    for(let i=0;i<pts.length;i++){const j=(i+1)%pts.length;area+=pts[i].x*pts[j].y-pts[j].x*pts[i].y}
+    area=Math.abs(area/2);
+    measurements.push({id:idCounter++,type:'poly',points:[...points],pxArea:area,color:measureColor,layer:getCurrentLayer(),label:'Area '+idCounter});
+    toolState='idle';points=[];renderMeasurements();calcMaterials();render();
+  }
+});
+
+function getCurrentLayer(){return document.getElementById('layerFilter')?.value||'flooring'}
+
+// SCALE
+function setScale(){
+  if(!scaleLine){alert('Draw a linear measurement first to use as reference');return}
+  const len=parseFloat(document.getElementById('scaleLength').value);
+  if(!len){alert('Enter a real-world length');return}
+  const unit=document.getElementById('scaleUnit').value;
+  const pxLen=Math.hypot(scaleLine.p2.x-scaleLine.p1.x,scaleLine.p2.y-scaleLine.p1.y);
+  scale={set:true,pxPerFt:pxLen/len,unit,refLen:len,pxLen};
+  document.getElementById('scaleInfo').textContent=`Scale: 1px = ${(1/scale.pxPerFt).toFixed(4)} ${unit} | ${len} ${unit} ref`;
+  document.getElementById('scaleStatus').innerHTML=`✅ Scale set: ${len} ${unit} = ${Math.round(pxLen)}px`;
+  document.getElementById('scaleStatus').style.color='var(--green)';
+  renderMeasurements();calcMaterials();render();
+}
+
+function quickScale(fraction,unit){
+  // fraction is like "1/4" meaning 1/4 inch = 1 foot
+  const parts=fraction.split('/');const inchesPerFoot=parseFloat(parts[0])/parseFloat(parts[1]);
+  // This means inchesPerFoot inches on drawing = 12 inches (1 foot) real
+  // Without a reference, assume 96dpi
+  const pxPerInch=96;
+  const realInches=12; // 1 foot
+  const drawInches=inchesPerFoot;
+  const pxPerDrawInch=pxPerInch;
+  // scale: drawInches * pxPerDrawInch pixels = realInches real
+  // Actually for blueprint scaling: fraction inch on paper = 1 foot real
+  // So if we know pxPerRealFoot: drawInches * pxPerDrawInch px = 1 foot real
+  // pxPerRealFoot = drawInches * pxPerDrawInch (at 96dpi on screen)
+  // This is approximate — user should calibrate with a known dimension
+  scale={set:true,pxPerFt:inchesPerFoot*pxPerInch,unit:'ft',refLen:1,pxLen:inchesPerFoot*pxPerInch};
+  document.getElementById('scaleInfo').textContent=`Scale: ${fraction}" = 1' (approx at 96dpi)`;
+  document.getElementById('scaleStatus').innerHTML=`✅ Scale set: ${fraction}" = 1' (approximate — calibrate with known dimension for accuracy)`;
+  document.getElementById('scaleStatus').style.color='var(--green)';
+  renderMeasurements();calcMaterials();render();
+}
+
+function pxToReal(px){
+  if(!scale.set)return{value:px,unit:'px'};
+  const v=px/scale.pxPerFt;
+  if(scale.unit==='ft')return{value:v,unit:'sq ft'};
+  if(scale.unit==='m')return{value:v,unit:'sq m'};
+  return{value:v,unit:scale.unit};
+}
+function pxLenToReal(px){
+  if(!scale.set)return{value:px,unit:'px'};
+  const v=px/scale.pxPerFt;
+  return{value:v,unit:scale.unit==='ft'?'ft':scale.unit};
+}
+function pxAreaToReal(pxArea){
+  if(!scale.set)return{value:pxArea,unit:'px²'};
+  const v=pxArea/(scale.pxPerFt*scale.pxPerFt);
+  return{value:v,unit:scale.unit==='ft'?'sq ft':'sq m'};
+}
+
+// RENDER
+function render(mouseCP){
+  X.fillStyle='#0a0f1a';X.fillRect(0,0,C.width,C.height);
+  X.save();X.translate(panX,panY);X.scale(zoom,zoom);
+
+  // Blueprint image
+  if(img){X.drawImage(img,0,0)}
+
+  // Grid
+  if(scale.set){
+    X.strokeStyle='#ffffff08';X.lineWidth=1/zoom;
+    const gridFt=10;const gridPx=gridFt*scale.pxPerFt;
+    for(let gx=0;gx<(C.width/zoom);gx+=gridPx){X.beginPath();X.moveTo(gx,0);X.lineTo(gx,C.height/zoom);X.stroke()}
+    for(let gy=0;gy<(C.height/zoom);gy+=gridPx){X.beginPath();X.moveTo(0,gy);X.lineTo(C.width,gy);X.stroke()}
+  }
+
+  // Measurements
+  measurements.forEach((m,idx)=>{
+    X.strokeStyle=m.color;X.fillStyle=m.color;X.lineWidth=2/zoom;X.font=`${12/zoom}px Inter`;
+    if(m.type==='linear'){
+      X.beginPath();X.moveTo(m.points[0].x,m.points[0].y);X.lineTo(m.points[1].x,m.points[1].y);X.stroke();
+      // Endpoints
+      [m.points[0],m.points[1]].forEach(p=>{X.beginPath();X.arc(p.x,p.y,3/zoom,0,Math.PI*2);X.fill()});
+      // Label
+      const mid={x:(m.points[0].x+m.points[1].x)/2,y:(m.points[0].y+m.points[1].y)/2};
+      const r=pxLenToReal(m.pxLen);X.fillStyle='#000a';X.fillRect(mid.x-30/zoom,mid.y-16/zoom,60/zoom,14/zoom);
+      X.fillStyle=m.color;X.textAlign='center';X.fillText(`${r.value.toFixed(1)} ${r.unit}`,mid.x,mid.y-6/zoom);
+    }
+    if(m.type==='rect'){
+      const x=Math.min(m.points[0].x,m.points[1].x),y=Math.min(m.points[0].y,m.points[1].y);
+      const w=Math.abs(m.points[1].x-m.points[0].x),h=Math.abs(m.points[1].y-m.points[0].y);
+      X.fillStyle=m.color+'15';X.fillRect(x,y,w,h);X.strokeRect(x,y,w,h);
+      const rw=pxLenToReal(w),rh=pxLenToReal(h);const ra=pxAreaToReal(w*h);
+      X.textAlign='center';X.fillStyle='#000a';X.fillRect(x+w/2-40/zoom,y+h/2-16/zoom,80/zoom,28/zoom);
+      X.fillStyle=m.color;X.fillText(`${rw.value.toFixed(1)}×${rh.value.toFixed(1)} ${rw.unit}`,x+w/2,y+h/2-4/zoom);
+      X.fillText(`${ra.value.toFixed(1)} ${ra.unit}`,x+w/2,y+h/2+10/zoom);
+    }
+    if(m.type==='poly'||m.type==='area'||m.type==='freehand'){
+      const pts=m.points;X.beginPath();X.moveTo(pts[0].x,pts[0].y);
+      for(let i=1;i<pts.length;i++)X.lineTo(pts[i].x,pts[i].y);
+      X.closePath();X.fillStyle=m.color+'15';X.fill();X.stroke();
+      // Area label
+      let cx=0,cy=0;pts.forEach(p=>{cx+=p.x;cy+=p.y});cx/=pts.length;cy/=pts.length;
+      const ra=pxAreaToReal(m.pxArea);
+      X.textAlign='center';X.fillStyle='#000a';X.fillRect(cx-35/zoom,cy-8/zoom,70/zoom,14/zoom);
+      X.fillStyle=m.color;X.fillText(`${ra.value.toFixed(1)} ${ra.unit}`,cx,cy+3/zoom);
+    }
+    if(m.type==='count'){
+      const p=m.points[0];X.beginPath();X.arc(p.x,p.y,6/zoom,0,Math.PI*2);X.fill();
+      X.fillStyle='#fff';X.textAlign='center';X.fillText('✓',p.x,p.y+4/zoom);
+    }
+    if(m.type==='text'){
+      X.textAlign='left';X.fillStyle=m.color;X.fillText(m.label,m.points[0].x,m.points[0].y);
+    }
+  });
+
+  // Drawing preview
+  if(toolState==='drawing'&&mouseCP){
+    X.setLineDash([5/zoom,5/zoom]);X.strokeStyle=measureColor;X.lineWidth=2/zoom;
+    if(tool==='linear'&&points.length===1){
+      X.beginPath();X.moveTo(points[0].x,points[0].y);X.lineTo(mouseCP.x,mouseCP.y);X.stroke();
+    }
+    if(tool==='rect'&&points.length===1){
+      const x=Math.min(points[0].x,mouseCP.x),y=Math.min(points[0].y,mouseCP.y);
+      X.strokeRect(x,y,Math.abs(mouseCP.x-points[0].x),Math.abs(mouseCP.y-points[0].y));
+    }
+    if((tool==='poly'||tool==='area')&&points.length>0){
+      X.beginPath();X.moveTo(points[0].x,points[0].y);
+      for(let i=1;i<points.length;i++)X.lineTo(points[i].x,points[i].y);
+      X.lineTo(mouseCP.x,mouseCP.y);X.stroke();
+    }
+    if(tool==='freehand'&&freehandPts.length>1){
+      X.beginPath();X.moveTo(freehandPts[0].x,freehandPts[0].y);
+      for(let i=1;i<freehandPts.length;i++)X.lineTo(freehandPts[i].x,freehandPts[i].y);
+      X.stroke();
+    }
+    X.setLineDash([]);
+  }
+
+  X.restore();
+  document.getElementById('zoomInfo').textContent=`Zoom: ${Math.round(zoom*100)}%`;
+
+  // Enable set scale button if we have linear measurements
+  const linearMs=measurements.filter(m=>m.type==='linear');
+  if(linearMs.length>0&&!scale.set){
+    scaleLine={p1:linearMs[0].points[0],p2:linearMs[0].points[1]};
+    document.getElementById('setScaleBtn').disabled=false;
+  }
+}
+
+// MEASUREMENTS LIST
+function renderMeasurements(){
+  const list=document.getElementById('measurementsList');if(!list)return;
+  const filter=document.getElementById('layerFilter').value;
+  const filtered=filter==='all'?measurements:measurements.filter(m=>m.layer===filter);
+  
+  list.innerHTML=filtered.map((m,i)=>{
+    let val='';
+    if(m.type==='linear'){const r=pxLenToReal(m.pxLen);val=`${r.value.toFixed(2)} ${r.unit}`}
+    if(m.type==='rect'){const ra=pxAreaToReal(m.pxW*m.pxH);val=`${ra.value.toFixed(2)} ${ra.unit}`}
+    if(m.type==='poly'||m.type==='area'||m.type==='freehand'){const ra=pxAreaToReal(m.pxArea);val=`${ra.value.toFixed(2)} ${ra.unit}`}
+    if(m.type==='count')val=`Count: ${m.count||1}`;
+    return`<div class="measure-item" onclick="selectMeasure(${m.id})" style="border-left:3px solid ${m.color}">
+      <div class="mi-head"><span class="mi-label">${m.label}</span><span class="mi-value">${val}</span></div>
+      <div class="mi-meta"><span>${m.type}</span><span>${m.layer}</span>
+      <span class="mi-delete" onclick="event.stopPropagation();deleteMeasure(${m.id})">✕</span></div></div>`;
+  }).join('')||'<div style="font-size:.7rem;color:var(--text3);text-align:center;padding:1rem">No measurements yet. Use the tools on the left.</div>';
+}
+
+function selectMeasure(id){selectedMeasure=id;render()}
+function deleteMeasure(id){measurements=measurements.filter(m=>m.id!==id);renderMeasurements();calcMaterials();render()}
+
+function addManualMeasure(){
+  const type=prompt('Type (linear/rect/count):','linear');if(!type)return;
+  if(type==='linear'){
+    const len=parseFloat(prompt('Length (in scale units):'));if(!len)return;
+    measurements.push({id:idCounter++,type:'manual-linear',pxLen:len*(scale.set?scale.pxPerFt:1),color:measureColor,layer:getCurrentLayer(),label:'Manual '+idCounter,manualVal:len});
+  }else if(type==='rect'){
+    const w=parseFloat(prompt('Width:'));const h=parseFloat(prompt('Height:'));if(!w||!h)return;
+    measurements.push({id:idCounter++,type:'manual-rect',pxW:w*(scale.set?scale.pxPerFt:1),pxH:h*(scale.set?scale.pxPerFt:1),color:measureColor,layer:getCurrentLayer(),label:'Manual '+idCounter,manualW:w,manualH:h});
+  }
+  renderMeasurements();calcMaterials();
+}
+
+// MATERIALS CALCULATION
+function calcMaterials(){
+  const waste=parseFloat(document.getElementById('wastePct').value)/100||0.1;
+  const byType={};
+  
+  measurements.forEach(m=>{
+    let sqFt=0,linFt=0,count=0;
+    if(m.type==='rect'){
+      const ra=pxAreaToReal(m.pxW*m.pxH);sqFt=ra.value;
+    }else if(m.type==='poly'||m.type==='area'||m.type==='freehand'){
+      const ra=pxAreaToReal(m.pxArea);sqFt=ra.value;
+    }else if(m.type==='linear'){
+      const r=pxLenToReal(m.pxLen);linFt=r.value;
+    }else if(m.type==='manual-linear'){
+      linFt=m.manualVal;
+    }else if(m.type==='manual-rect'){
+      sqFt=m.manualW*m.manualH;
+    }else if(m.type==='count'){
+      count=m.count||1;
+    }
+
+    const layer=m.layer||'flooring';
+    if(!byType[layer])byType[layer]={sqFt:0,linFt:0,count:0};
+    byType[layer].sqFt+=sqFt;
+    byType[layer].linFt+=linFt;
+    byType[layer].count+=count;
+  });
+
+  const prices={flooring:3.50,baseboard:2.75,tile:5.50,carpet:3.00,hardwood:7.50,vinyl:4.25,count:0};
+  const units={flooring:'sq ft',baseboard:'lin ft',tile:'sq ft',carpet:'sq ft',hardwood:'sq ft',vinyl:'sq ft',count:'ea'};
+
+  const list=document.getElementById('materialsList');
+  let html='';
+  let totalCost=0;
+  Object.entries(byType).forEach(([layer,data])=>{
+    if(data.sqFt===0&&data.linFt===0&&data.count===0)return;
+    const qty=data.sqFt>0?data.sqFt:(data.linFt>0?data.linFt:data.count);
+    const unit=units[layer]||'ea';
+    const wasteQty=qty*(1+waste);
+    const price=prices[layer]||0;
+    const cost=wasteQty*price;
+    totalCost+=cost;
+    html+=`<div class="mat-row">
+      <span class="mat-name">${layer.charAt(0).toUpperCase()+layer.slice(1)}</span>
+      <span><span class="mat-qty">${qty.toFixed(1)}</span><span class="mat-unit">${unit}</span></span>
+      <span><span class="mat-qty">${wasteQty.toFixed(1)}</span><span class="mat-unit">w/ waste</span></span>
+      ${price>0?`<span class="mat-cost">$${cost.toFixed(2)}</span>`:''}
+    </div>`;
+  });
+
+  html+=`<div class="summary-total"><span class="st-label">Estimated Total</span><span class="st-value">$${totalCost.toFixed(2)}</span></div>`;
+  list.innerHTML=html||'<div style="font-size:.7rem;color:var(--text3);text-align:center;padding:1rem">Add measurements to calculate materials</div>';
+}
+
+// SUMMARY
+function renderSummary(){
+  const proj=document.getElementById('projectName').value||'Untitled';
+  const client=document.getElementById('clientName').value||'—';
+  const waste=parseFloat(document.getElementById('wastePct')?.value||10);
+  const date=new Date().toLocaleDateString();
+  
+  let totalSqFt=0,totalLinFt=0,totalCount=0;
+  measurements.forEach(m=>{
+    if(m.type==='rect')totalSqFt+=pxAreaToReal(m.pxW*m.pxH).value;
+    else if(m.type==='poly'||m.type==='area'||m.type==='freehand')totalSqFt+=pxAreaToReal(m.pxArea).value;
+    else if(m.type==='linear')totalLinFt+=pxLenToReal(m.pxLen).value;
+    else if(m.type==='count')totalCount+=m.count||1;
+  });
+
+  document.getElementById('summaryContent').innerHTML=`
+    <div style="margin-top:.5rem">
+      <div class="mat-row"><span class="mat-name">Project</span><span class="mat-qty">${proj}</span></div>
+      <div class="mat-row"><span class="mat-name">Client</span><span class="mat-qty">${client}</span></div>
+      <div class="mat-row"><span class="mat-name">Date</span><span class="mat-qty">${date}</span></div>
+      <div class="mat-row"><span class="mat-name">Total Measurements</span><span class="mat-qty">${measurements.length}</span></div>
+      <div class="mat-row"><span class="mat-name">Total Area</span><span class="mat-qty cyan">${totalSqFt.toFixed(1)} sq ft</span></div>
+      <div class="mat-row"><span class="mat-name">Total Linear</span><span class="mat-qty cyan">${totalLinFt.toFixed(1)} ft</span></div>
+      <div class="mat-row"><span class="mat-name">Total Counts</span><span class="mat-qty cyan">${totalCount}</span></div>
+      <div class="mat-row"><span class="mat-name">Waste Factor</span><span class="mat-qty yellow">${waste}%</span></div>
+      <div class="mat-row"><span class="mat-name">Scale</span><span class="mat-qty">${scale.set?scale.refLen+' '+scale.unit:'Not set'}</span></div>
+    </div>`;
+}
+
+// EXPORT
+function exportReport(){
+  const proj=document.getElementById('projectName').value||'Takeoff Report';
+  const client=document.getElementById('clientName').value||'';
+  const date=new Date().toLocaleDateString();
+  const waste=parseFloat(document.getElementById('wastePct')?.value||10);
+  
+  let text=`${'='.repeat(50)}\n  TAKEOFF PRO — MEASUREMENT REPORT\n${'='.repeat(50)}\n`;
+  text+=`Project: ${proj}\nClient: ${client}\nDate: ${date}\nWaste: ${waste}%\nScale: ${scale.set?scale.refLen+' '+scale.unit:'Not set'}\n`;
+  text+=`${'─'.repeat(50)}\nMEASUREMENTS\n${'─'.repeat(50)}\n`;
+  
+  measurements.forEach(m=>{
+    let val='';
+    if(m.type==='linear'){const r=pxLenToReal(m.pxLen);val=`${r.value.toFixed(2)} ${r.unit}`}
+    if(m.type==='rect'){const ra=pxAreaToReal(m.pxW*m.pxH);val=`${ra.value.toFixed(2)} ${ra.unit}`}
+    if(m.type==='poly'||m.type==='area'||m.type==='freehand'){const ra=pxAreaToReal(m.pxArea);val=`${ra.value.toFixed(2)} ${ra.unit}`}
+    if(m.type==='count')val=`Count: ${m.count||1}`;
+    text+=`  ${m.label.padEnd(20)} | ${val.padEnd(15)} | ${m.layer} | ${m.type}\n`;
+  });
+  
+  text+=`${'─'.repeat(50)}\n`;
+  const blob=new Blob([text],{type:'text/plain'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`takeoff-${date.replace(/\//g,'-')}.txt`;a.click();
+}
+
+function exportCSV(){
+  const rows=[['ID','Label','Type','Layer','Value','Unit']];
+  measurements.forEach(m=>{
+    let val='',unit='';
+    if(m.type==='linear'){const r=pxLenToReal(m.pxLen);val=r.value.toFixed(2);unit=r.unit}
+    if(m.type==='rect'){const ra=pxAreaToReal(m.pxW*m.pxH);val=ra.value.toFixed(2);unit=ra.unit}
+    if(m.type==='poly'||m.type==='area'||m.type==='freehand'){const ra=pxAreaToReal(m.pxArea);val=ra.value.toFixed(2);unit=ra.unit}
+    if(m.type==='count'){val=m.count||1;unit='ea'}
+    rows.push([m.id,m.label,m.type,m.layer,val,unit]);
+  });
+  const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='takeoff.csv';a.click();
+}
+
+function undoLast(){if(measurements.length){measurements.pop();renderMeasurements();calcMaterials();render()}}
+function clearAll(){if(measurements.length===0||confirm('Clear all measurements?')){measurements=[];renderMeasurements();calcMaterials();render()}}
+</script>
+</body>
+</html>
