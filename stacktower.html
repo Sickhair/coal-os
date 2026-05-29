@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Stack Tower</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+body{background:#0f172a;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:'Inter',sans-serif;overflow:hidden}
+canvas{display:block;touch-action:none}
+.hud{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:.5rem .75rem;pointer-events:none;z-index:10}
+.hud .score{font-size:1.5rem;font-weight:800;color:#fff}.hud .best{font-size:.7rem;color:#64748b}
+.overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;text-align:center;color:#e2e8f0}
+.overlay h1{font-size:1.5rem;margin-bottom:.5rem;letter-spacing:2px}.overlay p{font-size:.75rem;color:#94a3b8;margin-bottom:.75rem}
+.overlay button{background:transparent;border:2px solid #22c55e;color:#22c55e;padding:.6rem 2rem;border-radius:6px;font-family:inherit;font-size:.9rem;cursor:pointer;font-weight:700;letter-spacing:2px}
+</style>
+</head>
+<body>
+<div class="hud">
+  <div class="score" id="scoreEl">0</div>
+  <div class="best" id="bestEl">Best: 0</div>
+</div>
+<canvas id="c"></canvas>
+<div class="overlay" id="start">
+  <h1 style="color:#22c55e">🏗 STACK TOWER</h1>
+  <p>Tap to place blocks. Stack perfectly for bonus points. Build the tallest tower you can!</p>
+  <button onclick="startGame()">BUILD</button>
+</div>
+<div class="overlay" id="over" style="display:none">
+  <h1 style="color:#ef4444">💥 COLLAPSED</h1>
+  <p id="overMsg"></p>
+  <button onclick="startGame()">RETRY</button>
+</div>
+<script>
+const C=document.getElementById('c'),X=C.getContext('2d');
+let W,H,blocks,current,score,best=0,gameOver,cameraY,particles,perfectCount,speed,baseSpeed;
+
+const COLORS=['#ef4444','#f97316','#f59e0b','#84cc16','#22c55e','#06b6d4','#3b82f6','#6366f1','#a855f7','#ec4899'];
+
+function resize(){W=C.width=window.innerWidth;H=C.height=window.innerHeight}
+window.addEventListener('resize',resize);resize();
+
+function startGame(){
+  document.getElementById('start').style.display='none';
+  document.getElementById('over').style.display='none';
+  score=0;gameOver=false;cameraY=0;perfectCount=0;baseSpeed=2;speed=baseSpeed;
+  blocks=[];particles=[];
+  
+  // Base
+  const bw=Math.min(160,W*0.5);
+  blocks.push({x:W/2-bw/2,y:H-60,w:bw,h:30,color:COLORS[0],placed:true});
+  spawnBlock();
+  updateHUD();
+  requestAnimationFrame(loop);
+}
+
+function spawnBlock(){
+  const last=blocks[blocks.length-1];
+  const colorIdx=blocks.length%COLORS.length;
+  const dir=blocks.length%2===0?1:-1;
+  current={
+    x:dir===1?-last.w:W,
+    y:last.y-30,
+    w:last.w,
+    h:30,
+    color:COLORS[colorIdx],
+    dir,
+    speed:speed
+  };
+}
+
+function placeBlock(){
+  if(!current||gameOver)return;
+  const last=blocks[blocks.length-1];
+  
+  const overlapLeft=Math.max(current.x,last.x);
+  const overlapRight=Math.min(current.x+current.w,last.x+last.w);
+  const overlapW=overlapRight-overlapLeft;
+  
+  if(overlapW<=0){
+    // Miss entirely
+    gameOver=true;
+    addParticles(current.x+current.w/2,current.y,current.color,15);
+    addParticles(current.x+current.w/2,current.y+current.h,'#fff',5);
+    if(score>best)best=score;
+    document.getElementById('overMsg').textContent=`Score: ${score} | Best: ${best}`;
+    setTimeout(()=>document.getElementById('over').style.display='flex',500);
+    return;
+  }
+  
+  const perfect=Math.abs(overlapW-last.w)<5;
+  
+  if(perfect){
+    // Perfect placement — keep same width, snap
+    blocks.push({x:last.x,y:current.y,w:last.w,h:30,color:current.color,placed:true});
+    perfectCount++;
+    score+=2;
+    speed=Math.min(baseSpeed+blocks.length*0.08,8);
+    addParticles(last.x+last.w/2,current.y,'#fff',20);
+  }else{
+    // Cut block
+    const cutW=last.w-overlapW;
+    const cutX=overlapW===current.w?current.x:(current.x<last.x?current.x:overlapRight);
+    
+    // Falling piece
+    const falling={x:cutX,y:current.y,w:cutW,h:30,color:current.color,placed:false,vy:0,falling:true};
+    blocks.push(falling);
+    
+    // Placed piece
+    blocks.push({x:overlapLeft,y:current.y,w:overlapW,h:30,color:current.color,placed:true});
+    perfectCount=0;
+    score++;
+    speed=Math.min(baseSpeed+blocks.length*0.08,8);
+    addParticles(overlapLeft+overlapW/2,current.y,current.color,8);
+  }
+  
+  updateHUD();
+  spawnBlock();
+}
+
+function addParticles(x,y,color,count){
+  for(let i=0;i<count;i++){
+    particles.push({
+      x,y,vx:(Math.random()-.5)*6,vy:-Math.random()*4-2,
+      life:30+Math.random()*30,maxLife:60,color,size:2+Math.random()*3
+    });
+  }
+}
+
+function updateHUD(){
+  document.getElementById('scoreEl').textContent=score;
+  document.getElementById('bestEl').textContent='Best: '+best;
+}
+
+function loop(){
+  if(!gameOver){
+    // Move current block
+    if(current){
+      current.x+=current.speed*current.dir;
+      if(current.x+current.w>W+50)current.dir=-1;
+      if(current.x<-50)current.dir=1;
+    }
+    
+    // Camera follow
+    const topBlock=blocks.filter(b=>b.placed).pop();
+    if(topBlock){
+      const targetCam=Math.max(0,-topBlock.y+H*0.6);
+      cameraY+=(targetCam-cameraY)*0.08;
+    }
+  }
+  
+  // Falling blocks
+  blocks.forEach(b=>{if(b.falling){b.vy+=0.3;b.y+=b.vy}});
+  blocks=blocks.filter(b=>!b.falling||b.y<H+200);
+  
+  // Particles
+  particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=0.15;p.life--});
+  particles=particles.filter(p=>p.life>0);
+  
+  render();
+  if(!gameOver||particles.length)requestAnimationFrame(loop);
+}
+
+function render(){
+  X.fillStyle='#0f172a';X.fillRect(0,0,W,H);
+  
+  // Stars bg
+  X.fillStyle='#ffffff08';
+  for(let i=0;i<30;i++){
+    const sx=(i*137.5)%W,sy=((i*97.3)+cameraY*0.3)%H;
+    X.fillRect(sx,sy,2,2);
+  }
+  
+  X.save();X.translate(0,cameraY);
+  
+  // Ground
+  X.fillStyle='#1e293b';X.fillRect(0,H-30,W,30);
+  
+  // Placed blocks
+  blocks.forEach(b=>{
+    if(!b.placed&&!b.falling)return;
+    X.fillStyle=b.color;
+    X.shadowColor=b.color;X.shadowBlur=b.placed?8:0;
+    X.fillRect(b.x,b.y,b.w,b.h);
+    // Top highlight
+    X.fillStyle='rgba(255,255,255,0.15)';X.fillRect(b.x,b.y,b.w,3);
+    X.shadowBlur=0;
+  });
+  
+  // Falling blocks
+  blocks.forEach(b=>{
+    if(!b.falling)return;
+    X.fillStyle=b.color+'99';
+    X.fillRect(b.x,b.y,b.w,b.h);
+  });
+  
+  // Current block
+  if(current&&!gameOver){
+    X.fillStyle=current.color;
+    X.shadowColor=current.color;X.shadowBlur=15;
+    X.fillRect(current.x,current.y,current.w,current.h);
+    X.fillStyle='rgba(255,255,255,0.2)';X.fillRect(current.x,current.y,current.w,3);
+    X.shadowBlur=0;
+    
+    // Guide line
+    const last=blocks.filter(b=>b.placed).pop();
+    if(last){
+      X.strokeStyle='#ffffff11';X.lineWidth=1;X.setLineDash([4,4]);
+      X.strokeRect(last.x,current.y,last.w,current.h);
+      X.setLineDash([]);
+    }
+  }
+  
+  // Particles
+  particles.forEach(p=>{
+    const a=p.life/p.maxLife;
+    X.fillStyle=p.color;X.globalAlpha=a;
+    X.fillRect(p.x-p.size/2,p.y-p.size/2,p.size,p.size);
+  });
+  X.globalAlpha=1;
+  
+  X.restore();
+  
+  // Perfect indicator
+  if(perfectCount>=2&&!gameOver){
+    X.fillStyle='#22c55e';X.font='bold 16px Inter';X.textAlign='center';
+    X.fillText(`PERFECT x${perfectCount}!`,W/2,80);
+  }
+}
+
+// Input
+C.addEventListener('mousedown',()=>{if(!gameOver&&current)placeBlock()});
+C.addEventListener('touchstart',e=>{e.preventDefault();if(!gameOver&&current)placeBlock()},{passive:false});
+document.addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();if(!gameOver&&current)placeBlock()}});
+</script>
+</body>
+</html>
