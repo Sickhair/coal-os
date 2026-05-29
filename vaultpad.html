@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>VaultPad — Encrypted Notes</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0f172a">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{--bg:#0f172a;--surface:#1e293b;--surface2:#334155;--border:#334155;--text:#f8fafc;--text2:#94a3b8;--text3:#64748b;--primary:#3b82f6;--primary-hover:#2563eb;--primary-dim:#3b82f622;--green:#22c55e;--red:#ef4444;--yellow:#f59e0b;--purple:#a855f7;--radius:8px}
+    body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh}
+    nav{background:var(--surface);border-bottom:1px solid var(--border);padding:.5rem 1rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+    .logo{font-weight:800;font-size:.95rem;color:var(--purple)}.logo span{color:var(--text3);font-weight:400;font-size:.65rem}
+    .page{display:none;padding:1rem;max-width:900px;margin:0 auto}.page.active{display:block}
+    .btn{display:inline-flex;align-items:center;gap:.35rem;background:var(--purple);color:#fff;border:none;padding:.45rem .85rem;border-radius:var(--radius);font-size:.78rem;font-weight:500;cursor:pointer;font-family:inherit;transition:all .15s}
+    .btn:hover{opacity:.9}.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text2)}.btn-danger{background:var(--red)}.btn-sm{padding:.3rem .6rem;font-size:.7rem}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:1rem}
+    .card-title{font-size:.7rem;font-weight:600;letter-spacing:1px;color:var(--text3);text-transform:uppercase;margin-bottom:.75rem}
+    input,textarea,select{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:.5rem .75rem;border-radius:var(--radius);font-family:inherit;font-size:.85rem;outline:none;width:100%}
+    input:focus,textarea:focus{border-color:var(--purple);box-shadow:0 0 0 3px #a855f722}
+    textarea{resize:vertical;line-height:1.6}
+    .form-group{margin-bottom:.75rem}
+    .form-group label{display:block;font-size:.7rem;color:var(--text3);margin-bottom:.15rem;font-weight:500}
+
+    /* Note cards */
+    .notes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.75rem}
+    .note-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;cursor:pointer;transition:all .15s;position:relative}
+    .note-card:hover{border-color:var(--purple);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.2)}
+    .note-card.locked::after{content:'🔒';position:absolute;top:.5rem;right:.5rem;font-size:.7rem}
+    .note-title{font-size:.85rem;font-weight:600;margin-bottom:.25rem}
+    .note-preview{font-size:.75rem;color:var(--text3);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+    .note-meta{display:flex;gap:.75rem;margin-top:.5rem;font-size:.6rem;color:var(--text3)}
+    .note-tag{font-size:.55rem;padding:.1rem .4rem;border-radius:3px;background:var(--surface2);color:var(--text2)}
+    .note-color{width:4px;position:absolute;left:0;top:0;bottom:0;border-radius:var(--radius) 0 0 var(--radius)}
+
+    /* Editor */
+    .editor-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem}
+    .editor-title{font-size:1.1rem;font-weight:600}
+    .editor-actions{display:flex;gap:.5rem;flex-wrap:wrap}
+    #noteContent{min-height:300px;font-family:'Inter',sans-serif;font-size:.9rem}
+    .tag-input-container{display:flex;flex-wrap:wrap;gap:.25rem;align-items:center;padding:.35rem .5rem;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);min-height:36px}
+    .tag-input-container:focus-within{border-color:var(--purple)}
+    .tag-pill{background:var(--surface2);color:var(--text2);padding:.1rem .4rem;border-radius:12px;font-size:.65rem;display:flex;align-items:center;gap:.2rem}
+    .tag-pill button{background:none;border:none;color:var(--text3);cursor:pointer;font-size:.7rem;padding:0}
+    .tag-input{border:none!important;background:none!important;padding:0!important;flex:1;min-width:80px;box-shadow:none!important}
+
+    /* Lock modal */
+    .lock-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,.9);display:flex;align-items:center;justify-content:center;border-radius:var(--radius);z-index:5}
+    .lock-inner{text-align:center;padding:1rem}
+    .lock-inner input{width:200px;margin:.5rem 0}
+
+    /* Search */
+    .search-bar{display:flex;gap:.5rem;margin-bottom:1rem}
+    .search-bar input{flex:1}
+    .search-bar select{width:auto}
+
+    /* Empty */
+    .empty{text-align:center;padding:3rem;color:var(--text3)}.empty .icon{font-size:2rem;margin-bottom:.5rem}
+
+    /* Modal */
+    .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:200;padding:1rem}
+    .modal-overlay.show{display:flex}
+    .modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;width:100%;max-width:400px}
+    .modal h3{margin-bottom:1rem}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">VaultPad <span>ENCRYPTED</span></div>
+  <div style="display:flex;gap:.5rem;align-items:center">
+    <span style="font-size:.65rem;color:var(--text3)" id="noteCount">0 notes</span>
+    <button class="btn btn-sm" onclick="newNote()">+ New</button>
+  </div>
+</nav>
+
+<!-- NOTES LIST -->
+<div class="page active" id="page-list">
+  <div class="search-bar">
+    <input id="searchInput" placeholder="Search notes..." oninput="renderList()">
+    <select id="filterTag" onchange="renderList()" style="width:auto"><option value="">All Tags</option></select>
+    <select id="sortBy" onchange="renderList()" style="width:auto">
+      <option value="updated">Recent</option>
+      <option value="created">Oldest</option>
+      <option value="alpha">A-Z</option>
+    </select>
+  </div>
+  <div class="notes-grid" id="notesGrid"></div>
+</div>
+
+<!-- EDITOR -->
+<div class="page" id="page-editor">
+  <div class="editor-header">
+    <div class="editor-title" id="editorTitle">New Note</div>
+    <div class="editor-actions">
+      <button class="btn btn-outline btn-sm" id="lockBtn" onclick="toggleLock()">🔓 Lock</button>
+      <button class="btn btn-outline btn-sm" onclick="exportNote()">↓ Export</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteNote()">Delete</button>
+      <button class="btn btn-sm" onclick="saveNote()">Save</button>
+    </div>
+  </div>
+  <div class="form-group">
+    <input id="noteTitle" placeholder="Note title..." style="font-size:1.1rem;font-weight:600;border:none;background:none;padding:.25rem 0">
+  </div>
+  <div class="form-group">
+    <div class="tag-input-container" id="tagContainer">
+      <input class="tag-input" id="tagInput" placeholder="Add tag (Enter)..." onkeydown="if(event.key==='Enter'){addTag(this.value);this.value='';event.preventDefault()}">
+    </div>
+  </div>
+  <div class="form-group" style="display:flex;gap:.5rem;align-items:center">
+    <label style="margin:0;font-size:.7rem;color:var(--text3)">Color</label>
+    <input type="color" id="noteColor" value="#a855f7" style="width:30px;height:24px;border:none;background:none;cursor:pointer;padding:0">
+    <label style="margin:0;font-size:.7rem;color:var(--text3);margin-left:.5rem">Markdown</label>
+    <input type="checkbox" id="noteMarkdown" style="width:auto">
+  </div>
+  <div class="form-group" id="editorContainer">
+    <textarea id="noteContent" placeholder="Start writing..."></textarea>
+  </div>
+  <div id="previewContainer" style="display:none;background:#fff;color:#1a1a1a;padding:1rem;border-radius:var(--radius);min-height:300px;line-height:1.7;font-size:.9rem"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:.5rem">
+    <span style="font-size:.6rem;color:var(--text3)" id="wordCount">0 words · 0 chars</span>
+    <span style="font-size:.6rem;color:var(--text3)" id="lastSaved"></span>
+  </div>
+</div>
+
+<!-- PASSWORD MODAL -->
+<div class="modal-overlay" id="pwModal">
+  <div class="modal">
+    <h3 id="pwModalTitle>Enter Password</h3>
+    <div class="form-group"><input id="pwInput" type="password" placeholder="Password..." onkeydown="if(event.key==='Enter')submitPw()"></div>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end">
+      <button class="btn btn-outline btn-sm" onclick="closePwModal()">Cancel</button>
+      <button class="btn btn-sm" onclick="submitPw()">Unlock</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DB={
+  get(k){try{return JSON.parse(localStorage.getItem('vp_'+k))||null}catch{return null}},
+  set(k,v){localStorage.setItem('vp_'+k,JSON.stringify(v))},
+  genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+};
+
+function getNotes(){return DB.get('notes')||[]}
+let currentNote=null;
+let currentTags=[];
+let pwCallback=null;
+
+// === CRYPTO ===
+async function deriveKey(password,salt){
+  const enc=new TextEncoder();
+  const keyMaterial=await crypto.subtle.importKey('raw',enc.encode(password),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:100000,hash:'SHA-256'},keyMaterial,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+}
+async function encrypt(text,password){
+  const salt=crypto.getRandomValues(new Uint8Array(16));
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const key=await deriveKey(password,salt);
+  const enc=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(text));
+  const result=new Uint8Array(salt.length+iv.length+enc.byteLength);
+  result.set(salt,0);result.set(iv,salt.length);result.set(new Uint8Array(enc),salt.length+iv.length);
+  return btoa(String.fromCharCode(...result));
+}
+async function decrypt(cipher,password){
+  try{
+    const data=Uint8Array.from(atob(cipher),c=>c.charCodeAt(0));
+    const salt=data.slice(0,16);const iv=data.slice(16,28);const enc=data.slice(28);
+    const key=await deriveKey(password,salt);
+    const dec=await crypto.subtle.decrypt({name:'AES-GCM',iv},key,enc);
+    return new TextDecoder().decode(dec);
+  }catch{return null}
+}
+
+// === NAV ===
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+}
+
+// === LIST ===
+function renderList(){
+  let notes=getNotes();
+  const search=document.getElementById('searchInput').value.toLowerCase();
+  const tagFilter=document.getElementById('filterTag').value;
+  const sort=document.getElementById('sortBy').value;
+
+  if(search)notes=notes.filter(n=>(n.title+n.content).toLowerCase().includes(search));
+  if(tagFilter)notes=notes.filter(n=>(n.tags||[]).includes(tagFilter));
+
+  if(sort==='updated')notes.sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));
+  else if(sort==='created')notes.sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
+  else if(sort==='alpha')notes.sort((a,b)=>a.title.localeCompare(b.title));
+
+  // Populate tag filter
+  const allTags=new Set();
+  getNotes().forEach(n=>(n.tags||[]).forEach(t=>allTags.add(t)));
+  document.getElementById('filterTag').innerHTML='<option value="">All Tags</option>'+Array.from(allTags).map(t=>`<option value="${t}">${t}</option>`).join('');
+
+  document.getElementById('noteCount').textContent=getNotes().length+' notes';
+
+  if(!notes.length){document.getElementById('notesGrid').innerHTML='<div class="empty"><div class="icon">📝</div><p>No notes yet</p><button class="btn" onclick="newNote()">Create First Note</button></div>';return}
+
+  document.getElementById('notesGrid').innerHTML=notes.map(n=>{
+    const preview=n.locked?'[Encrypted — unlock to view]':(n.content||'').slice(0,120);
+    return`<div class="note-card ${n.locked?'locked':''}" onclick="openNote('${n.id}')"><div class="note-color" style="background:${n.color||'var(--purple)'}"></div><div class="note-title">${n.title||'Untitled'}</div><div class="note-preview">${preview}</div><div class="note-meta">${(n.tags||[]).map(t=>`<span class="note-tag">${t}</span>`).join('')}${n.updatedAt?'<span>'+timeAgo(n.updatedAt)+'</span>':''}${n.locked?'<span>🔒 AES-256</span>':''}</div></div>`;
+  }).join('');
+}
+
+// === NEW ===
+function newNote(){
+  currentNote={id:DB.genId(),title:'',content:'',tags:[],color:'#a855f7',locked:false,lockedData:null,markdown:false,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+  currentTags=[];
+  loadEditor();
+  showPage('editor');
+}
+
+// === OPEN ===
+async function openNote(id){
+  const note=getNotes().find(n=>n.id===id);
+  if(!note)return;
+  if(note.locked){
+    document.getElementById('pwModalTitle').textContent='Unlock Note';
+    document.getElementById('pwInput').value='';
+    document.getElementById('pwModal').classList.add('show');
+    pwCallback=async(pw)=>{
+      const dec=await decrypt(note.lockedData,pw);
+      if(dec===null){alert('Wrong password');return false}
+      note.content=dec;
+      currentNote={...note};currentTags=[...(note.tags||[])];
+      loadEditor();showPage('editor');
+      return true;
+    };
+    return;
+  }
+  currentNote={...note};currentTags=[...(note.tags||[])];
+  loadEditor();showPage('editor');
+}
+
+// === EDITOR ===
+function loadEditor(){
+  document.getElementById('noteTitle').value=currentNote.title;
+  document.getElementById('noteContent').value=currentNote.content;
+  document.getElementById('noteColor').value=currentNote.color||'#a855f7';
+  document.getElementById('noteMarkdown').checked=currentNote.markdown||false;
+  document.getElementById('lockBtn').textContent=currentNote.locked?'🔒 Locked':'🔓 Lock';
+  document.getElementById('lockBtn').className=currentNote.locked?'btn btn-sm':'btn btn-outline btn-sm';
+  renderTags();
+  updateWordCount();
+  togglePreview();
+}
+
+function renderTags(){
+  const container=document.getElementById('tagContainer');
+  container.innerHTML=currentTags.map(t=>`<span class="tag-pill">${t}<button onclick="removeTag('${t}')">×</button></span>`).join('')+`<input class="tag-input" id="tagInput" placeholder="Add tag..." onkeydown="if(event.key==='Enter'){addTag(this.value);this.value='';event.preventDefault()}">`;
+}
+function addTag(t){t=t.trim();if(t&&!currentTags.includes(t)){currentTags.push(t);renderTags()}}
+function removeTag(t){currentTags=currentTags.filter(x=>x!==t);renderTags()}
+
+function updateWordCount(){
+  const text=document.getElementById('noteContent').value;
+  const words=text.trim()?text.trim().split(/\s+/).length:0;
+  document.getElementById('wordCount').textContent=words+' words · '+text.length+' chars';
+}
+
+function togglePreview(){
+  const md=document.getElementById('noteMarkdown').checked;
+  document.getElementById('previewContainer').style.display=md?'block':'none';
+  document.getElementById('noteContent').style.display=md?'none':'block';
+  if(md){
+    let html=document.getElementById('noteContent').value;
+    html=html.replace(/^### (.+)$/gm,'<h3>$1</h3>');
+    html=html.replace(/^## (.+)$/gm,'<h2>$1</h2>');
+    html=html.replace(/^# (.+)$/gm,'<h1>$1</h1>');
+    html=html.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+    html=html.replace(/\*(.+?)\*/g,'<em>$1</em>');
+    html=html.replace(/`([^`]+)`/g,'<code>$1</code>');
+    html=html.replace(/^- (.+)$/gm,'<li>$1</li>');
+    html=html.replace(/^> (.+)$/gm,'<blockquote style="border-left:3px solid #a855f7;padding:.5rem;margin:.5rem 0;color:#666">$1</blockquote>');
+    html=html.replace(/\n\n/g,'<br><br>');
+    document.getElementById('previewContainer').innerHTML=html;
+  }
+}
+
+document.getElementById('noteContent').addEventListener('input',()=>{updateWordCount();togglePreview()});
+document.getElementById('noteMarkdown').addEventListener('change',togglePreview);
+
+// === SAVE ===
+function saveNote(){
+  if(!currentNote)return;
+  currentNote.title=document.getElementById('noteTitle').value;
+  currentNote.content=document.getElementById('noteContent').value;
+  currentNote.tags=[...currentTags];
+  currentNote.color=document.getElementById('noteColor').value;
+  currentNote.markdown=document.getElementById('noteMarkdown').checked;
+  currentNote.updatedAt=new Date().toISOString();
+
+  let notes=getNotes();
+  const idx=notes.findIndex(n=>n.id===currentNote.id);
+  const saveNote={...currentNote};
+  if(saveNote.locked){
+    // Don't store plaintext content when locked
+    saveNote.content='';
+  }
+  if(idx>=0)notes[idx]=saveNote;else notes.push(saveNote);
+  DB.set('notes',notes);
+
+  document.getElementById('lastSaved').textContent='Saved '+new Date().toLocaleTimeString();
+}
+
+// === LOCK ===
+async function toggleLock(){
+  if(!currentNote)return;
+  if(currentNote.locked){
+    // Unlocking
+    document.getElementById('pwModalTitle').textContent='Enter Password to Unlock';
+    document.getElementById('pwInput').value='';
+    document.getElementById('pwModal').classList.add('show');
+    pwCallback=async(pw)=>{
+      const dec=await decrypt(currentNote.lockedData,pw);
+      if(dec===null){alert('Wrong password');return false}
+      currentNote.locked=false;currentNote.lockedData=null;currentNote.content=dec;
+      document.getElementById('noteContent').value=dec;
+      document.getElementById('lockBtn').textContent='🔓 Lock';
+      document.getElementById('lockBtn').className='btn btn-outline btn-sm';
+      saveNote();renderList();
+      return true;
+    };
+  }else{
+    // Locking
+    document.getElementById('pwModalTitle').textContent='Set Password to Lock';
+    document.getElementById('pwInput').value='';
+    document.getElementById('pwModal').classList.add('show');
+    pwCallback=async(pw)=>{
+      if(!pw||pw.length<4){alert('Password must be at least 4 characters');return false}
+      const cipher=await encrypt(document.getElementById('noteContent').value,pw);
+      currentNote.locked=true;currentNote.lockedData=cipher;
+      document.getElementById('lockBtn').textContent='🔒 Locked';
+      document.getElementById('lockBtn').className='btn btn-sm';
+      saveNote();renderList();
+      return true;
+    };
+  }
+}
+
+function closePwModal(){document.getElementById('pwModal').classList.remove('show');pwCallback=null}
+async function submitPw(){
+  const pw=document.getElementById('pwInput').value;
+  if(!pw)return;
+  const result=await pwCallback(pw);
+  if(result!==false)closePwModal();
+}
+
+// === DELETE ===
+function deleteNote(){
+  if(!confirm('Delete this note?'))return;
+  DB.set('notes',getNotes().filter(n=>n.id!==currentNote.id));
+  showPage('list');renderList();
+}
+
+// === EXPORT ===
+function exportNote(){
+  const content=currentNote.title+'\n\n'+document.getElementById('noteContent').value;
+  const blob=new Blob([content],{type:'text/plain'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(currentNote.title||'note')+'.txt';a.click();
+}
+
+function timeAgo(iso){
+  const s=Math.floor((Date.now()-new Date(iso).getTime())/1000);
+  if(s<60)return'just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago';
+}
+
+// SEED
+if(!DB.get('seeded')){
+  DB.set('notes',[
+    {id:DB.genId(),title:'Getting Started',content:'Welcome to VaultPad!\n\nThis is your encrypted note-taking app. All notes are stored locally in your browser.\n\nFeatures:\n- Rich text notes with markdown support\n- AES-256 encryption for sensitive notes\n- Tags and color coding\n- Search and filter\n- Export to text file\n\nTap the lock button to encrypt any note with a password.',tags:['help','welcome'],color:'#3b82f6',locked:false,lockedData:null,markdown:false,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()},
+    {id:DB.genId(),title:'API Keys — ENCRYPTED',content:'This note is encrypted with AES-256.\n\nPassword hint: "password"',tags:['secrets'],color:'#ef4444',locked:true,lockedData:null,markdown:false,createdAt:new Date(Date.now()-86400000).toISOString(),updatedAt:new Date(Date.now()-86400000).toISOString()},
+    {id:DB.genId(),title:'Meeting Notes — Sprint 14',content:'## Sprint 14 Planning\n\n- Discussed Q2 roadmap priorities\n- Feature X needs API redesign\n- Deadline moved to June 15\n- New team member onboarding next week\n\nAction items:\n1. Update design docs\n2. Schedule API review\n3. Prepare onboarding materials',tags:['work','meetings'],color:'#22c55e',locked:false,lockedData:null,markdown:true,createdAt:new Date(Date.now()-2*86400000).toISOString(),updatedAt:new Date(Date.now()-86400000).toISOString()},
+  ]);
+  // Encrypt the locked note
+  (async()=>{
+    const notes=getNotes();
+    const locked=notes.find(n=>n.locked);
+    if(locked){locked.lockedData=await encrypt('API_KEY=sk-prod-1234567890\nDB_PASSWORD=SuperS3cure!\nAWS_SECRET=wJalrXUtnFEMI/K7MDENG',locked.title.includes('password')?'password':'password');DB.set('notes',notes)}
+  })();
+  DB.set('seeded',true);
+}
+
+renderList();
+</script>
+</body>
+</html>

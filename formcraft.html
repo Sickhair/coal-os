@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>FormCraft — Drag & Drop Form Builder</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0f172a">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{--bg:#0f172a;--surface:#1e293b;--surface2:#334155;--border:#334155;--text:#f8fafc;--text2:#94a3b8;--text3:#64748b;--primary:#3b82f6;--primary-hover:#2563eb;--primary-dim:#3b82f622;--green:#22c55e;--red:#ef4444;--yellow:#f59e0b;--purple:#a855f7;--cyan:#06b6d4;--radius:8px}
+    body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh}
+    nav{background:var(--surface);border-bottom:1px solid var(--border);padding:.5rem 1rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+    .logo{font-weight:800;font-size:.95rem;color:var(--cyan)}.logo span{color:var(--text3);font-weight:400;font-size:.65rem}
+    .btn{display:inline-flex;align-items:center;gap:.35rem;background:var(--cyan);color:#fff;border:none;padding:.45rem .85rem;border-radius:var(--radius);font-size:.78rem;font-weight:500;cursor:pointer;font-family:inherit;transition:all .15s}
+    .btn:hover{opacity:.9}.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text2)}.btn-danger{background:var(--red)}.btn-sm{padding:.3rem .6rem;font-size:.7rem}.btn-primary{background:var(--primary)}
+    input,select,textarea{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:.45rem .65rem;border-radius:var(--radius);font-family:inherit;font-size:.8rem;outline:none;width:100%}
+    input:focus,select:focus{border-color:var(--cyan);box-shadow:0 0 0 3px #06b6d422}
+    .page{display:none;height:calc(100vh - 45px)}.page.active{display:flex}
+
+    /* BUILDER LAYOUT */
+    .builder{display:flex;flex:1;overflow:hidden}
+    @media(max-width:768px){.builder{flex-direction:column}}
+
+    /* LEFT PALETTE */
+    .palette{width:220px;background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;flex-shrink:0;padding:.5rem}
+    @media(max-width:768px){.palette{width:100%;max-height:150px;border-right:none;border-bottom:1px solid var(--border)}}
+    .palette-title{font-size:.6rem;font-weight:600;letter-spacing:1.5px;color:var(--text3);text-transform:uppercase;margin:.5rem .25rem}
+    .field-btn{display:flex;align-items:center;gap:.5rem;padding:.4rem .6rem;border-radius:6px;font-size:.78rem;color:var(--text2);cursor:pointer;border:1px dashed transparent;transition:all .15s;margin-bottom:.2rem}
+    .field-btn:hover{background:var(--surface2);color:var(--text);border-color:var(--border)}
+    .field-btn .icon{width:20px;text-align:center;font-size:.85rem}
+
+    /* CENTER CANVAS */
+    .canvas-area{flex:1;overflow-y:auto;padding:1rem}
+    .form-canvas{max-width:600px;margin:0 auto;min-height:300px}
+    .form-canvas-header{text-align:center;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--border)}
+    .form-canvas-header input{border:none;background:none;text-align:center;font-size:1.2rem;font-weight:700;color:var(--text);padding:.25rem}
+    .form-canvas-header textarea{border:none;background:none;text-align:center;font-size:.85rem;color:var(--text3);resize:none;padding:.15rem}
+    .form-canvas-header input:focus,.form-canvas-header textarea:focus{box-shadow:none}
+
+    /* FIELD ON CANVAS */
+    .canvas-field{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:.5rem;cursor:pointer;transition:all .15s;position:relative}
+    .canvas-field:hover{border-color:var(--cyan)}
+    .canvas-field.selected{border-color:var(--cyan);box-shadow:0 0 0 3px #06b6d422}
+    .canvas-field .field-controls{position:absolute;top:.25rem;right:.25rem;display:none;gap:.15rem}
+    .canvas-field:hover .field-controls,.canvas-field.selected .field-controls{display:flex}
+    .canvas-field .field-controls button{background:var(--surface2);border:none;color:var(--text3);width:22px;height:22px;border-radius:4px;cursor:pointer;font-size:.7rem;display:flex;align-items:center;justify-content:center}
+    .canvas-field .field-controls button:hover{color:var(--text);background:var(--border)}
+    .field-label{font-size:.8rem;font-weight:500;margin-bottom:.35rem;display:flex;align-items:center;gap:.25rem}
+    .field-label .required{color:var(--red);font-size:.7rem}
+    .field-preview{pointer-events:none}
+    .field-preview input,.field-preview select,.field-preview textarea{pointer-events:none;opacity:.7}
+    .field-desc{font-size:.65rem;color:var(--text3);margin-top:.2rem}
+    .canvas-empty{text-align:center;padding:3rem;color:var(--text3);border:2px dashed var(--border);border-radius:var(--radius)}
+
+    /* RIGHT PROPERTIES */
+    .properties{width:260px;background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;flex-shrink:0;padding:.75rem}
+    @media(max-width:768px){.properties{display:none}}
+    .prop-title{font-size:.7rem;font-weight:600;letter-spacing:1px;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem}
+    .prop-group{margin-bottom:.6rem}
+    .prop-group label{display:block;font-size:.7rem;color:var(--text3);margin-bottom:.15rem;font-weight:500}
+    .prop-row{display:flex;gap:.5rem}
+    .toggle{display:flex;align-items:center;gap:.4rem;font-size:.75rem;color:var(--text2);cursor:pointer}
+    .toggle input{width:auto}
+
+    /* PREVIEW MODE */
+    .preview-mode{padding:2rem;overflow-y:auto;flex:1}
+    .preview-form{max-width:550px;margin:0 auto;background:#fff;color:#1a1a1a;padding:2rem;border-radius:var(--radius);min-height:400px}
+    .preview-form h2{font-size:1.3rem;margin-bottom:.25rem}
+    .preview-form .desc{font-size:.85rem;color:#666;margin-bottom:1.5rem}
+    .preview-form .pf-group{margin-bottom:1rem}
+    .preview-form .pf-label{font-size:.8rem;font-weight:500;margin-bottom:.3rem;display:flex;align-items:center;gap:.25rem}
+    .preview-form .pf-label .req{color:var(--red)}
+    .preview-form input,.preview-form select,.preview-form textarea{background:#f8f9fa;border:1px solid #d1d5db;color:#1a1a1a;padding:.5rem .75rem;border-radius:6px;font-size:.85rem;width:100%}
+    .preview-form .pf-desc{font-size:.7rem;color:#999;margin-top:.15rem}
+    .preview-form .pf-check{display:flex;align-items:center;gap:.4rem;font-size:.8rem}
+    .preview-form button[type=submit]{background:var(--cyan);color:#fff;border:none;padding:.6rem 1.5rem;border-radius:6px;font-size:.9rem;font-weight:600;cursor:pointer;margin-top:1rem;width:100%}
+    .preview-form .pf-radio,.preview-form .pf-check-group{display:flex;flex-direction:column;gap:.35rem}
+    .preview-form .pf-radio label,.preview-form .pf-check-group label{display:flex;align-items:center;gap:.3rem;font-size:.85rem}
+
+    /* RESPONSES */
+    .responses-table{width:100%;border-collapse:collapse;font-size:.8rem}
+    .responses-table th{text-align:left;font-size:.65rem;color:var(--text3);font-weight:600;letter-spacing:1px;text-transform:uppercase;padding:.5rem;border-bottom:1px solid var(--border)}
+    .responses-table td{padding:.5rem;border-bottom:1px solid #1e293b44;font-size:.78rem;color:var(--text2);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+    /* SHARE MODAL */
+    .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:200;padding:1rem}
+    .modal-overlay.show{display:flex}
+    .modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;width:100%;max-width:500px}
+    .modal h3{margin-bottom:1rem}
+    .embed-code{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:.5rem;font-family:monospace;font-size:.75rem;color:var(--text2);word-break:break-all;margin:.5rem 0}
+  </style>
+</head>
+<body>
+<nav>
+  <div class="logo">FormCraft <span>BUILDER</span></div>
+  <div style="display:flex;gap:.5rem">
+    <button class="btn btn-outline btn-sm" onclick="showResponses()">Responses <span id="respCount"></span></button>
+    <button class="btn btn-outline btn-sm" onclick="showShare()">Share</button>
+    <button class="btn btn-outline btn-sm" onclick="togglePreview()">Preview</button>
+    <button class="btn btn-sm" onclick="saveForm()">Save</button>
+  </div>
+</nav>
+
+<!-- BUILDER -->
+<div class="page active" id="page-builder">
+  <div class="builder">
+    <div class="palette">
+      <div class="palette-title">Input Fields</div>
+      <div class="field-btn" onclick="addField('text')"><span class="icon">T</span> Text</div>
+      <div class="field-btn" onclick="addField('email')"><span class="icon">@</span> Email</div>
+      <div class="field-btn" onclick="addField('number')"><span class="icon">#</span> Number</div>
+      <div class="field-btn" onclick="addField('phone')"><span class="icon">☎</span> Phone</div>
+      <div class="field-btn" onclick="addField('url')"><span class="icon">🔗</span> URL</div>
+      <div class="field-btn" onclick="addField('date')"><span class="icon">📅</span> Date</div>
+      <div class="palette-title">Content</div>
+      <div class="field-btn" onclick="addField('textarea')"><span class="icon">¶</span> Long Text</div>
+      <div class="field-btn" onclick="addField('select')"><span class="icon">▾</span> Dropdown</div>
+      <div class="field-btn" onclick="addField('radio')"><span class="icon">◉</span> Multiple Choice</div>
+      <div class="field-btn" onclick="addField('checkbox')"><span class="icon">☑</span> Checkboxes</div>
+      <div class="palette-title">Layout</div>
+      <div class="field-btn" onclick="addField('heading')"><span class="icon">H</span> Heading</div>
+      <div class="field-btn" onclick="addField('divider')"><span class="icon">—</span> Divider</div>
+      <div class="palette-title">Special</div>
+      <div class="field-btn" onclick="addField('file')"><span class="icon">📎</span> File Upload</div>
+      <div class="field-btn" onclick="addField('rating')"><span class="icon">★</span> Rating</div>
+      <div class="field-btn" onclick="addField('scale')"><span class="icon">⊞</span> Scale (1-10)</div>
+    </div>
+    <div class="canvas-area">
+      <div class="form-canvas" id="formCanvas"></div>
+    </div>
+    <div class="properties" id="propsPanel">
+      <div class="prop-title">Properties</div>
+      <div id="propsContent"><p style="font-size:.8rem;color:var(--text3)">Select a field to edit</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- PREVIEW -->
+<div class="page" id="page-preview"></div>
+
+<!-- RESPONSES -->
+<div class="page" id="page-responses" style="display:block;overflow-y:auto;padding:1rem;max-width:1000px;margin:0 auto"></div>
+
+<!-- SHARE MODAL -->
+<div class="modal-overlay" id="shareModal">
+  <div class="modal">
+    <h3>Share Form</h3>
+    <p style="font-size:.8rem;color:var(--text3);margin-bottom:.75rem">Copy the embed code below or share the direct link.</p>
+    <div class="prop-group"><label>Direct Link</label><input id="shareLink" readonly onclick="this.select()"></div>
+    <div class="prop-group"><label>Embed Code</label><div class="embed-code" id="embedCode"></div></div>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
+      <button class="btn btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('shareLink').value)">Copy Link</button>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('shareModal').classList.remove('show')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DB={
+  get(k){try{return JSON.parse(localStorage.getItem('fc_'+k))||null}catch{return null}},
+  set(k,v){localStorage.setItem('fc_'+k,JSON.stringify(v))},
+  genId(){returnDate.now().toString(36)+Math.random().toString(36).slice(2,7)}
+};
+
+function getForm(){return DB.get('form')||{title:'Untitled Form',description:'Add a description...',fields:[]}}
+function getResponses(){return DB.get('responses')||[]}
+
+let selectedField=null;
+
+// === FIELD DEFAULTS ===
+const FIELD_DEFAULTS={
+  text:{label:'Text Input',placeholder:'Type here...',required:false},
+  email:{label:'Email',placeholder:'email@example.com',required:false},
+  number:{label:'Number',placeholder:'0',required:false,min:'',max:''},
+  phone:{label:'Phone',placeholder:'(555) 123-4567',required:false},
+  url:{label:'Website',placeholder:'https://...',required:false},
+  date:{label:'Date',required:false},
+  textarea:{label:'Long Answer',placeholder:'Write your response...',required:false},
+  select:{label:'Dropdown',options:['Option 1','Option 2','Option 3'],required:false},
+  radio:{label:'Multiple Choice',options:['Choice 1','Choice 2','Choice 3'],required:false},
+  checkbox:{label:'Checkboxes',options:['Option A','Option B','Option C'],required:false},
+  heading:{label:'Section Heading',text:'Section Title'},
+  divider:{label:'Divider'},
+  file:{label:'File Upload',required:false},
+  rating:{label:'Rating',max:5,required:false},
+  scale:{label:'Scale',min:1,max:10,minLabel:'Low',maxLabel:'High',required:false},
+};
+
+function addField(type){
+  const form=getForm();
+  const def=FIELD_DEFAULTS[type]||{};
+  form.fields.push({id:DB.genId(),type,...JSON.parse(JSON.stringify(def))});
+  DB.set('form',form);
+  selectedField=form.fields[form.fields.length-1].id;
+  renderCanvas();
+  renderProps();
+}
+
+function renderCanvas(){
+  const form=getForm();
+  const canvas=document.getElementById('formCanvas');
+  
+  let html=`<div class="form-canvas-header">
+    <input value="${form.title}" onchange="getForm().title=this.value;DB.set('form',getForm())" placeholder="Form Title">
+    <textarea rows="1" onchange="getForm().description=this.value;DB.set('form',getForm())" placeholder="Form description...">${form.description}</textarea>
+  </div>`;
+  
+  if(!form.fields.length){
+    html+=`<div class="canvas-empty"><div style="font-size:2rem;margin-bottom:.5rem">+</div><p>Add fields from the left panel</p></div>`;
+  }else{
+    html+=form.fields.map(f=>{
+      const sel=f.id===selectedField?'selected':'';
+      return`<div class="canvas-field ${sel}" onclick="selectField('${f.id}')">
+        <div class="field-controls">
+          <button onclick="event.stopPropagation();moveField('${f.id}',-1)">↑</button>
+          <button onclick="event.stopPropagation();moveField('${f.id}',1)">↓</button>
+          <button onclick="event.stopPropagation();dupField('${f.id}')">⧉</button>
+          <button onclick="event.stopPropagation();removeField('${f.id}')">✕</button>
+        </div>
+        <div class="field-label">${f.label||f.type}${f.required?'<span class="required">*</span>':''}</div>
+        <div class="field-preview">${renderFieldPreview(f)}</div>
+        ${f.description?`<div class="field-desc">${f.description}</div>`:''}
+      </div>`;
+    }).join('');
+  }
+  canvas.innerHTML=html;
+}
+
+function renderFieldPreview(f){
+  switch(f.type){
+    case'text':case'email':case'phone':case'url':return`<input placeholder="${f.placeholder||''}" disabled>`;
+    case'number':return`<input type="number" placeholder="${f.placeholder||'0'}" disabled>`;
+    case'date':return`<input type="date" disabled>`;
+    case'textarea':return`<textarea rows="2" placeholder="${f.placeholder||''}" disabled></textarea>`;
+    case'select':return`<select disabled>${(f.options||[]).map(o=>`<option>${o}</option>`).join('')}</select>`;
+    case'radio':return`<div style="font-size:.75rem;color:var(--text3)">${(f.options||[]).map(o=>`<div>◉ ${o}</div>`).join('')}</div>`;
+    case'checkbox':return`<div style="font-size:.75rem;color:var(--text3)">${(f.options||[]).map(o=>`<div>☑ ${o}</div>`).join('')}</div>`;
+    case'heading':return`<div style="font-size:1rem;font-weight:600">${f.text||f.label}</div>`;
+    case'divider':return`<hr style="border:none;border-top:1px solid var(--border)">`;
+    case'file':return`<div style="border:1px dashed var(--border);padding:.5rem;text-align:center;font-size:.75rem;color:var(--text3)">📎 Drop file or click to upload</div>`;
+    case'rating':return`<div style="font-size:1.2rem;color:var(--yellow)">${'★'.repeat(f.max||5)}${'☆'.repeat(5-(f.max||5))}</div>`;
+    case'scale':return`<div style="display:flex;justify-content:space-between;font-size:.75rem"><span>${f.minLabel||'Low'}</span><span>${Array.from({length:(f.max||10)-(f.min||1)+1},(_,i)=>(f.min||1)+i).join(' ')}</span><span>${f.maxLabel||'High'}</span></div>`;
+    default:return`<input disabled>`;
+  }
+}
+
+function selectField(id){selectedField=id;renderCanvas();renderProps()}
+function moveField(id,dir){
+  const form=getForm();const idx=form.fields.findIndex(f=>f.id===id);
+  const newIdx=idx+dir;if(newIdx<0||newIdx>=form.fields.length)return;
+  [form.fields[idx],form.fields[newIdx]]=[form.fields[newIdx],form.fields[idx]];
+  DB.set('form',form);renderCanvas();
+}
+function dupField(id){
+  const form=getForm();const f=form.fields.find(x=>x.id===id);
+  const clone=JSON.parse(JSON.stringify(f));clone.id=DB.genId();
+  const idx=form.fields.indexOf(f);form.fields.splice(idx+1,0,clone);
+  DB.set('form',form);renderCanvas();
+}
+function removeField(id){
+  const form=getForm();form.fields=form.fields.filter(f=>f.id!==id);
+  DB.set('form',form);if(selectedField===id)selectedField=null;
+  renderCanvas();renderProps();
+}
+
+function renderProps(){
+  const panel=document.getElementById('propsContent');
+  if(!selectedField){panel.innerHTML='<p style="font-size:.8rem;color:var(--text3)">Select a field to edit</p>';return}
+  const form=getForm();const f=form.fields.find(x=>x.id===selectedField);
+  if(!f){panel.innerHTML='<p style="font-size:.8rem;color:var(--text3)">Select a field</p>';return}
+  
+  let html=`<div class="prop-group"><label>Label</label><input value="${f.label||''}" oninput="updateProp('label',this.value)"></div>`;
+  
+  if(f.placeholder!==undefined)html+=`<div class="prop-group"><label>Placeholder</label><input value="${f.placeholder}" oninput="updateProp('placeholder',this.value)"></div>`;
+  if(f.text!==undefined)html+=`<div class="prop-group"><label>Text</label><input value="${f.text}" oninput="updateProp('text',this.value)"></div>`;
+  if(f.description!==undefined||true)html+=`<div class="prop-group"><label>Help Text</label><input value="${f.description||''}" oninput="updateProp('description',this.value)"></div>`;
+  if(f.required!==undefined)html+=`<div class="prop-group"><label class="toggle"><input type="checkbox" ${f.required?'checked':''} onchange="updateProp('required',this.checked)"> Required</label></div>`;
+  
+  // Options for select/radio/checkbox
+  if(f.options){
+    html+=`<div class="prop-group"><label>Options</label>`;
+    f.options.forEach((o,i)=>{
+      html+=`<div style="display:flex;gap:.25rem;margin-bottom:.2rem"><input value="${o}" oninput="updateOption(${i},this.value)" style="flex:1"><button class="btn btn-danger btn-sm" onclick="removeOption(${i})" style="width:28px;padding:0;display:flex;align-items:center;justify-content:center">✕</button></div>`;
+    });
+    html+=`<button class="btn btn-outline btn-sm" onclick="addOption()" style="margin-top:.25rem">+ Add Option</button></div>`;
+  }
+  
+  // Rating max
+  if(f.type==='rating')html+=`<div class="prop-group"><label>Max Stars</label><input type="number" value="${f.max||5}" min="3" max="10" oninput="updateProp('max',parseInt(this.value))"></div>`;
+  
+  // Scale
+  if(f.type==='scale'){
+    html+=`<div class="prop-row"><div class="prop-group"><label>Min</label><input type="number" value="${f.min||1}" oninput="updateProp('min',parseInt(this.value))"></div><div class="prop-group"><label>Max</label><input type="number" value="${f.max||10}" oninput="updateProp('max',parseInt(this.value))"></div></div>`;
+    html+=`<div class="prop-row"><div class="prop-group"><label>Min Label</label><input value="${f.minLabel||''}" oninput="updateProp('minLabel',this.value)"></div><div class="prop-group"><label>Max Label</label><input value="${f.maxLabel||''}" oninput="updateProp('maxLabel',this.value)"></div></div>`;
+  }
+
+  // Number min/max
+  if(f.type==='number')html+=`<div class="prop-row"><div class="prop-group"><label>Min</label><input type="number" value="${f.min||''}" oninput="updateProp('min',this.value)"></div><div class="prop-group"><label>Max</label><input type="number" value="${f.max||''}" oninput="updateProp('max',this.value)"></div></div>`;
+  
+  panel.innerHTML=html;
+}
+
+function updateProp(key,val){
+  const form=getForm();const f=form.fields.find(x=>x.id===selectedField);
+  if(!f)return;f[key]=val;DB.set('form',form);renderCanvas();
+}
+function updateOption(idx,val){
+  const form=getForm();const f=form.fields.find(x=>x.id===selectedField);
+  if(!f||!f.options)return;f.options[idx]=val;DB.set('form',form);renderCanvas();
+}
+function addOption(){
+  const form=getForm();const f=form.fields.find(x=>x.id===selectedField);
+  if(!f||!f.options)return;f.options.push('Option '+(f.options.length+1));DB.set('form',form);renderCanvas();renderProps();
+}
+function removeOption(idx){
+  const form=getForm();const f=form.fields.find(x=>x.id===selectedField);
+  if(!f||!f.options||f.options.length<=1)return;f.options.splice(idx,1);DB.set('form',form);renderCanvas();renderProps();
+}
+
+function saveForm(){DB.set('form',getForm());alert('Form saved!')}
+
+// === PREVIEW ===
+function togglePreview(){
+  const el=document.getElementById('page-preview');
+  if(el.classList.contains('active')){el.classList.remove('active');document.getElementById('page-builder').classList.add('active');return}
+  document.getElementById('page-builder').classList.remove('active');
+  el.classList.add('active');
+  const form=getForm();
+  let html=`<div class="preview-mode"><div class="preview-form"><h2>${form.title}</h2><div class="desc">${form.description}</div><form onsubmit="submitPreview(event)">`;
+  form.fields.forEach(f=>{
+    if(f.type==='heading'){html+=`<h3 style="margin:1rem 0 .5rem;font-size:1.1rem">${f.text||f.label}</h3>`;return}
+    if(f.type==='divider'){html+=`<hr style="border:none;border-top:1px solid #e5e7eb;margin:1rem 0">`;return}
+    html+=`<div class="pf-group"><div class="pf-label">${f.label}${f.required?'<span class="req">*</span>':''}</div>`;
+    switch(f.type){
+      case'text':case'email':case'phone':case'url':html+=`<input type="${f.type}" name="${f.id}" placeholder="${f.placeholder||''}" ${f.required?'required':''}>`;break;
+      case'number':html+=`<input type="number" name="${f.id}" placeholder="${f.placeholder||''}" ${f.min?'min="'+f.min+'"':''} ${f.max?'max="'+f.max+'"':''} ${f.required?'required':''}>`;break;
+      case'date':html+=`<input type="date" name="${f.id}" ${f.required?'required':''}>`;break;
+      case'textarea':html+=`<textarea name="${f.id}" rows="3" placeholder="${f.placeholder||''}" ${f.required?'required':''}></textarea>`;break;
+      case'select':html+=`<select name="${f.id}" ${f.required?'required':''}><option value="">Select...</option>${(f.options||[]).map(o=>`<option>${o}</option>`).join('')}</select>`;break;
+      case'radio':html+=`<div class="pf-radio">${(f.options||[]).map(o=>`<label><input type="radio" name="${f.id}" value="${o}">${o}</label>`).join('')}</div>`;break;
+      case'checkbox':html+=`<div class="pf-check-group">${(f.options||[]).map((o,i)=>`<label><input type="checkbox" name="${f.id}" value="${o}">${o}</label>`).join('')}</div>`;break;
+      case'file':html+=`<input type="file" name="${f.id}">`;break;
+      case'rating':html+=`<div style="font-size:1.5rem;color:#f59e0b;cursor:pointer">${Array.from({length:f.max||5},(_,i)=>`<span onclick="this.parentElement.querySelectorAll('span').forEach((s,j)=>s.textContent=j<=${i}?'★':'☆')">☆</span>`).join('')} <input type="hidden" name="${f.id}"></div>`;break;
+      case'scale':html+=`<div style="display:flex;align-items:center;gap:.5rem"><span style="font-size:.75rem;color:#666">${f.minLabel||''}</span><input type="range" name="${f.id}" min="${f.min||1}" max="${f.max||10}" value="${Math.round(((f.min||1)+(f.max||10))/2)}" style="flex:1"><span style="font-size:.75rem;color:#666">${f.maxLabel||''}</span><span id="scale_${f.id}" style="font-weight:700;min-width:20px;text-align:center">${Math.round(((f.min||1)+(f.max||10))/2)}</span></div>`;break;
+    }
+    if(f.description)html+=`<div class="pf-desc">${f.description}</div>`;
+    html+=`</div>`;
+  });
+  html+=`<button type="submit">Submit</button></form></div></div>`;
+  el.innerHTML=html;
+}
+
+function submitPreview(e){
+  e.preventDefault();
+  const fd=new FormData(e.target);
+  const resp={id:DB.genId(),submittedAt:new Date().toISOString()};
+  for(const[k,v]of fd.entries()){resp[k]=v}
+  // Checkboxes
+  const form=getForm();
+  form.fields.filter(f=>f.type==='checkbox').forEach(f=>{
+    resp[f.id]=fd.getAll(f.id).join(', ');
+  });
+  const resps=getResponses();resps.push(resp);DB.set('responses',resps);
+  e.target.innerHTML='<div style="text-align:center;padding:2rem"><div style="font-size:3rem;margin-bottom:1rem">✅</div><h3>Response Submitted!</h3><p style="color:#666;margin-top:.5rem">Thank you for your response.</p></div>';
+}
+
+// === RESPONSES ===
+function showResponses(){
+  document.getElementById('page-builder').classList.remove('active');
+  document.getElementById('page-preview').classList.remove('active');
+  const el=document.getElementById('page-responses');
+  el.style.display='block';
+  const form=getForm();
+  const resps=getResponses();
+  const fields=form.fields.filter(f=>!['heading','divider'].includes(f.type));
+  
+  document.getElementById('respCount').textContent=`(${resps.length})`;
+  
+  if(!resps.length){el.innerHTML=`<h2 style="font-size:1.1rem;margin-bottom:1rem">Responses (${resps.length})</h2><div style="text-align:center;padding:3rem;color:var(--text3)"><div style="font-size:2rem;margin-bottom:.5rem">📊</div><p>No responses yet. Share your form to collect data.</p></div><button class="btn btn-outline btn-sm" onclick="backToBuilder()">← Back</button>`;return}
+  
+  el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem"><h2 style="font-size:1.1rem">Responses (${resps.length})</h2><div style="display:flex;gap:.5rem"><button class="btn btn-outline btn-sm" onclick="exportCSV()">Export CSV</button><button class="btn btn-danger btn-sm" onclick="if(confirm('Clear all responses?')){DB.set('responses',[]);showResponses()}">Clear</button><button class="btn btn-outline btn-sm" onclick="backToBuilder()">← Back</button></div></div><div style="overflow-x:auto"><table class="responses-table"><tr><th>#</th><th>Submitted</th>${fields.map(f=>`<th>${f.label}</th>`).join('')}</tr>${resps.map((r,i)=>`<tr><td>${i+1}</td><td>${new Date(r.submittedAt).toLocaleString()}</td>${fields.map(f=>`<td>${r[f.id]||'—'}</td>`).join('')}</tr>`).join('')}</table></div>`;
+}
+
+function backToBuilder(){
+  document.getElementById('page-responses').style.display='none';
+  document.getElementById('page-builder').classList.add('active');
+}
+
+function exportCSV(){
+  const form=getForm();const resps=getResponses();
+  const fields=form.fields.filter(f=>!['heading','divider'].includes(f.type));
+  let csv=','+fields.map(f=>'"'+f.label+'"').join(',')+'\n';
+  resps.forEach((r,i)=>{csv+=(i+1)+','+fields.map(f=>'"'+(r[f.id]||'')+'"').join(',')+'\n'});
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='form-responses.csv';a.click();
+}
+
+function showShare(){
+  const form=getForm();
+  const url=location.href.split('?')[0]+'?form='+btoa(JSON.stringify(form));
+  document.getElementById('shareLink').value=url;
+  document.getElementById('embedCode').textContent=`<iframe src="${url}" width="100%" height="600" frameborder="0"></iframe>`;
+  document.getElementById('shareModal').classList.add('show');
+}
+
+// SEED
+if(!DB.get('seeded')){
+  DB.set('form',{
+    title:'Customer Feedback Survey',
+    description:'Help us improve our service by sharing your experience.',
+    fields:[
+      {id:'f1',type:'text',label:'Full Name',placeholder:'John Doe',required:true,description:''},
+      {id:'f2',type:'email',label:'Email Address',placeholder:'john@example.com',required:true,description:"We'll never share your email"},
+      {id:'f3',type:'rating',label:'Overall Satisfaction',max:5,required:true,description:'How would you rate your experience?'},
+      {id:'f4',type:'radio',label:'How did you find us?',options:['Google Search','Social Media','Friend Referral','Advertisement','Other'],required:false,description:''},
+      {id:'f5',type:'checkbox',label:'What features do you use?',options:['Dashboard','Reports','API','Mobile App','Integrations'],required:false,description:'Select all that apply'},
+      {id:'f6',type:'scale',label:'Likelihood to Recommend',min:1,max:10,minLabel:'Not Likely',maxLabel:'Very Likely',required:true,description:''},
+      {id:'f7',type:'textarea',label:'Additional Comments',placeholder:'Tell us more...',required:false,description:'Anything else you\'d like to share?'}
+    ]
+  });
+  DB.set('responses',[
+    {id:'r1',f1:'Alice Smith',f2:'alice@test.com',f3:'5',f4:'Google Search',f5:'Dashboard, API',f6:'9',f7:'Great product! Love the dashboard.',submittedAt:new Date(Date.now()-86400000).toISOString()},
+    {id:'r2',f1:'Bob Jones',f2:'bob@test.com',f3:'4',f4:'Friend Referral',f5:'Reports, Mobile App',f6:'8',f7:'Would love dark mode.',submittedAt:new Date(Date.now()-3600000).toISOString()},
+  ]);
+  DB.set('seeded',true);
+}
+
+renderCanvas();
+</script>
+</body>
+</html>

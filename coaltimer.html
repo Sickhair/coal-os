@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>CoalTimer — Time Tracker</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0f172a">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{--bg:#0f172a;--surface:#1e293b;--surface2:#334155;--border:#334155;--text:#f8fafc;--text2:#94a3b8;--text3:#64748b;--primary:#3b82f6;--primary-hover:#2563eb;--green:#22c55e;--red:#ef4444;--yellow:#f59e0b;--radius:8px}
+    body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,sans-serif;min-height:100vh}
+    nav{background:var(--surface);border-bottom:1px solid var(--border);padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+    .logo{font-weight:800;font-size:1rem;color:var(--primary)}.logo span{color:var(--text2);font-weight:400;font-size:.7rem;margin-left:.5rem}
+    .page{display:none;padding:1rem;max-width:800px;margin:0 auto}.page.active{display:block}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:1rem}
+    .card-title{font-size:.7rem;font-weight:600;letter-spacing:1px;color:var(--text3);text-transform:uppercase;margin-bottom:.75rem}
+    .btn{display:inline-flex;align-items:center;gap:.4rem;background:var(--primary);color:#fff;border:none;padding:.5rem 1rem;border-radius:var(--radius);font-size:.8rem;font-weight:500;cursor:pointer;font-family:inherit;transition:all .2s}
+    .btn:hover{background:var(--primary-hover)}
+    .btn-outline{background:transparent;border:1px solid var(--border);color:var(--text2)}.btn-outline:hover{border-color:var(--primary);color:var(--primary)}
+    .btn-danger{background:var(--red)}.btn-sm{padding:.3rem .6rem;font-size:.7rem}
+    .btn-green{background:var(--green)}.btn-green:hover{background:#16a34a}
+    .btn-yellow{background:var(--yellow);color:#000}
+    input,select,textarea{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:.5rem .75rem;border-radius:var(--radius);font-family:inherit;font-size:.8rem;outline:none}
+    input:focus,select:focus{border-color:var(--primary);box-shadow:0 0 0 3px #3b82f633}
+    .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.75rem;margin-bottom:1rem}
+    .stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;text-align:center}
+    .stat .val{font-size:1.4rem;font-weight:700}.stat .label{font-size:.65rem;color:var(--text3);margin-top:.1rem;letter-spacing:1px;text-transform:uppercase}
+    .timer-display{font-size:3rem;font-weight:800;text-align:center;padding:1rem 0;text-shadow:0 0 30px #3b82f633;letter-spacing:2px}
+    .timer-running{color:var(--green);text-shadow:0 0 30px #22c55e33}
+    .timer-controls{display:flex;gap:.5rem;justify-content:center;margin-bottom:1rem;flex-wrap:wrap}
+    .project-row{display:flex;align-items:center;gap:.75rem;padding:.5rem 0;border-bottom:1px solid #1e293b44}
+    .project-color{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+    .project-name{font-weight:600;flex:1}
+    .project-time{font-family:monospace;color:var(--text2);font-size:.8rem}
+    .task-input-row{display:flex;gap:.5rem;margin-bottom:1rem}
+    .task-input-row input{flex:1}
+    .entry{display:flex;align-items:center;gap:.75rem;padding:.4rem 0;border-bottom:1px solid #1e293b44;font-size:.8rem}
+    .entry-project{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+    .entry-desc{flex:1;color:var(--text2)}
+    .entry-time{font-family:monospace;color:var(--text3);font-size:.7rem}
+    .entry-dur{font-family:monospace;color:var(--text);font-size:.8rem;min-width:60px;text-align:right}
+    .nav-pills{display:flex;gap:.25rem;flex-wrap:wrap}
+    .nav-pill{background:var(--surface);border:1px solid var(--border);color:var(--text2);padding:.35rem .7rem;border-radius:20px;font-size:.7rem;cursor:pointer;font-family:inherit}
+    .nav-pill:hover,.nav-pill.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+    table{width:100%;border-collapse:collapse;font-size:.8rem}
+    th{text-align:left;font-size:.65rem;color:var(--text3);font-weight:600;letter-spacing:1px;text-transform:uppercase;padding:.5rem;border-bottom:1px solid var(--border)}
+    td{padding:.5rem;border-bottom:1px solid #1e293b44}
+    .badge{display:inline-block;padding:.15rem .5rem;border-radius:20px;font-size:.6rem;font-weight:600}
+    .badge-green{background:#22c55e22;color:#22c55e}
+    .empty{text-align:center;padding:2rem;color:var(--text3)}.empty .icon{font-size:2rem;margin-bottom:.5rem}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">CoalTimer <span>PRO</span></div>
+  <div class="nav-pills">
+    <button class="nav-pill active" onclick="showPage('tracker')">Timer</button>
+    <button class="nav-pill" onclick="showPage('projects')">Projects</button>
+    <button class="nav-pill" onclick="showPage('history')">History</button>
+    <button class="nav-pill" onclick="showPage('report')">Report</button>
+  </div>
+</nav>
+
+<!-- TIMER -->
+<div class="page active" id="page-tracker">
+  <div class="timer-display" id="timerDisplay">00:00:00</div>
+  <div style="text-align:center;margin-bottom:.5rem;font-size:.8rem;color:var(--text3)" id="currentTask">No task running</div>
+  <div class="timer-controls">
+    <select id="t-project" style="width:auto"><option value="">Select project...</option></select>
+    <input id="t-desc" placeholder="What are you working on?" style="flex:1;max-width:250px">
+    <button class="btn btn-green" id="t-startBtn" onclick="toggleTimer()">▶ Start</button>
+  </div>
+  <div class="stats" id="todayStats"></div>
+  <div class="card">
+    <div class="card-title">Today's Entries</div>
+    <div id="todayEntries"></div>
+  </div>
+</div>
+
+<!-- PROJECTS -->
+<div class="page" id="page-projects">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+    <h2 style="font-size:1.1rem">Projects</h2>
+    <button class="btn" onclick="showProjectForm()">+ New Project</button>
+  </div>
+  <div id="projectList"></div>
+  <div class="card" id="projectForm" style="display:none">
+    <div class="card-title">New Project</div>
+    <div style="display:flex;gap:.5rem;margin-bottom:.5rem">
+      <input id="p-name" placeholder="Project name" style="flex:1">
+      <input id="p-color" type="color" value="#3b82f6" style="width:50px;height:36px;border:none;background:none;cursor:pointer">
+    </div>
+    <input id="p-rate" type="number" placeholder="Hourly rate ($)" step="0.01">
+    <div style="display:flex;gap:.5rem;margin-top:.5rem">
+      <button class="btn" onclick="saveProject()">Save</button>
+      <button class="btn btn-outline" onclick="document.getElementById('projectForm').style.display='none'">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div class="page" id="page-history">
+  <h2 style="font-size:1.1rem;margin-bottom:1rem">Time History</h2>
+  <div style="display:flex;gap:.5rem;margin-bottom:1rem">
+    <select id="h-filter-project" onchange="renderHistory()" style="width:auto"><option value="">All Projects</option></select>
+    <input id="h-filter-date" type="date" onchange="renderHistory()" style="width:auto">
+    <button class="btn btn-outline btn-sm" onclick="exportCSV()">Export CSV</button>
+  </div>
+  <div id="historyList"></div>
+</div>
+
+<!-- REPORT -->
+<div class="page" id="page-report">
+  <h2 style="font-size:1.1rem;margin-bottom:1rem">Weekly Report</h2>
+  <div class="stats" id="reportStats"></div>
+  <div class="card">
+    <div class="card-title">Hours by Project</div>
+    <div id="reportByProject"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Daily Breakdown</div>
+    <div id="reportDaily"></div>
+  </div>
+</div>
+
+<script>
+const DB={
+  get(k){try{return JSON.parse(localStorage.getItem('ct_'+k))||null}catch{return null}},
+  set(k,v){localStorage.setItem('ct_'+k,JSON.stringify(v))},
+  genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+};
+
+function getProjects(){return DB.get('projects')||[]}
+function getEntries(){return DB.get('entries')||[]}
+
+// === NAV ===
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.nav-pill').forEach(p=>p.classList.remove('active'));
+  if(id==='tracker'){renderToday();populateProjectSelects()}
+  if(id==='projects')renderProjects();
+  if(id==='history'){populateProjectSelects();renderHistory()}
+  if(id==='report')renderReport();
+}
+
+// === TIMER ===
+let timerInterval=null;
+let timerStart=null;
+let timerEntry=null;
+
+function toggleTimer(){
+  if(timerInterval){stopTimer()}
+  else{startTimer()}
+}
+
+function startTimer(){
+  const pid=document.getElementById('t-project').value;
+  const desc=document.getElementById('t-desc').value.trim()||'General';
+  timerStart=Date.now();
+  timerEntry={id:DB.genId(),projectId:pid,description:desc,startTime:timerStart,endTime:null,duration:0};
+  document.getElementById('t-startBtn').textContent='⏹ Stop';
+  document.getElementById('t-startBtn').className='btn btn-danger';
+  document.getElementById('currentTask').textContent=desc;
+  timerInterval=setInterval(updateTimer,1000);
+  updateTimer();
+}
+
+function stopTimer(){
+  clearInterval(timerInterval);timerInterval=null;
+  const end=Date.now();
+  timerEntry.endTime=end;
+  timerEntry.duration=(end-timerStart)/1000;
+  const entries=getEntries();entries.push(timerEntry);DB.set('entries',entries);
+  document.getElementById('t-startBtn').textContent='▶ Start';
+  document.getElementById('t-startBtn').className='btn btn-green';
+  document.getElementById('currentTask').textContent='No task running';
+  document.getElementById('timerDisplay').textContent='00:00:00';
+  document.getElementById('timerDisplay').classList.remove('timer-running');
+  renderToday();
+}
+
+function updateTimer(){
+  const elapsed=(Date.now()-timerStart)/1000;
+  document.getElementById('timerDisplay').textContent=formatDur(elapsed);
+  document.getElementById('timerDisplay').classList.add('timer-running');
+}
+
+function formatDur(sec){
+  const h=Math.floor(sec/3600);const m=Math.floor((sec%3600)/60);const s=Math.floor(sec%60);
+  return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+function formatHours(sec){return(sec/3600).toFixed(2)+'h'}
+
+// === TODAY ===
+function renderToday(){
+  const today=new Date().toISOString().split('T')[0];
+  const entries=getEntries().filter(e=>{
+    const d=new Date(e.startTime).toISOString().split('T')[0];
+    return d===today;
+  });
+  const totalSec=entries.reduce((s,e)=>s+e.duration,0);
+  const projects=new Set(entries.map(e=>e.projectId).filter(Boolean));
+  
+  document.getElementById('todayStats').innerHTML=`
+    <div class="stat"><div class="val">${formatHours(totalSec)}</div><div class="label">Today</div></div>
+    <div class="stat"><div class="val">${entries.length}</div><div class="label">Entries</div></div>
+    <div class="stat"><div class="val">${projects.size}</div><div class="label">Projects</div></div>
+  `;
+  
+  if(!entries.length){document.getElementById('todayEntries').innerHTML='<div class="empty"><div class="icon">⏱</div><p>No entries today. Start tracking!</p></div>';return}
+  const projs=getProjects();
+  document.getElementById('todayEntries').innerHTML=entries.slice().reverse().map(e=>{
+    const p=projs.find(x=>x.id===e.projectId);
+    return`<div class="entry"><div class="entry-project" style="background:${p?p.color:'#666'}"></div><div class="entry-desc">${p?p.name+': ':''}${e.description}</div><div class="entry-time">${new Date(e.startTime).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}</div><div class="entry-dur">${formatDur(e.duration)}</div></div>`;
+  }).join('');
+}
+
+function populateProjectSelects(){
+  const projs=getProjects();
+  const opts='<option value="">No project</option>'+projs.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  document.getElementById('t-project').innerHTML=opts;
+  const hSel=document.getElementById('h-filter-project');
+  hSel.innerHTML='<option value="">All Projects</option>'+projs.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+}
+
+// === PROJECTS ===
+function showProjectForm(){document.getElementById('projectForm').style.display='block'}
+function renderProjects(){
+  const projs=getProjects();
+  const entries=getEntries();
+  if(!projs.length){document.getElementById('projectList').innerHTML='<div class="empty"><div class="icon">📁</div><p>No projects yet</p></div>';return}
+  document.getElementById('projectList').innerHTML=projs.map(p=>{
+    const pEntries=entries.filter(e=>e.projectId===p.id);
+    const totalSec=pEntries.reduce((s,e)=>s+e.duration,0);
+    const earnings=totalSec/3600*(p.rate||0);
+    return`<div class="card"><div class="project-row"><div class="project-color" style="background:${p.color}"></div><div class="project-name">${p.name}</div><div class="project-time">${formatHours(totalSec)}</div></div>${p.rate?`<div style="font-size:.7rem;color:var(--text3);margin-top:.25rem">${p.rate?`$${p.rate}/hr → $${earnings.toFixed(2)} earned`:''}</div>`:''}<div style="margin-top:.25rem"><button class="btn btn-danger btn-sm" onclick="deleteProject('${p.id}')">Delete</button></div></div>`;
+  }).join('');
+}
+
+function saveProject(){
+  const name=document.getElementById('p-name').value.trim();
+  if(!name)return;
+  const projs=getProjects();
+  projs.push({id:DB.genId(),name,color:document.getElementById('p-color').value,rate:parseFloat(document.getElementById('p-rate').value)||0});
+  DB.set('projects',projs);
+  document.getElementById('p-name').value='';
+  document.getElementById('p-rate').value='';
+  document.getElementById('projectForm').style.display='none';
+  renderProjects();
+  populateProjectSelects();
+}
+
+function deleteProject(id){
+  if(!confirm('Delete this project?'))return;
+  DB.set('projects',getProjects().filter(p=>p.id!==id));
+  renderProjects();
+}
+
+// === HISTORY ===
+function renderHistory(){
+  let entries=getEntries().slice().reverse();
+  const projFilter=document.getElementById('h-filter-project').value;
+  const dateFilter=document.getElementById('h-filter-date').value;
+  if(projFilter)entries=entries.filter(e=>e.projectId===projFilter);
+  if(dateFilter)entries=entries.filter(e=>new Date(e.startTime).toISOString().split('T')[0]===dateFilter);
+  
+  const projs=getProjects();
+  if(!entries.length){document.getElementById('historyList').innerHTML='<div class="empty"><div class="icon">📋</div><p>No entries found</p></div>';return}
+  document.getElementById('historyList').innerHTML=`<div class="card"><div class="table-wrap"><table><tr><th>Date</th><th>Time</th><th>Project</th><th>Task</th><th>Duration</th><th></th></tr>${entries.map(e=>{
+    const p=projs.find(x=>x.id===e.projectId);
+    const d=new Date(e.startTime);
+    return`<tr><td>${d.toLocaleDateString()}</td><td>${d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}</td><td>${p?p.name:'—'}</td><td>${e.description}</td><td style="font-family:monospace">${formatDur(e.duration)}</td><td><button class="btn btn-danger btn-sm" onclick="deleteEntry('${e.id}')">✕</button></td></tr>`}).join('')}</table></div></div>`;
+}
+
+function deleteEntry(id){
+  DB.set('entries',getEntries().filter(e=>e.id!==id));
+  renderHistory();renderToday();
+}
+
+function exportCSV(){
+  const entries=getEntries();const projs=getProjects();
+  let csv='Date,Time,Project,Task,Duration (hours)\n';
+  entries.forEach(e=>{
+    const p=projs.find(x=>x.id===e.projectId);
+    const d=new Date(e.startTime);
+    csv+=`${d.toLocaleDateString()},${d.toLocaleTimeString()},${p?p.name:''},${e.description},${(e.duration/3600).toFixed(2)}\n`;
+  });
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='coaltimer-export.csv';a.click();
+}
+
+// === REPORT ===
+function renderReport(){
+  const entries=getEntries();
+  const projs=getProjects();
+  const now=new Date();
+  const weekAgo=new Date(now-7*86400000);
+  const weekEntries=entries.filter(e=>e.startTime>=weekAgo.getTime());
+  const totalSec=weekEntries.reduce((s,e)=>s+e.duration,0);
+  const totalEarnings=weekEntries.reduce((s,e)=>{
+    const p=projs.find(x=>x.id===e.projectId);
+    return s+(e.duration/3600)*(p?p.rate:0);
+  },0);
+  
+  document.getElementById('reportStats').innerHTML=`
+    <div class="stat"><div class="val">${formatHours(totalSec)}</div><div class="label">This Week</div></div>
+    <div class="stat"><div class="val">${weekEntries.length}</div><div class="label">Entries</div></div>
+    <div class="stat"><div class="val green">$${totalEarnings.toFixed(2)}</div><div class="label">Earnings</div></div>
+  `;
+  
+  // By project
+  const byProject={};
+  weekEntries.forEach(e=>{
+    const pid=e.projectId||'none';
+    if(!byProject[pid])byProject[pid]={sec:0,count:0};
+    byProject[pid].sec+=e.duration;byProject[pid].count++;
+  });
+  const maxSec=Math.max(...Object.values(byProject).map(v=>v.sec),1);
+  document.getElementById('reportByProject').innerHTML=Object.entries(byProject).map(([pid,v])=>{
+    const p=projs.find(x=>x.id===pid);
+    const pct=(v.sec/maxSec)*100;
+    return`<div style="margin-bottom:.5rem"><div style="display:flex;justify-content:space-between;font-size:.8rem"><span>${p?p.name:'No Project'}</span><span style="color:var(--text3)">${formatHours(v.sec)}</span></div><div style="background:var(--bg);border-radius:3px;height:6px;margin-top:.2rem"><div style="background:${p?p.color:'var(--primary)'};height:100%;border-radius:3px;width:${pct}%"></div></div></div>`;
+  }).join('')||'<div style="color:var(--text3);font-size:.8rem">No data this week</div>';
+  
+  // Daily
+  const daily={};
+  for(let i=6;i>=0;i--){
+    const d=new Date(now-i*86400000).toISOString().split('T')[0];
+    daily[d]=0;
+  }
+  weekEntries.forEach(e=>{
+    const d=new Date(e.startTime).toISOString().split('T')[0];
+    if(d in daily)daily[d]+=e.duration;
+  });
+  const maxDaily=Math.max(...Object.values(daily),1);
+  document.getElementById('reportDaily').innerHTML=Object.entries(daily).map(([d,sec])=>{
+    const day=new Date(d+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+    const pct=(sec/maxDaily)*100;
+    return`<div style="margin-bottom:.4rem"><div style="display:flex;justify-content:space-between;font-size:.75rem"><span style="color:var(--text3)">${day}</span><span>${formatHours(sec)}</span></div><div style="background:var(--bg);border-radius:3px;height:4px;margin-top:.15rem"><div style="background:var(--primary);height:100%;border-radius:3px;width:${pct}%"></div></div></div>`;
+  }).join('');
+}
+
+// INIT
+populateProjectSelects();
+renderToday();
+</script>
+</body>
+</html>
