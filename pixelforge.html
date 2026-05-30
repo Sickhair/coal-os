@@ -27,9 +27,15 @@ canvas{display:block;cursor:crosshair;image-rendering:pixelated}
 .size-row{display:flex;gap:.3rem;margin-bottom:.3rem}
 .size-btn{background:#1e293b;border:1px solid #334155;color:#64748b;padding:.2rem .5rem;border-radius:3px;cursor:pointer;font-size:.6rem}
 .size-btn.active{color:#ec4899;border-color:#ec4899}
+
+.brand{font-size:.4rem;letter-spacing:4px;color:#334155;margin-bottom:6px;text-transform:uppercase;font-family:'Orbitron',sans-serif;text-align:center}
+.back-link{position:fixed;top:8px;left:8px;z-index:200;text-decoration:none;font-family:'Orbitron',sans-serif;font-size:.5rem;letter-spacing:1px;color:#475569;opacity:.6;transition:opacity .2s}
+.back-link:hover{opacity:1;color:#e2e8f0}
+
 </style>
 </head>
 <body>
+<a class="back-link" href="index.html">← COAL OS</a>
 <div class="top">
   <div class="logo">🎨 PIXEL FORGE</div>
   <button class="btn" onclick="undo()">↩ Undo</button>

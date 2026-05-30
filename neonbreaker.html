@@ -14,11 +14,18 @@ canvas{display:block;touch-action:none}
 .overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(5,5,16,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;text-align:center;color:#e2e8f0;padding:1rem}
 .overlay h1{font-size:1.3rem;margin-bottom:.5rem;letter-spacing:2px}.overlay p{font-size:.75rem;color:#94a3b8;margin-bottom:.75rem;max-width:300px;line-height:1.4}
 .overlay button{background:transparent;border:2px solid #06b6d4;color:#06b6d4;padding:.5rem 1.5rem;border-radius:6px;font-family:inherit;font-size:.85rem;cursor:pointer;font-weight:700;letter-spacing:2px}
+
+.brand{font-size:.4rem;letter-spacing:4px;color:#334155;margin-bottom:6px;text-transform:uppercase;font-family:'Orbitron',sans-serif;text-align:center}
+.back-link{position:fixed;top:8px;left:8px;z-index:200;text-decoration:none;font-family:'Orbitron',sans-serif;font-size:.5rem;letter-spacing:1px;color:#475569;opacity:.6;transition:opacity .2s}
+.back-link:hover{opacity:1;color:#e2e8f0}
+
 </style>
 </head>
 <body>
+<a class="back-link" href="index.html">← COAL OS</a>
 <div class="hud"><div class="score" id="scoreEl">0</div><div class="lvl" id="lvlEl">Level 1</div><div class="lives" id="livesEl">♥♥♥</div></div>
 <canvas id="c"></canvas>
+<div class="brand">COAL OS</div>
 <div class="overlay" id="start"><h1 style="color:#06b6d4">💎 NEON BREAKER</h1><p>Move paddle to bounce the ball and destroy all bricks. Catch power-ups! Tap or use mouse/touch to move paddle.</p><button onclick="startGame()">BREAK</button></div>
 <div class="overlay" id="over" style="display:none"><h1 style="color:#ef4444">GAME OVER</h1><p id="overMsg"></p><button onclick="startGame()">RETRY</button></div>
 <div class="overlay" id="win" style="display:none"><h1 style="color:#22c55e">✓ LEVEL CLEAR</h1><p id="winMsg"></p><button onclick="nextLevel()">NEXT</button></div>

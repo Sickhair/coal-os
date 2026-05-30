@@ -99,9 +99,15 @@
     /* FLIGHT EVENT NOTIFICATION */
     .flight-event{position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--surface);border:2px solid var(--green);color:var(--green);padding:.6rem 1.5rem;border-radius:var(--r);font-weight:700;font-size:.85rem;z-index:200;display:none;text-align:center;animation:fadeInOut 3s forwards}
     @keyframes fadeInOut{0%{opacity:0;transform:translateX(-50%) translateY(-10px)}10%{opacity:1;transform:translateX(-50%) translateY(0)}80%{opacity:1}100%{opacity:0}}
-  </style>
+  
+.brand{font-size:.4rem;letter-spacing:4px;color:#334155;margin-bottom:6px;text-transform:uppercase;font-family:'Orbitron',sans-serif;text-align:center}
+.back-link{position:fixed;top:8px;left:8px;z-index:200;text-decoration:none;font-family:'Orbitron',sans-serif;font-size:.5rem;letter-spacing:1px;color:#475569;opacity:.6;transition:opacity .2s}
+.back-link:hover{opacity:1;color:#e2e8f0}
+
+</style>
 </head>
 <body>
+<a class="back-link" href="index.html">← COAL OS</a>
 
 <div class="topbar">
   <div class="mission-name">ATOCS <span>ACTIVE TAKEOFF CONTROL SYSTEM</span></div>

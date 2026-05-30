@@ -15,15 +15,22 @@
     .overlay button:hover{background:#00ffaa22}
     .hud{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:.5rem .75rem;z-index:50;font-size:.7rem;color:#e2e8f0;pointer-events:none}
     .hud .val{font-weight:700;font-family:'JetBrains Mono',monospace}.hud .score{color:#00ffaa}.hud .combo{color:#ff6b6b}.hud .dist{color:#6bafff}
-  </style>
+  
+.brand{font-size:.4rem;letter-spacing:4px;color:#334155;margin-bottom:6px;text-transform:uppercase;font-family:'Orbitron',sans-serif;text-align:center}
+.back-link{position:fixed;top:8px;left:8px;z-index:200;text-decoration:none;font-family:'Orbitron',sans-serif;font-size:.5rem;letter-spacing:1px;color:#475569;opacity:.6;transition:opacity .2s}
+.back-link:hover{opacity:1;color:#e2e8f0}
+
+</style>
 </head>
 <body>
+<a class="back-link" href="index.html">← COAL OS</a>
 <div class="hud" id="hud" style="display:none">
   <div>SCORE <span class="score val" id="scoreEl">0</span></div>
   <div>COMBO <span class="combo val" id="comboEl">x1</span></div>
   <div><span class="dist val" id="distEl">0</span>m</div>
 </div>
 <canvas id="c"></canvas>
+<div class="brand">COAL OS</div>
 <div class="overlay" id="start">
   <h1 style="color:#00ffaa">⚔ NEON BLADE</h1>
   <p>Endless runner. Tap to jump. Slash enemies mid-air for combo points. Dodge obstacles. Survive as long as you can.</p>

@@ -53,9 +53,15 @@
     .player-status{font-size:.65rem;color:#94a3b8;margin:.25rem 0}
     .buffs{display:flex;gap:.3rem;justify-content:center;margin:.25rem 0}
     .buff{font-size:.55rem;padding:.1rem .3rem;border-radius:3px;background:#334155}
-  </style>
+  
+.brand{font-size:.4rem;letter-spacing:4px;color:#334155;margin-bottom:6px;text-transform:uppercase;font-family:'Orbitron',sans-serif;text-align:center}
+.back-link{position:fixed;top:8px;left:8px;z-index:200;text-decoration:none;font-family:'Orbitron',sans-serif;font-size:.5rem;letter-spacing:1px;color:#475569;opacity:.6;transition:opacity .2s}
+.back-link:hover{opacity:1;color:#e2e8f0}
+
+</style>
 </head>
 <body>
+<a class="back-link" href="index.html">← COAL OS</a>
 
 <div class="hud" id="hud" style="display:none">
   <div><span class="hp">❤️</span> <span class="hp val" id="hpText">50/50</span><div class="hp-bar"><div class="hp-fill" id="hpBar"></div></div></div>
@@ -79,6 +85,7 @@
 <div class="log" id="log"></div>
 
 <!-- START -->
+<div class="brand">COAL OS</div>
 <div class="overlay" id="startScreen">
   <h1 style="color:#f59e0b">🃏 CARD FORGE</h1>
   <h2>Deckbuilder Roguelike</h2>

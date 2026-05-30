@@ -97,11 +97,17 @@
 
     /* PRINT */
     @media print{.toolbar,.panel,.topbar-actions,.zoom-ctrl,.canvas-info{display:none!important}.panel{width:100%!important;border:none!important}.main{flex-direction:column!important}}
-  </style>
+  
+.brand{font-size:.4rem;letter-spacing:4px;color:#334155;margin-bottom:6px;text-transform:uppercase;font-family:'Orbitron',sans-serif;text-align:center}
+.back-link{position:fixed;top:8px;left:8px;z-index:200;text-decoration:none;font-family:'Orbitron',sans-serif;font-size:.5rem;letter-spacing:1px;color:#475569;opacity:.6;transition:opacity .2s}
+.back-link:hover{opacity:1;color:#e2e8f0}
+
+</style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script>pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'</script>
 </head>
 <body>
+<a class="back-link" href="index.html">← COAL OS</a>
 
 <div class="topbar">
   <div class="logo">TAKEOFF PRO <span>Blueprint Measurement System</span></div>

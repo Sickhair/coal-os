@@ -26,9 +26,15 @@
     .overlay button.outline{background:transparent;border:1px solid #475569;color:#94a3b8}
     .info-bar{font-size:.6rem;color:#475569;text-align:center;padding:.2rem;background:#111827;width:100%;max-width:800px}
     .wave-badge{background:#7c3aed33;color:#a78bfa;padding:.1rem .4rem;border-radius:3px;font-weight:700}
-  </style>
+  
+.brand{font-size:.4rem;letter-spacing:4px;color:#334155;margin-bottom:6px;text-transform:uppercase;font-family:'Orbitron',sans-serif;text-align:center}
+.back-link{position:fixed;top:8px;left:8px;z-index:200;text-decoration:none;font-family:'Orbitron',sans-serif;font-size:.5rem;letter-spacing:1px;color:#475569;opacity:.6;transition:opacity .2s}
+.back-link:hover{opacity:1;color:#e2e8f0}
+
+</style>
 </head>
 <body>
+<a class="back-link" href="index.html">← COAL OS</a>
 
 <div class="hud" id="hud" style="display:none">
   <div class="hud-section">
@@ -55,6 +61,7 @@
 <div class="info-bar" id="infoBar" style="display:none">Tap map to place tower · Waves auto-start · Defend the path!</div>
 
 <!-- START SCREEN -->
+<div class="brand">COAL OS</div>
 <div class="overlay" id="startScreen">
   <h1>🏰 TOWER SIEGE</h1>
   <p>Defend against waves of enemies by building towers along the path. Each tower has unique abilities. Survive all 30 waves to win!</p>
