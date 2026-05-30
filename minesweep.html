@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Mine Sweep</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+body{background:#0f172a;display:flex;flex-direction:column;align-items:center;min-height:100vh;font-family:'Inter',sans-serif;color:#e2e8f0;padding:.5rem}
+.top{display:flex;justify-content:space-between;align-items:center;width:100%;max-width:420px;margin-bottom:.5rem}
+.logo{font-weight:800;font-size:.85rem;color:#f59e0b;letter-spacing:2px}
+.top .mines{font-family:monospace;font-size:.9rem;font-weight:700;color:#ef4444}
+.top .timer{font-family:monospace;font-size:.9rem;font-weight:700;color:#06b6d4}
+.btn{background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:.3rem .6rem;border-radius:4px;font-family:inherit;font-size:.65rem;cursor:pointer;font-weight:600;margin:.1rem}
+.btn:hover{border-color:#64748b;color:#fff}
+.btn.active{border-color:#f59e0b;color:#f59e0b}
+.diff{display:flex;gap:.2rem;margin-bottom:.5rem}
+.grid{display:inline-grid;gap:1px;background:#1e293b;border:2px solid #334155;border-radius:4px;overflow:hidden}
+.cell{display:flex;align-items:center;justify-content:center;font-weight:800;cursor:pointer;transition:background .05s;border:none;font-family:'Inter',sans-serif}
+.cell.hidden{background:#334155}.cell.hidden:hover{background:#475569}
+.cell.revealed{background:#1e293b}
+.cell.mine{background:#7f1d1d}.cell.flagged{background:#1e3a5f}
+.cell.boom{background:#ef4444;animation:shake .3s}
+.n1{color:#3b82f6}.n2{color:#22c55e}.n3{color:#ef4444}.n4{color:#6366f1}.n5{color:#a855f7}.n6{color:#06b6d4}.n7{color:#f59e0b}.n8{color:#94a3b8}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+.status{font-size:.7rem;color:#94a3b8;margin-top:.5rem;min-height:20px;text-align:center}
+.overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;text-align:center;padding:1rem}
+.overlay h1{font-size:1.3rem;margin-bottom:.5rem}.overlay p{font-size:.75rem;color:#94a3b8;margin-bottom:.5rem}
+.overlay button{background:transparent;border:2px solid #f59e0b;color:#f59e0b;padding:.5rem 1.5rem;border-radius:6px;font-family:inherit;font-size:.85rem;cursor:pointer;font-weight:700}
+.mode-toggle{display:flex;gap:.3rem;margin-bottom:.3rem}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="mines" id="minesEl">💣 10</div>
+  <div class="logo">💎 MINE SWEEP</div>
+  <div class="timer" id="timerEl">⏱ 0:00</div>
+</div>
+<div class="diff">
+  <button class="btn active" onclick="setDiff(9,9,10,this)">Easy 9×9</button>
+  <button class="btn" onclick="setDiff(16,16,40,this)">Med 16×16</button>
+  <button class="btn" onclick="setDiff(20,16,60,this)">Hard 20×16</button>
+</div>
+<div class="mode-toggle">
+  <button class="btn active" id="modeDig" onclick="setMode('dig',this)">⛏ Dig</button>
+  <button class="btn" id="modeFlag" onclick="setMode('flag',this)">🚩 Flag</button>
+</div>
+<div class="grid" id="grid"></div>
+<div class="status" id="status">Tap to reveal • Long press or flag mode to flag</div>
+
+<script>
+let cols=9,rows=9,mineCount=10,grid,revealed,flagged,mines,gameOver,firstClick,timer,timerInterval,mode='dig';
+
+function setDiff(c,r,m,el){
+  cols=c;rows=r;mineCount=m;
+  document.querySelectorAll('.diff .btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');
+  newGame();
+}
+
+function setMode(m,el){
+  mode=m;
+  document.getElementById('modeDig').classList.toggle('active',m==='dig');
+  document.getElementById('modeFlag').classList.toggle('active',m==='flag');
+}
+
+function newGame(){
+  grid=Array.from({length:rows},()=>Array(cols).fill(0));
+  revealed=Array.from({length:rows},()=>Array(cols).fill(false));
+  flagged=Array.from({length:rows},()=>Array(cols).fill(false));
+  mines=[];gameOver=false;firstClick=true;timer=0;
+  clearInterval(timerInterval);timerInterval=null;
+  document.getElementById('status').textContent='Tap to reveal • Long press or flag mode to flag';
+  document.getElementById('minesEl').textContent='💣 '+mineCount;
+  document.getElementById('timerEl').textContent='⏱ 0:00';
+  renderGrid();
+}
+
+function placeMines(sr,sc){
+  mines=[];
+  while(mines.length<mineCount){
+    const r=Math.floor(Math.random()*rows),c=Math.floor(Math.random()*cols);
+    if(mines.some(m=>m.r===r&&m.c===c))continue;
+    if(Math.abs(r-sr)<=1&&Math.abs(c-sc)<=1)continue;
+    mines.push({r,c});grid[r][c]=-1;
+  }
+  // Calc numbers
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    if(grid[r][c]===-1)continue;
+    let n=0;
+    for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
+      const nr=r+dr,nc=c+dc;
+      if(nr>=0&&nr<rows&&nc>=0&&nc<cols&&grid[nr][nc]===-1)n++;
+    }
+    grid[r][c]=n;
+  }
+}
+
+function renderGrid(){
+  const el=document.getElementById('grid');
+  const cellSize=Math.min(Math.floor((Math.min(window.innerWidth-20,420))/cols),36);
+  el.style.gridTemplateColumns=`repeat(${cols},${cellSize}px)`;
+  el.innerHTML='';
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    const cell=document.createElement('button');
+    cell.className='cell';
+    cell.style.width=cellSize+'px';cell.style.height=cellSize+'px';cell.style.fontSize=(cellSize*0.45)+'px';
+    
+    if(revealed[r][c]){
+      cell.classList.add('revealed');
+      if(grid[r][c]===-1){cell.classList.add('mine');cell.textContent='💣'}
+      else if(grid[r][c]>0){cell.textContent=grid[r][c];cell.classList.add('n'+grid[r][c])}
+    }else if(flagged[r][c]){
+      cell.classList.add('flagged');cell.textContent='🚩';
+    }else{
+      cell.classList.add('hidden');
+    }
+    
+    cell.onclick=()=>handleClick(r,c);
+    cell.oncontextmenu=e=>{e.preventDefault();toggleFlag(r,c)};
+    
+    // Long press for mobile flagging
+    let pressTimer;
+    cell.addEventListener('touchstart',e=>{
+      pressTimer=setTimeout(()=>{e.preventDefault();toggleFlag(r,c)},500);
+    },{passive:false});
+    cell.addEventListener('touchend',()=>clearTimeout(pressTimer));
+    cell.addEventListener('touchmove',()=>clearTimeout(pressTimer));
+    
+    el.appendChild(cell);
+  }
+}
+
+function handleClick(r,c){
+  if(gameOver)return;
+  if(flagged[r][c])return;
+  
+  if(mode==='flag'){toggleFlag(r,c);return}
+  
+  if(firstClick){
+    firstClick=false;
+    placeMines(r,c);
+    timerInterval=setInterval(()=>{
+      timer++;
+      const m=Math.floor(timer/60),s=timer%60;
+      document.getElementById('timerEl').textContent=`⏱ ${m}:${String(s).padStart(2,'0')}`;
+    },1000);
+  }
+  
+  if(revealed[r][c])return;
+  
+  if(grid[r][c]===-1){
+    // Hit mine!
+    gameOver=true;clearInterval(timerInterval);
+    revealed[r][c]=true;
+    // Reveal all mines
+    mines.forEach(m=>{revealed[m.r][m.c]=true});
+    renderGrid();
+    // Mark the boom
+    const idx=r*cols+c;
+    document.getElementById('grid').children[idx]?.classList.add('boom');
+    document.getElementById('status').innerHTML='<span style="color:#ef4444;font-weight:700">💥 BOOM! Game Over</span>';
+    return;
+  }
+  
+  reveal(r,c);
+  renderGrid();
+  checkWin();
+}
+
+function reveal(r,c){
+  if(r<0||r>=rows||c<0||c>=cols)return;
+  if(revealed[r][c]||flagged[r][c])return;
+  revealed[r][c]=true;
+  if(grid[r][c]===0){
+    for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++)reveal(r+dr,c+dc);
+  }
+}
+
+function toggleFlag(r,c){
+  if(gameOver||revealed[r][c]||firstClick)return;
+  flagged[r][c]=!flagged[r][c];
+  const flagCount=flagged.flat().filter(Boolean).length;
+  document.getElementById('minesEl').textContent='💣 '+(mineCount-flagCount);
+  renderGrid();
+}
+
+function checkWin(){
+  let unrevealed=0;
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){if(!revealed[r][c])unrevealed++}
+  if(unrevealed===mineCount){
+    gameOver=true;clearInterval(timerInterval);
+    document.getElementById('status').innerHTML='<span style="color:#22c55e;font-weight:700">🏆 CLEARED!</span>';
+    // Auto-flag remaining
+    mines.forEach(m=>{flagged[m.r][m.c]=true});
+    renderGrid();
+  }
+}
+
+// Init
+newGame();
+</script>
+</body>
+</html>
