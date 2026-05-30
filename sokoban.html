@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Sokoban — Box Puzzle</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+body{background:#0f172a;display:flex;flex-direction:column;align-items:center;min-height:100vh;font-family:'Inter',sans-serif;color:#e2e8f0;padding:.5rem}
+.top{display:flex;justify-content:space-between;align-items:center;width:100%;max-width:400px;margin-bottom:.5rem;font-size:.75rem}
+.top .lvl{font-weight:700;color:#a855f7}.top .moves{color:#f59e0b;font-weight:600}.top .pushes{color:#06b6d4;font-weight:600}
+.dpad{display:grid;grid-template-columns:repeat(3,50px);grid-template-rows:repeat(3,50px);gap:4px;margin-top:.5rem}
+.dpad .d{background:#1e293b;border:1px solid #334155;color:#94a3b8;display:flex;align-items:center;justify-content:center;font-size:1.2rem;border-radius:6px;cursor:pointer;font-weight:700}
+.dpad .d:hover{background:#334155;color:#fff}.dpad .d:active{background:#475569}
+.dpad .empty{background:transparent;border:none}
+canvas{display:block;border:2px solid #334155;border-radius:6px;background:#0f172a}
+.btns{display:flex;gap:.3rem;margin-top:.3rem}
+.btn{background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:.3rem .6rem;border-radius:4px;font-family:inherit;font-size:.65rem;cursor:pointer;font-weight:600}
+.btn:hover{border-color:#64748b;color:#fff}
+.overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;text-align:center;padding:1rem}
+.overlay h1{font-size:1.3rem;margin-bottom:.5rem}.overlay p{font-size:.75rem;color:#94a3b8;margin-bottom:.5rem}
+.overlay button{background:transparent;border:2px solid #a855f7;color:#a855f7;padding:.5rem 1.5rem;border-radius:6px;font-family:inherit;font-size:.85rem;cursor:pointer;font-weight:700;margin:.2rem}
+</style>
+</head>
+<body>
+<div class="overlay" id="start"><h1 style="color:#a855f7">📦 SOKOBAN</h1><p>Push all boxes onto the targets. Use arrow keys, WASD, or the D-pad. You can only push, not pull!</p><button onclick="startGame()">PLAY</button></div>
+<div class="overlay" id="win" style="display:none"><h1 style="color:#22c55e">✓ SOLVED!</h1><p id="winMsg"></p><button onclick="nextLevel()">Next Level</button></div>
+<div class="overlay" id="allDone" style="display:none"><h1 style="color:#f59e0b">🏆 ALL CLEAR!</h1><p id="allDoneMsg"></p><button onclick="startGame()">Play Again</button></div>
+
+<div id="game" style="display:none">
+<div class="top"><div class="lvl" id="lvlEl">Level 1</div><div class="moves" id="movesEl">Moves: 0</div><div class="pushes" id="pushesEl">Pushes: 0</div></div>
+<canvas id="c"></canvas>
+<div class="dpad">
+  <div class="empty"></div><div class="d" onclick="move(0,-1)">▲</div><div class="empty"></div>
+  <div class="d" onclick="move(-1,0)">◄</div><div class="empty"></div><div class="d" onclick="move(1,0)">►</div>
+  <div class="empty"></div><div class="d" onclick="move(0,1)">▼</div><div class="empty"></div>
+</div>
+<div class="btns">
+  <button class="btn" onclick="undo()">↩ Undo</button>
+  <button class="btn" onclick="resetLevel()">↺ Reset</button>
+</div>
+</div>
+
+<script>
+const C=document.getElementById('c'),X=C.getContext('2d');
+const T=36; // tile size
+
+// Level format: # wall, . floor, $ box, @ player, * box on target, + player on target, _ target
+const LEVELS=[
+  // Level 1 — tutorial
+  ["######","#.@__#","#_$__#","#____#","#_$__#","#__$_#","######"],
+  // Level 2
+  ["#######","#_____#","#.@$__#","#___$_#","#_$_$_#","#_____#","#######"],
+  // Level 3
+  ["____###","###___#","#.@$__#","#___$_#","#_$_$##","##_._##","###__##","____###"],
+  // Level 4
+  ["########","#______#","#.@$.__#","#___#__#","#_$_$_ #","#___#_ #","#______#","########"],
+  // Level 5
+  ["____####","####___#","#.___$_#","#._#_$_#","#.___$_#","#______#","########"],
+  // Level 6
+  ["#######","#_____#","#.#___#","#.$$__#","#._@$_#","#._.__#","#_____#","#######"],
+  // Level 7
+  ["________#","#####___#","#___#__##","#.__$__##","#._#_$_##","#___$_#__","#._____#_","#########"],
+  // Level 8
+  ["########","#__###_#","#_$___._#","#._$__$_#","#._.___#","##__#####","_##____#_","__######_"],
+  // Level 9
+  ["__######","###____#","#._$__##","#.#_$__#","#._.___#","#.___$_#","##___####","_##__###","__#####_"],
+  // Level 10
+  ["__#####_","###___##","#_$_.__#","#_$_.__#","#.#_$__#","#___._#_","#.__#__#_","##_.__#__","_###___#_","___#####_"],
+];
+
+let level,map,player,boxes,targets,w,h,moves,pushes,history;
+
+function parseLevel(data){
+  h=data.length;w=Math.max(...data.map(r=>r.length));
+  map=Array.from({length:h},(_,r)=>Array.from({length:w},(_,c)=>{
+    const ch=(data[r]||'')[c]||'_';
+    if(ch==='#')return'wall';
+    if(ch==='.')return'target';
+    if(ch==='@'){player={r,c};return'floor'}
+    if(ch==='+'){player={r,c};return'target'}
+    if(ch==='$')return'box'; // boxes tracked separately
+    if(ch==='*')return'target'; // box on target — box added separately
+    return'floor';
+  }));
+  
+  // Find boxes, targets, player
+  boxes=[];targets=[];
+  for(let r=0;r<h;r++)for(let c=0;c<w;c++){
+    const ch=(data[r]||'')[c]||'_';
+    if(ch==='$'||ch==='*')boxes.push({r,c});
+    if(ch==='.'||ch==='*'||ch==='+')targets.push({r,c});
+  }
+}
+
+function startGame(){
+  document.getElementById('start').style.display='none';
+  document.getElementById('allDone').style.display='none';
+  level=0;loadLevel();
+}
+
+function loadLevel(){
+  document.getElementById('win').style.display='none';
+  document.getElementById('game').style.display='';
+  parseLevel(LEVELS[level]);
+  moves=0;pushes=0;history=[];
+  C.width=w*T;C.height=h*T;
+  updateHUD();render();
+}
+
+function resetLevel(){loadLevel()}
+
+function nextLevel(){
+  level++;
+  if(level>=LEVELS.length){
+    document.getElementById('game').style.display='none';
+    document.getElementById('allDoneMsg').textContent=`All ${LEVELS.length} levels solved!`;
+    document.getElementById('allDone').style.display='flex';return;
+  }
+  loadLevel();
+}
+
+function isWall(r,c){if(r<0||r>=h||c<0||c>=w)return true;const ch=map[r]?.[c];return ch==='wall'}
+function boxAt(r,c){return boxes.findIndex(b=>b.r===r&&b.c===c)}
+
+function move(dc,dr){
+  if(document.getElementById('win').style.display==='flex')return;
+  const nr=player.r+dr,nc=player.c+dc;
+  if(isWall(nr,nc))return;
+  
+  const bi=boxAt(nr,nc);
+  if(bi>=0){
+    // Try push box
+    const br=nr+dr,bc=nc+dc;
+    if(isWall(br,bc)||boxAt(br,bc)>=0)return;
+    // Save state
+    history.push({player:{...player},boxes:boxes.map(b=>({...b})),moves,pushes});
+    boxes[bi].r=br;boxes[bi].c=bc;
+    pushes++;
+  }else{
+    history.push({player:{...player},boxes:boxes.map(b=>({...b})),moves,pushes});
+  }
+  
+  player.r=nr;player.c=nc;moves++;
+  updateHUD();render();
+  checkWin();
+}
+
+function undo(){
+  if(!history.length)return;
+  const s=history.pop();
+  player=s.player;boxes=s.boxes;moves=s.moves;pushes=s.pushes;
+  updateHUD();render();
+}
+
+function checkWin(){
+  const allOnTarget=targets.every(t=>boxes.some(b=>b.r===t.r&&b.c===t.c));
+  if(allOnTarget){
+    document.getElementById('winMsg').textContent=`Level ${level+1} — ${moves} moves, ${pushes} pushes`;
+    setTimeout(()=>document.getElementById('win').style.display='flex',300);
+  }
+}
+
+function updateHUD(){
+  document.getElementById('lvlEl').textContent='Level '+(level+1);
+  document.getElementById('movesEl').textContent='Moves: '+moves;
+  document.getElementById('pushesEl').textContent='Pushes: '+pushes;
+}
+
+function render(){
+  X.fillStyle='#0f172a';X.fillRect(0,0,C.width,C.height);
+  
+  for(let r=0;r<h;r++)for(let c=0;c<w;c++){
+    const x=c*T,y=r*T;
+    const tile=map[r]?.[c];
+    
+    if(tile==='wall'){
+      X.fillStyle='#334155';X.fillRect(x,y,T,T);
+      X.fillStyle='#1e293b';X.fillRect(x+1,y+1,T-2,T-2);
+      // Brick pattern
+      X.fillStyle='#2a3444';
+      X.fillRect(x,y+T/2-1,T,2);
+      X.fillRect(x+T/2,y,2,T/2);X.fillRect(x,y+T/2,2,T/2);
+    }else if(tile==='target'){
+      X.fillStyle='#1a1a2e';X.fillRect(x,y,T,T);
+      X.fillStyle='#a855f733';X.fillRect(x,y,T,T);
+      X.strokeStyle='#a855f7';X.lineWidth=2;
+      X.beginPath();X.arc(x+T/2,y+T/2,T*0.25,0,Math.PI*2);X.stroke();
+    }else{
+      X.fillStyle='#1a1a2e';X.fillRect(x,y,T,T);
+    }
+  }
+  
+  // Boxes
+  boxes.forEach(b=>{
+    const x=b.c*T,y=b.r*T;
+    const onTarget=targets.some(t=>t.r===b.r&&t.c===b.c);
+    X.fillStyle=onTarget?'#22c55e':'#f59e0b';
+    X.shadowColor=onTarget?'#22c55e':'#f59e0b';X.shadowBlur=8;
+    X.beginPath();X.roundRect(x+3,y+3,T-6,T-6,4);X.fill();
+    X.shadowBlur=0;
+    // Cross on box
+    X.strokeStyle=onTarget?'#166534':'#92400e';X.lineWidth=2;
+    X.beginPath();X.moveTo(x+8,y+8);X.lineTo(x+T-8,y+T-8);X.moveTo(x+T-8,y+8);X.lineTo(x+8,y+T-8);X.stroke();
+  });
+  
+  // Player
+  const px=player.c*T,py=player.r*T;
+  X.fillStyle='#3b82f6';X.shadowColor='#3b82f6';X.shadowBlur=10;
+  X.beginPath();X.arc(px+T/2,py+T/2,T*0.35,0,Math.PI*2);X.fill();
+  X.shadowBlur=0;
+  // Eyes
+  X.fillStyle='#fff';
+  X.beginPath();X.arc(px+T*0.38,py+T*0.42,3,0,Math.PI*2);X.fill();
+  X.beginPath();X.arc(px+T*0.62,py+T*0.42,3,0,Math.PI*2);X.fill();
+}
+
+// Keyboard
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowUp'||e.key==='w'){e.preventDefault();move(0,-1)}
+  if(e.key==='ArrowDown'||e.key==='s'){e.preventDefault();move(0,1)}
+  if(e.key==='ArrowLeft'||e.key==='a'){e.preventDefault();move(-1,0)}
+  if(e.key==='ArrowRight'||e.key==='d'){e.preventDefault();move(1,0)}
+  if(e.key==='z'&&e.ctrlKey){e.preventDefault();undo()}
+});
+</script>
+</body>
+</html>
