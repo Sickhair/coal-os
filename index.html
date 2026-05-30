@@ -352,6 +352,89 @@
     }
     .chat-send:hover { background: var(--cyan); color: #000; }
 
+    /* === APP LAUNCHER === */
+    .app-launcher {
+      grid-column: 1 / -1;
+    }
+    .launcher-header {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      margin-bottom: .75rem;
+      padding-bottom: .5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .launcher-logo {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #00d4ff, #3b82f6);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.1rem; font-weight: 900; color: #fff;
+      box-shadow: 0 0 20px #00d4ff44;
+    }
+    .launcher-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: .75rem; font-weight: 700; color: #e2e8f0;
+      letter-spacing: 2px;
+    }
+    .launcher-subtitle {
+      font-size: .55rem; color: #475569; margin-top: .1rem;
+    }
+    .launcher-count {
+      margin-left: auto;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: .65rem; color: var(--cyan);
+    }
+    .cat-label {
+      font-family: 'Orbitron', sans-serif;
+      font-size: .5rem; font-weight: 600; letter-spacing: 2px;
+      color: #334155; text-transform: uppercase;
+      margin: .75rem 0 .35rem .15rem;
+      display: flex; align-items: center; gap: .4rem;
+    }
+    .cat-label::after {
+      content: ''; flex: 1; height: 1px; background: #1e293b;
+    }
+    .app-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: .5rem;
+    }
+    .app-card {
+      background: #0a1628;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: .6rem .5rem;
+      text-decoration: none;
+      display: flex; flex-direction: column; align-items: center;
+      gap: .3rem;
+      transition: all .2s;
+      cursor: pointer;
+    }
+    .app-card:hover {
+      border-color: var(--cyan);
+      background: #0f1d35;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px #00d4ff11;
+    }
+    .app-icon {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem;
+    }
+    .app-name {
+      font-family: 'Orbitron', sans-serif;
+      font-size: .5rem; font-weight: 600;
+      letter-spacing: 1px;
+      text-align: center;
+      line-height: 1.3;
+    }
+    .app-tag {
+      font-size: .4rem; color: #334155;
+      letter-spacing: 1px; text-transform: uppercase;
+    }
     /* Bottom */
     .bottom-bar {
       display: flex; justify-content: space-between; align-items: center;
@@ -529,47 +612,65 @@
       <div class="cron-item"><span class="cron-name">Health Check</span><span class="cron-next">6 AM</span></div>
     </div>
 
-    <!-- Games -->
-    <div class="panel" style="grid-column: 1 / -1; text-align: center;">
-      <div class="panel-title">⬡ Recreation</div>
-      <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
-        <a href="game.html" style="display: inline-block; background: transparent; border: 1px solid var(--cyan); color: var(--cyan); font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ DIAMOND RUNNER</a>
-        <a href="art.html" style="display: inline-block; background: transparent; border: 1px solid #a855f7; color: #a855f7; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ NEURAL CANVAS</a>
-        <a href="morse.html" style="display: inline-block; background: transparent; border: 1px solid #22c55e; color: #22c55e; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ MORSE ENCODER</a>
-        <a href="binary-clock.html" style="display: inline-block; background: transparent; border: 1px solid #f59e0b; color: #f59e0b; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ BINARY CLOCK</a>
-        <a href="cipher-key.html" style="display: inline-block; background: transparent; border: 1px solid #ec4899; color: #ec4899; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ CIPHER KEY</a>
-        <a href="snake.html" style="display: inline-block; background: transparent; border: 1px solid #22c55e; color: #22c55e; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ NEON SERPENT</a>
-        <a href="spectrum.html" style="display: inline-block; background: transparent; border: 1px solid #a855f7; color: #a855f7; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ SPECTRUM</a>
-        <a href="pomo.html" style="display: inline-block; background: transparent; border: 1px solid #f59e0b; color: #f59e0b; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ POMO FOCUS</a>
-        <a href="hash.html" style="display: inline-block; background: transparent; border: 1px solid #06b6d4; color: #06b6d4; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ HASH FORGE</a>
-        <a href="chroma.html" style="display: inline-block; background: transparent; border: 1px solid #f43f5e; color: #f43f5e; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ CHROMA LAB</a>
-        <a href="base64.html" style="display: inline-block; background: transparent; border: 1px solid #8b5cf6; color: #8b5cf6; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ BASE64 LAB</a>
-        <a href="wheel.html" style="display: inline-block; background: transparent; border: 1px solid #f59e0b; color: #f59e0b; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ DECISION WHEEL</a>
-        <a href="invoiceforge.html" style="display: inline-block; background: transparent; border: 1px solid #3b82f6; color: #3b82f6; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ INVOICEFORGE</a>
-        <a href="markdownpad.html" style="display: inline-block; background: transparent; border: 1px solid #10b981; color: #10b981; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ MARKDOWNPAD</a>
-        <a href="tower-siege.html" style="display: inline-block; background: transparent; border: 1px solid #ef4444; color: #ef4444; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ TOWER SIEGE</a>
-        <a href="depths.html" style="display: inline-block; background: transparent; border: 1px solid #a855f7; color: #a855f7; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ DEPTHS OF COAL</a>
-        <a href="void-runner.html" style="display: inline-block; background: transparent; border: 1px solid #3b82f6; color: #3b82f6; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ VOID RUNNER</a>
-        <a href="cardforge.html" style="display: inline-block; background: transparent; border: 1px solid #f59e0b; color: #f59e0b; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ CARD FORGE</a>
-        <a href="realm.html" style="display: inline-block; background: transparent; border: 1px solid #22c55e; color: #22c55e; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ REALM CONQUEST</a>
-        <a href="atocs.html" style="display: inline-block; background: transparent; border: 1px solid #ef4444; color: #ef4444; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ ATOCS</a>
-        <a href="takeoff.html" style="display: inline-block; background: transparent; border: 1px solid #06b6d4; color: #06b6d4; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ TAKEOFF PRO</a>
-        <a href="hexlinks.html" style="display: inline-block; background: transparent; border: 1px solid #a855f7; color: #a855f7; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ HEX LINKS</a>
-        <a href="djcoal.html" style="display: inline-block; background: transparent; border: 1px solid #ef4444; color: #ef4444; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ DJ COAL</a>
-        <a href="neonblade.html" style="display: inline-block; background: transparent; border: 1px solid #00ffaa; color: #00ffaa; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ NEON BLADE</a>
-        <a href="codeforge.html" style="display: inline-block; background: transparent; border: 1px solid #58a6ff; color: #58a6ff; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ CODEFORGE</a>
-        <a href="chess.html" style="display: inline-block; background: transparent; border: 1px solid #f0f6fc; color: #f0f6fc; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ CHESS</a>
-        <a href="beatforge.html" style="display: inline-block; background: transparent; border: 1px solid #f97316; color: #f97316; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ BEAT FORGE</a>
-        <a href="pixelforge.html" style="display: inline-block; background: transparent; border: 1px solid #ec4899; color: #ec4899; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ PIXEL FORGE</a>
-        <a href="stacktower.html" style="display: inline-block; background: transparent; border: 1px solid #22c55e; color: #22c55e; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ STACK TOWER</a>
-        <a href="wordmine.html" style="display: inline-block; background: transparent; border: 1px solid #f59e0b; color: #f59e0b; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ WORD MINE</a>
-        <a href="neonbreaker.html" style="display: inline-block; background: transparent; border: 1px solid #06b6d4; color: #06b6d4; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ NEON BREAKER</a>
-        <a href="minesweep.html" style="display: inline-block; background: transparent; border: 1px solid #f59e0b; color: #f59e0b; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ MINE SWEEP</a>
-        <a href="sokoban.html" style="display: inline-block; background: transparent; border: 1px solid #a855f7; color: #a855f7; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ SOKOBAN</a>
-        <a href="coaltimer.html" style="display: inline-block; background: transparent; border: 1px solid #22c55e; color: #22c55e; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ COALTIMER</a>
-        <a href="forgeboard.html" style="display: inline-block; background: transparent; border: 1px solid #f59e0b; color: #f59e0b; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ FORGEBOARD</a>
-        <a href="vaultpad.html" style="display: inline-block; background: transparent; border: 1px solid #a855f7; color: #a855f7; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ VAULTPAD</a>
-        <a href="formcraft.html" style="display: inline-block; background: transparent; border: 1px solid #06b6d4; color: #06b6d4; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; padding: 0.4rem 1rem; text-decoration: none;">◆ FORMCRAFT</a>
+    <!-- App Launcher -->
+    <div class="panel app-launcher">
+      <div class="launcher-header">
+        <div class="launcher-logo">C</div>
+        <div><div class="launcher-title">COAL APPS</div><div class="launcher-subtitle">Your portable toolkit</div></div>
+        <div class="launcher-count" id="appCount">35 APPS</div>
+      </div>
+
+      <div class="cat-label">🎮 GAMES</div>
+      <div class="app-grid">
+        <a class="app-card" href="game.html"><div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)">💎</div><div class="app-name" style="color:#f59e0b">Diamond Runner</div><div class="app-tag">Arcade</div></a>
+        <a class="app-card" href="snake.html"><div class="app-icon" style="background:linear-gradient(135deg,#22c55e,#16a34a)">🐍</div><div class="app-name" style="color:#22c55e">Neon Serpent</div><div class="app-tag">Classic</div></a>
+        <a class="app-card" href="tower-siege.html"><div class="app-icon" style="background:linear-gradient(135deg,#ef4444,#b91c1c)">🏰</div><div class="app-name" style="color:#ef4444">Tower Siege</div><div class="app-tag">Tower Defense</div></a>
+        <a class="app-card" href="depths.html"><div class="app-icon" style="background:linear-gradient(135deg,#a855f7,#7c3aed)">⚔</div><div class="app-name" style="color:#a855f7">Depths of Coal</div><div class="app-tag">Roguelike</div></a>
+        <a class="app-card" href="void-runner.html"><div class="app-icon" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">🚀</div><div class="app-name" style="color:#3b82f6">Void Runner</div><div class="app-tag">Shooter</div></a>
+        <a class="app-card" href="cardforge.html"><div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#92400e)">🃏</div><div class="app-name" style="color:#f59e0b">Card Forge</div><div class="app-tag">Deckbuilder</div></a>
+        <a class="app-card" href="realm.html"><div class="app-icon" style="background:linear-gradient(135deg,#22c55e,#065f46)">🗺</div><div class="app-name" style="color:#22c55e">Realm Conquest</div><div class="app-tag">Strategy</div></a>
+        <a class="app-card" href="neonblade.html"><div class="app-icon" style="background:linear-gradient(135deg,#00ffaa,#059669)">⚔</div><div class="app-name" style="color:#00ffaa">Neon Blade</div><div class="app-tag">Endless Runner</div></a>
+        <a class="app-card" href="chess.html"><div class="app-icon" style="background:linear-gradient(135deg,#e2e8f0,#94a3b8)">♟</div><div class="app-name" style="color:#e2e8f0">Chess</div><div class="app-tag">vs AI</div></a>
+        <a class="app-card" href="stacktower.html"><div class="app-icon" style="background:linear-gradient(135deg,#22c55e,#16a34a)">🏗</div><div class="app-name" style="color:#22c55e">Stack Tower</div><div class="app-tag">Arcade</div></a>
+        <a class="app-card" href="neonbreaker.html"><div class="app-icon" style="background:linear-gradient(135deg,#06b6d4,#0891b2)">💎</div><div class="app-name" style="color:#06b6d4">Neon Breaker</div><div class="app-tag">Breakout</div></a>
+        <a class="app-card" href="minesweep.html"><div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#92400e)">💎</div><div class="app-name" style="color:#f59e0b">Mine Sweep</div><div class="app-tag">Puzzle</div></a>
+        <a class="app-card" href="wordmine.html"><div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)">📝</div><div class="app-name" style="color:#f59e0b">Word Mine</div><div class="app-tag">Word Puzzle</div></a>
+        <a class="app-card" href="sokoban.html"><div class="app-icon" style="background:linear-gradient(135deg,#a855f7,#7c3aed)">📦</div><div class="app-name" style="color:#a855f7">Sokoban</div><div class="app-tag">Puzzle</div></a>
+      </div>
+
+      <div class="cat-label">🛠 TOOLS</div>
+      <div class="app-grid">
+        <a class="app-card" href="takeoff.html"><div class="app-icon" style="background:linear-gradient(135deg,#06b6d4,#0e7490)">📐</div><div class="app-name" style="color:#06b6d4">Takeoff Pro</div><div class="app-tag">Blueprint</div></a>
+        <a class="app-card" href="atocs.html"><div class="app-icon" style="background:linear-gradient(135deg,#ef4444,#b91c1c)">🚀</div><div class="app-name" style="color:#ef4444">ATOCS</div><div class="app-tag">Launch Control</div></a>
+        <a class="app-card" href="hash.html"><div class="app-icon" style="background:linear-gradient(135deg,#06b6d4,#0891b2)">#</div><div class="app-name" style="color:#06b6d4">Hash Forge</div><div class="app-tag">Crypto</div></a>
+        <a class="app-card" href="cipher-key.html"><div class="app-icon" style="background:linear-gradient(135deg,#ec4899,#be185d)">🔑</div><div class="app-name" style="color:#ec4899">Cipher Key</div><div class="app-tag">Passwords</div></a>
+        <a class="app-card" href="chroma.html"><div class="app-icon" style="background:linear-gradient(135deg,#f43f5e,#be123c)">🎨</div><div class="app-name" style="color:#f43f5e">Chroma Lab</div><div class="app-tag">Colors</div></a>
+        <a class="app-card" href="base64.html"><div class="app-icon" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)">⚙</div><div class="app-name" style="color:#8b5cf6">Base64 Lab</div><div class="app-tag">Encode</div></a>
+        <a class="app-card" href="morse.html"><div class="app-icon" style="background:linear-gradient(135deg,#22c55e,#16a34a)">📡</div><div class="app-name" style="color:#22c55e">Morse Encoder</div><div class="app-tag">Audio</div></a>
+        <a class="app-card" href="binary-clock.html"><div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)">🕐</div><div class="app-name" style="color:#f59e0b">Binary Clock</div><div class="app-tag">Time</div></a>
+        <a class="app-card" href="pomo.html"><div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)">🍅</div><div class="app-name" style="color:#f59e0b">Pomo Focus</div><div class="app-tag">Timer</div></a>
+        <a class="app-card" href="wheel.html"><div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)">🎡</div><div class="app-name" style="color:#f59e0b">Decision Wheel</div><div class="app-tag">Fun</div></a>
+        <a class="app-card" href="markdownpad.html"><div class="app-icon" style="background:linear-gradient(135deg,#10b981,#059669)">📝</div><div class="app-name" style="color:#10b981">MarkdownPad</div><div class="app-tag">Editor</div></a>
+        <a class="app-card" href="codeforge.html"><div class="app-icon" style="background:linear-gradient(135deg,#58a6ff,#3b82f6)">⚡</div><div class="app-name" style="color:#58a6ff">CodeForge</div><div class="app-tag">Code Editor</div></a>
+        <a class="app-card" href="pixelforge.html"><div class="app-icon" style="background:linear-gradient(135deg,#ec4899,#be185d)">🎨</div><div class="app-name" style="color:#ec4899">Pixel Forge</div><div class="app-tag">Pixel Art</div></a>
+        <a class="app-card" href="hexlinks.html"><div class="app-icon" style="background:linear-gradient(135deg,#a855f7,#7c3aed)">🔮</div><div class="app-name" style="color:#a855f7">Hex Links</div><div class="app-tag">Puzzle</div></a>
+      </div>
+
+      <div class="cat-label">🎵 CREATIVE</div>
+      <div class="app-grid">
+        <a class="app-card" href="art.html"><div class="app-icon" style="background:linear-gradient(135deg,#a855f7,#7c3aed)">🎨</div><div class="app-name" style="color:#a855f7">Neural Canvas</div><div class="app-tag">Generative Art</div></a>
+        <a class="app-card" href="spectrum.html"><div class="app-icon" style="background:linear-gradient(135deg,#a855f7,#7c3aed)">📊</div><div class="app-name" style="color:#a855f7">Spectrum</div><div class="app-tag">Visualizer</div></a>
+        <a class="app-card" href="djcoal.html"><div class="app-icon" style="background:linear-gradient(135deg,#ef4444,#b91c1c)">🎧</div><div class="app-name" style="color:#ef4444">DJ Coal</div><div class="app-tag">Mix Deck</div></a>
+        <a class="app-card" href="beatforge.html"><div class="app-icon" style="background:linear-gradient(135deg,#f97316,#c2410c)">🔥</div><div class="app-name" style="color:#f97316">Beat Forge</div><div class="app-tag">Drum Machine</div></a>
+      </div>
+
+      <div class="cat-label">💼 BUSINESS</div>
+      <div class="app-grid">
+        <a class="app-card" href="invoiceforge.html"><div class="app-icon" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">📄</div><div class="app-name" style="color:#3b82f6">InvoiceForge</div><div class="app-tag">Invoicing</div></a>
+        <a class="app-card" href="coaltimer.html"><div class="app-icon" style="background:linear-gradient(135deg,#22c55e,#16a34a)">⏱</div><div class="app-name" style="color:#22c55e">CoalTimer</div><div class="app-tag">Time Tracker</div></a>
+        <a class="app-card" href="forgeboard.html"><div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)">📋</div><div class="app-name" style="color:#f59e0b">ForgeBoard</div><div class="app-tag">Project Mgmt</div></a>
+        <a class="app-card" href="vaultpad.html"><div class="app-icon" style="background:linear-gradient(135deg,#a855f7,#7c3aed)">🔒</div><div class="app-name" style="color:#a855f7">VaultPad</div><div class="app-tag">Encrypted Notes</div></a>
+        <a class="app-card" href="formcraft.html"><div class="app-icon" style="background:linear-gradient(135deg,#06b6d4,#0e7490)">📝</div><div class="app-name" style="color:#06b6d4">FormCraft</div><div class="app-tag">Form Builder</div></a>
       </div>
     </div>
 
