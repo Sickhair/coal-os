@@ -113,7 +113,7 @@ function allLegal(cl){
 function makeMove(m){
   if(gameOver)return;
   const p=board[m.fr][m.fc];
-  history.push({board:cloneBoard(),turn,enPassant,castleRights:{...castleRights},capturedW:[...capturedW],capturedB:[...capturedB],lastMove});
+  history.push({board:cloneB(),turn,enPassant,castleRights:{...castleRights},capturedW:[...capturedW],capturedB:[...capturedB],lastMove});
   if(board[m.tr][m.tc]){isW(board[m.tr][m.tc])?capturedW.push(board[m.tr][m.tc]):capturedB.push(board[m.tr][m.tc])}
   if(m.special==='enpassant'){const cap=board[m.fr][m.tc];isW(cap)?capturedW.push(cap):capturedB.push(cap)}
   board[m.tr][m.tc]=p;board[m.fr][m.fc]=null;

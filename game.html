@@ -131,7 +131,7 @@ function loop(){
   // Move
   obstacles.forEach(o=>o.x-=speed);
   gems.forEach(g=>{g.x-=speed;g.angle+=.08});
-  obstacles(obstacles.filter(o=>o.x>-50));
+  obstacles=obstacles.filter(o=>o.x>-50);
   gems=gems.filter(g=>g.x>-20&&!g.collected);
 
   // Gem collision
