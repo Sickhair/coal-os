@@ -94,7 +94,7 @@ function startGame(){
   // Stars
   stars=Array.from({length:100},()=>({x:Math.random()*W,y:Math.random()*H,s:Math.random()*2+.5,sp:Math.random()*2+1}));
   nextWave();
-  requestAnimationFrame(loop);
+  cancelAnimationFrame(animId);animId=requestAnimationFrame(loop);
 }
 
 function nextWave(){
@@ -256,7 +256,7 @@ function loop(time){
   player.invincible=Math.max(0,player.invincible-dt);
   updateHUD();
   render();
-  requestAnimationFrame(loop);
+  cancelAnimationFrame(animId);animId=requestAnimationFrame(loop);
 }
 
 function fireBullet(){
@@ -319,7 +319,7 @@ function applyPowerup(type){
 }
 
 function endGame(){
-  running=false;
+  running=false;cancelAnimationFrame(animId);
   document.getElementById('finalMsg').textContent=`Score: ${score} | Wave: ${wave} | Best Combo: ${combo}`;
   document.getElementById('gameOver').style.display='flex';
 }

@@ -54,7 +54,9 @@ C.addEventListener('mousedown',()=>tap=true);
 C.addEventListener('touchstart',e=>{e.preventDefault();tap=true},{passive:false});
 document.addEventListener('keydown',e=>{if(e.code==='Space'||e.code==='ArrowUp')tap=true});
 
+let animId=0;
 function startGame(){
+  cancelAnimationFrame(animId);
   document.getElementById('start').style.display='none';
   document.getElementById('death').style.display='none';
   document.getElementById('hud').style.display='flex';
@@ -191,13 +193,14 @@ function loop(){
   document.getElementById('distEl').textContent=Math.floor(dist);
 
   render();
-  requestAnimationFrame(loop);
+  animId=requestAnimationFrame(loop);
 }
 
 function die(){
   running=false;shake(15);
   addParticles(player.x,player.y,'#ff6b6b',20);
   render(); // final frame with particles
+  cancelAnimationFrame(animId);
   document.getElementById('deathMsg').textContent=`Score: ${score} | Distance: ${Math.floor(dist)}m | Max Combo: x${maxCombo}`;
   setTimeout(()=>document.getElementById('death').style.display='flex',500);
 }
