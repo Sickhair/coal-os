@@ -61,7 +61,9 @@ canvas{display:block}
 <script>
 const C=document.getElementById('c'),X=C.getContext('2d');
 const GRID=18;
-let cols,rows,snake,dir,nextDir,food,score,best=0,speed,running,frame,intervalId,particles,trail;
+let cols,rows,snake,dir,nextDir,food,score,best=0,speed,running,frame,intervalId,particles,trail,animId=0;
+// roundRect polyfill
+if(!CanvasRenderingContext2D.prototype.roundRect){CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){r=Math.min(r,w/2,h/2);this.moveTo(x+r,y);this.arcTo(x+w,y,x+w,y+h,r);this.arcTo(x+w,y+h,x,y+h,r);this.arcTo(x,y+h,x,y,r);this.arcTo(x,y,x+w,y,r);this.closePath();return this}}
 
 function resize(){
   C.width=window.innerWidth;C.height=window.innerHeight;
@@ -129,7 +131,7 @@ function addParticles(x,y,color,n){
 }
 
 function die(){
-  running=false;clearInterval(intervalId);
+  running=false;clearInterval(intervalId);cancelAnimationFrame(animId);
   addParticles(snake[0].x*GRID+GRID/2,snake[0].y*GRID+GRID/2,'#ef4444',20);
   if(score>best)best=score;
   document.getElementById('finalScore').textContent=score;
@@ -206,7 +208,8 @@ function renderLoop(){
   X.globalAlpha=1;
   particles=particles.filter(p=>p.life>0);
   
-  if(running||particles.length)requestAnimationFrame(renderLoop);
+  if(running)animId=requestAnimationFrame(renderLoop);
+  else requestAnimationFrame(renderLoop);
 }
 
 // Keyboard
