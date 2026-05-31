@@ -1,357 +1,300 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Realm Conquest — Hex Strategy</title>
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#0a0a1a">
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
-    *{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
-    body{background:#0a0a1a;display:flex;flex-direction:column;align-items:center;min-height:100vh;font-family:'Inter',sans-serif;color:#e2e8f0;overflow:hidden}
-    canvas{display:block;touch-action:none}
-    .hud{display:flex;justify-content:space-between;width:100%;max-width:600px;padding:.3rem .5rem;background:#111827;font-size:.65rem;border-bottom:1px solid #1e293b;flex-wrap:wrap;gap:.3rem}
-    .hud .val{font-weight:700}.hud .gold{color:#f59e0b}.hud .turn{color:#3b82f6}.hud .pop{color:#22c55e}
-    .toolbar{display:flex;gap:.3rem;padding:.3rem;background:#111827;width:100%;max-width:600px;justify-content:center;flex-wrap:wrap;border-top:1px solid #1e293b}
-    .tbtn{background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:.3rem .6rem;border-radius:4px;font-size:.65rem;cursor:pointer;font-family:inherit}
-    .tbtn:hover,.tbtn.active{border-color:#3b82f6;color:#fff}.tbtn.disabled{opacity:.3;pointer-events:none}
-    .info-panel{padding:.4rem .5rem;background:#0f172a;width:100%;max-width:600px;font-size:.6rem;color:#64748b;text-align:center;min-height:20px}
-    .overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;text-align:center;padding:1rem}
-    .overlay h1{font-size:1.2rem;margin-bottom:.5rem}.overlay p{font-size:.75rem;color:#94a3b8;margin-bottom:.75rem;max-width:340px;line-height:1.4}
-    .overlay button{background:#3b82f6;color:#fff;border:none;padding:.5rem 1.5rem;border-radius:6px;font-family:inherit;font-size:.85rem;cursor:pointer;margin:.25rem}
-  
-.brand{font-size:.4rem;letter-spacing:4px;color:#334155;margin-bottom:6px;text-transform:uppercase;font-family:'Orbitron',sans-serif;text-align:center}
-.back-link{position:fixed;top:8px;left:8px;z-index:200;text-decoration:none;font-family:'Orbitron',sans-serif;font-size:.5rem;letter-spacing:1px;color:#475569;opacity:.6;transition:opacity .2s}
-.back-link:hover{opacity:1;color:#e2e8f0}
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Realm Conquest — COAL OS</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+body{background:#050510;overflow:hidden;font-family:'Orbitron',sans-serif;color:#e2e8f0;touch-action:none}
+canvas{display:block}
+.ov{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 30%,#0a1628,#050510);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;text-align:center;padding:1.5rem}
+.ov.h{display:none}
+.brand{font-size:.4rem;letter-spacing:4px;color:#334155;margin-bottom:.8rem;text-transform:uppercase}
+.tt{font-size:1.2rem;font-weight:900;letter-spacing:2px}
+.st{font-size:.5rem;color:#475569;letter-spacing:3px;margin:.4rem 0 1rem}
+.bn{background:transparent;border:2px solid currentColor;color:inherit;padding:.6rem 2rem;border-radius:8px;font-family:'Orbitron',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:3px;cursor:pointer}
+.bn:active{filter:brightness(1.5)}
+.hud{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:.4rem .6rem;z-index:50;pointer-events:none;font-size:.55rem}
+.actions{position:fixed;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:4px;z-index:60}
+.abtn{padding:4px 12px;background:#1e293b88;border:1px solid #33415566;color:#94a3b8;border-radius:4px;font-family:inherit;font-size:.5rem;cursor:pointer}
+.abtn:active{background:#334155;color:#fff}
+.abtn.active{border-color:#22c55e;color:#22c55e}
+.abtn.dis{opacity:.3;cursor:not-allowed}
 </style>
 </head>
 <body>
-<a class="back-link" href="index.html">← COAL OS</a>
-
-<div class="hud" id="hud" style="display:none">
-  <div>TURN <span class="turn val" id="turnEl">1</span></div>
-  <div>💰 <span class="gold val" id="goldEl">10</span></div>
-  <div>👥 <span class="pop val" id="popEl">1</span> / <span id="popMax">1</span></div>
-  <div>🏰 <span class="val" id="citiesEl">1</span></div>
-  <div id="enemyInfo" style="color:#ef4444"></div>
+<canvas id="c"></canvas>
+<div class="hud hidden" id="hud">
+  <div style="color:#3b82f6" id="turnEl">TURN 1</div>
+  <div style="color:#f59e0b" id="goldEl">Gold: 20</div>
+  <div style="color:#ef4444" id="phaseEl">YOUR TURN</div>
 </div>
-
-<canvas id="game"></canvas>
-
-<div class="toolbar" id="toolbar" style="display:none">
-  <div class="tbtn" id="tb-settle" onclick="setMode('settle')">🏠 Settle</div>
-  <div class="tbtn" id="tb-recruit" onclick="setMode('recruit')">⚔ Recruit</div>
-  <div class="tbtn" id="tb-fortify" onclick="setMode('fortify')">🛡 Fortify</div>
-  <div class="tbtn" id="tb-move" onclick="setMode('move')">➡ Move</div>
-  <div class="tbtn" id="tb-end" onclick="endTurn()" style="border-color:#ef4444;color:#ef4444">End Turn</div>
+<div class="actions h" id="actions">
+  <button class="abtn" id="recruitBtn" onclick="recruit()">+ RECRUIT (10g)</button>
+  <button class="abtn" id="fortifyBtn" onclick="fortify()">FORTIFY (5g)</button>
+  <button class="abtn" id="endBtn" onclick="endTurn()">END TURN ▶</button>
 </div>
-
-<div class="info-panel" id="info">Tap a hex to select it</div>
-
-<div class="brand">COAL OS</div>
-<div class="overlay" id="startScreen">
-  <h1 style="color:#22c55e">🗺 REALM CONQUEST</h1>
-  <p>Hex-based strategy. Expand your kingdom by settling new hexes, recruiting armies, and conquering enemy territories. Capture all enemy cities to win!</p>
-  <p style="font-size:.6rem">Tap hexes to select · Build cities, recruit troops, fortify defenses, move armies · AI takes turns after you</p>
-  <button onclick="startGame()">CONQUER</button>
+<div class="ov" id="menu">
+  <div class="brand">COAL OS</div>
+  <div class="tt" style="color:#22c55e">🗺 REALM CONQUEST</div>
+  <div class="st">HEX STRATEGY</div>
+  <button class="bn" style="color:#22c55e;border-color:#22c55e" onclick="startGame()">CONQUER</button>
 </div>
-<div class="overlay" id="endScreen" style="display:none">
-  <h1 id="endTitle"></h1>
-  <p id="endMsg"></p>
-  <button onclick="startGame()">Play Again</button>
+<div class="ov h" id="over">
+  <div class="brand">COAL OS</div>
+  <div class="tt" style="color:#ef4444">DEFEATED</div>
+  <div style="font-size:1.5rem;font-weight:900;color:#ef4444;margin:.5rem 0" id="fScore">0</div>
+  <div style="font-size:.55rem;color:#64748b" id="fStats"></div>
+  <button class="bn" style="color:#ef4444;border-color:#ef4444" onclick="startGame()">RETRY</button>
 </div>
-
+<div class="ov h" id="winScreen">
+  <div class="brand">COAL OS</div>
+  <div class="tt" style="color:#22c55e">🏆 CONQUERED!</div>
+  <button class="bn" style="color:#22c55e;border-color:#22c55e" onclick="startGame()">AGAIN</button>
+</div>
 <script>
-const C=document.getElementById('game'),X=C.getContext('2d');
-const S=32; // hex size (radius)
-let COLS=14,ROWS=10,W,H;
-
-function resize(){
-  const maxW=Math.min(600,window.innerWidth);
-  COLS=Math.floor(maxW/(S*1.75));
-  ROWS=Math.floor((window.innerHeight-100)/(S*1.55));
-  COLS=Math.max(COLS,8);ROWS=Math.max(ROWS,6);
-  W=COLS*S*1.75+S;H=ROWS*S*1.55+S*2;
-  C.width=W;C.height=H;
-}
-resize();
-
-// Hex math (flat-top)
-function hexToPixel(c,r){const x=S*1.5*c+S;const y=S*Math.sqrt(3)*(r+.5*(c&1))+S;return{x,y}}
-function pixelToHex(px,py){
-  let best=null,bd=999;
-  for(let c=0;c<COLS;c++)for(let r=0;r<ROWS;r++){const p=hexToPixel(c,r);const d=Math.hypot(px-p.x,py-p.y);if(d<bd){bd=d;best={c,r}}}
-  return bd<S*1.1?best:null;
-}
-function neighbors(c,r){
-  const even=[[1,0],[-1,0],[0,-1],[0,1],[1,-1],[1,1]];
-  const odd=[[1,0],[-1,0],[0,-1],[0,1],[-1,-1],[-1,1]];
-  return(even[c&1?1:0]).map(([dc,dr])=>({c:c+dc,r:r+dr})).filter(n=>n.c>=0&&n.c<COLS&&n.r>=0&&n.r<ROWS);
-}
-
-// === GAME STATE ===
-let hexes,player,ai,turn,mode,selected,running;
-
-const TERRAIN={plains:{color:'#1a3a1a',name:'Plains',food:1,gold:0},forest:{color:'#0f2f0f',name:'Forest',food:1,gold:0},mountain:{color:'#2a2a3a',name:'Mountain',food:0,gold:1},gold_mine:{color:'#3a3a1a',name:'Gold Mine',food:0,gold:3},fertile:{color:'#1a3a2a',name:'Fertile',food:2,gold:0},water:{color:'#0a1a3a',name:'Water',passable:false}};
+const C=document.getElementById('c'),X=C.getContext('2d');
+const S=28; // hex size
+const R=7; // map radius
+let W,H,map,playerCity,aiCity,armies,turn,phase,selected,gold,income,running,animId;
 
 function startGame(){
-  document.getElementById('startScreen').style.display='none';
-  document.getElementById('endScreen').style.display='none';
-  ['hud','toolbar'].forEach(id=>document.getElementById(id).style.display='');
   resize();
-
-  // Generate map
-  hexes=Array.from({length:COLS},()=>Array(ROWS).fill(null));
-  const terrains=Object.keys(TERRAIN);
-  for(let c=0;c<COLS;c++)for(let r=0;r<ROWS;r++){
-    const t=terrains[Math.floor(Math.random()*terrains.length)];
-    hexes[c][r]={c,r,terrain:t,...TERRAIN[t],owner:null,city:false,fort:0,units:0};
+  document.getElementById('menu').classList.add('h');
+  document.getElementById('over').classList.add('h');
+  document.getElementById('winScreen').classList.add('h');
+  document.getElementById('hud').classList.remove('h');
+  document.getElementById('actions').classList.remove('h');
+  
+  turn=1;phase='player';gold=20;income=5;selected=null;running=true;
+  
+  // Generate hex map
+  map=new Map();
+  for(let q=-R;q<=R;q++)for(let r=-R;r<=R;r++){
+    if(Math.abs(q+r)<=R){
+      const terrain=Math.random()<.2?'mountain':Math.random()<.15?'forest':'plain';
+      map.set(q+','+r,{q,r,terrain,owner:null,fortified:false,army:0});
+    }
   }
-  // Ensure starting positions are plains
-  hexes[1][1].terrain='plains';hexes[1][1].food=1;hexes[1][1].gold=0;
-  hexes[COLS-2][ROWS-2].terrain='plains';hexes[COLS-2][ROWS-2].food=1;hexes[COLS-2][ROWS-2].gold=0;
-
-  // Players
-  player={id:'player',color:'#3b82f6',gold:10,food:0,pop:0,cities:[]};
-  ai={id:'ai',color:'#ef4444',gold:10,food:0,pop:0,cities:[]};
-
-  // Settle starting cities
-  settle(1,1,player);settle(COLS-2,ROWS-2,ai);
-  hexes[1][1].units=3;hexes[COLS-2][ROWS-2].units=3;
-
-  turn=1;mode='move';selected=null;running=true;
-  updateHUD();render();
+  
+  // Place player city (top-left area)
+  playerCity={q:-4,r:-1};
+  map.get(playerCity.q+','+playerCity.r).owner='player';
+  map.get(playerCity.q+','+playerCity.r).army=5;
+  // Give player some starting territory
+  getNeighbors(playerCity.q,playerCity.r).forEach(n=>{const h=map.get(n);if(h){h.owner='player';h.army=1}});
+  
+  // Place AI city (bottom-right area)
+  aiCity={q:4,r:1};
+  map.get(aiCity.q+','+aiCity.r).owner='ai';
+  map.get(aiCity.q+','+aiCity.r).army=5;
+  getNeighbors(aiCity.q,aiCity.r).forEach(n=>{const h=map.get(n);if(h){h.owner='ai';h.army=2}});
+  
+  animId=requestAnimationFrame(renderLoop);
 }
 
-function settle(c,r,owner){
-  const h=hexes[c][r];h.owner=owner.id;h.city=true;
-  owner.cities.push({c,r});
+function getNeighbors(q,r){
+  return[[q+1,r],[q-1,r],[q,r+1],[q,r-1],[q+1,r-1],[q-1,r+1]];
 }
 
-function setMode(m){mode=m;document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('active'));const btn=document.getElementById('tb-'+m);if(btn)btn.classList.add('active');selected=null;render()}
+function hexToPixel(q,r){
+  const x=S*1.5*q+W/2;
+  const y=S*Math.sqrt(3)*(r+q/2)+H/2;
+  return{x,y};
+}
 
-C.addEventListener('click',e=>{
-  if(!running)return;
-  const rect=C.getBoundingClientRect();
-  const hex=pixelToHex((e.clientX-rect.left)*(W/rect.width),(e.clientY-rect.top)*(H/rect.height));
-  if(!hex)return;
-  const h=hexes[hex.c][hex.r];
-  if(!h||h.terrain==='water')return;
+function pixelToHex(px,py){
+  const x=px-W/2,y=py-H/2;
+  const q=(2/3*x)/S;
+  const r=(-1/3*x+Math.sqrt(3)/3*y)/S;
+  // Round to nearest hex
+  let rx=Math.round(q),ry=Math.round(r),rz=Math.round(-q-r);
+  const dq=Math.abs(rx-q),dy=Math.abs(ry-r),dz=Math.abs(rz-(-q-r));
+  if(dq>dy&&dq>dz)rx=-ry-rz;else if(dy>dz)ry=-rx-rz;
+  return{q:rx,r:ry};
+}
 
-  if(selected&&selected.c===hex.c&&selected.r===hex.r){selected=null;render();return}
-  selected={c:hex.c,r:hex.r};
-
-  if(h.owner==='player'){
-    switch(mode){
-      case'settle':
-        if(!h.city&&h.owner==='player'){h.city=true;player.cities.push({c:hex.c,r:hex.r});addInfo('City founded!');render()}
-        break;
-      case'recruit':
-        if(h.city&&player.gold>=5){h.units+=2;player.gold-=5;addInfo('Recruited 2 units (-5g)');updateHUD();render()}
-        else if(!h.city)addInfo('Must recruit at a city')
-        else addInfo('Need 5 gold to recruit')
-        break;
-      case'fortify':
-        if(h.owner==='player'&&player.gold>=3){h.fort+=2;player.gold-=3;addInfo('Fortified +2 (-3g)');updateHUD();render()}
-        else addInfo('Need 3 gold to fortify')
-        break;
-      case'move':
-        addInfo(`Selected ${h.city?'city ':''}(${hex.c},${hex.r}) - ${h.units} units, fort ${h.fort}`);
-        break;
-    }
-  }else if(h.owner==='ai'&&mode==='move'&&selected){
-    // Try to attack from previous selected player hex
-    addInfo('Select your hex first, then tap enemy to attack');
-  }else if(h.owner===null&&mode==='move'){
-    addInfo('Unclaimed territory. Settle a city here first.');
+function drawHex(cx,cy,size,fill,stroke,lw=1){
+  X.beginPath();
+  for(let i=0;i<6;i++){
+    const a=Math.PI/3*i;
+    const px=cx+size*Math.cos(a),py=cy+size*Math.sin(a);
+    if(i===0)X.moveTo(px,py);else X.lineTo(px,py);
   }
-  render();
-});
+  X.closePath();
+  if(fill){X.fillStyle=fill;X.fill()}
+  if(stroke){X.strokeStyle=stroke;X.lineWidth=lw;X.stroke()}
+}
 
-// Move/attack via selecting player hex then adjacent target
-let moveFrom=null;
-C.addEventListener('dblclick',e=>{
-  if(!running)return;
-  const rect=C.getBoundingClientRect();
-  const hex=pixelToHex((e.clientX-rect.left)*(W/rect.width),(e.clientY-rect.top)*(H/rect.height));
-  if(!hex)return;
-  const h=hexes[hex.c][hex.r];
+function recruit(){
+  if(phase!=='player'||gold<10||!selected)return;
+  const h=map.get(selected.q+','+selected.r);
+  if(!h||h.owner!=='player')return;
+  gold-=10;h.army+=3;
+  updateHUD();
+}
 
-  if(mode==='move'&&h.owner==='player'&&h.units>0){
-    moveFrom={c:hex.c,r:hex.r};
-    addInfo(`Moving from (${hex.c},${hex.r}). Tap adjacent hex to move/attack.`);
-  }else if(moveFrom&&h.terrain!=='water'){
-    const from=hexes[moveFrom.c][moveFrom.r];
-    const adj=neighbors(moveFrom.c,moveFrom.r);
-    if(!adj.some(n=>n.c===hex.c&&n.r===hex.r)){addInfo('Target must be adjacent');return}
-    if(from.units<=1){addInfo('Need >1 unit to move');return}
-
-    if(h.owner==='ai'){
-      // Attack
-      const atk=from.units-1;const def=Math.max(h.units,1)+h.fort;
-      if(atk>def){
-        h.units=atk-def;h.owner='player';h.fort=0;from.units=1;
-        addInfo(`Captured! Lost ${def} units`);
-        player.cities.push({c:hex.c,r:hex.r});
-        ai.cities=ai.cities.filter(c=>!(c.c===hex.c&&c.r===hex.r));
-        if(!ai.cities.length)win();
-      }else{
-        from.units=Math.max(1,from.units-def);h.units=Math.max(0,h.units-Math.floor(atk/2));
-        addInfo(`Attack failed. Lost ${Math.min(atk,def)} units`);
-      }
-    }else if(h.owner===null){
-      h.owner='player';h.units=from.units-1;from.units=1;
-      addInfo('Territory claimed!');
-    }else if(h.owner==='player'){
-      h.units+=from.units-1;from.units=1;
-      addInfo('Units merged');
-    }
-    moveFrom=null;updateHUD();render();
-  }
-});
+function fortify(){
+  if(phase!=='player'||gold<5||!selected)return;
+  const h=map.get(selected.q+','+selected.r);
+  if(!h||h.owner!=='player')return;
+  gold-=5;h.fortified=true;
+  updateHUD();
+}
 
 function endTurn(){
-  if(!running)return;
-  moveFrom=null;
-
-  // Income
-  let pGold=0,pFood=0;
-  for(let c=0;c<COLS;c++)for(let r=0;r<ROWS;r++){
-    const h=hexes[c][r];
-    if(h.owner==='player'){pGold+=h.gold;pFood+=h.food}
-  }
-  player.gold+=pGold+player.cities.length*2;
-  player.food+=pFood;
-
-  // Pop growth
-  let pPop=0;for(let c=0;c<COLS;c++)for(let r=0;r<ROWS;r++){if(hexes[c][r].owner==='player')pPop+=hexes[c][r].units}
-  player.pop=pPop;
-  document.getElementById('popMax').textContent=Math.floor(player.food/2+player.cities.length*3);
-
-  // === AI TURN ===
-  aiTurn();
-
-  turn++;
-  updateHUD();render();
+  if(phase!=='player')return;
+  phase='ai';
+  updateHUD();
+  setTimeout(aiTurn,500);
 }
 
 function aiTurn(){
-  // Income
-  let aGold=0;
-  for(let c=0;c<COLS;c++)for(let r=0;r<ROWS;r++){if(hexes[c][r].owner==='ai')aGold+=hexes[c][r].gold}
-  ai.gold+=aGold+ai.cities.length*2;
-
-  // Recruit at cities
-  if(ai.gold>=5){
-    for(const city of ai.cities){
-      const h=hexes[city.c][city.r];
-      if(ai.gold>=5){h.units+=2;ai.gold-=5}
-    }
-  }
-
-  // Fortify
-  if(ai.gold>=3&&Math.random()<.3){
-    const city=ai.cities[Math.floor(Math.random()*ai.cities.length)];
-    hexes[city.c][city.r].fort+=2;ai.gold-=3;
-  }
-
-  // Expand: find AI hexes with units > 2, move toward unclaimed or player territory
-  for(let c=0;c<COLS;c++)for(let r=0;r<ROWS;r++){
-    const h=hexes[c][r];
-    if(h.owner!=='ai'||h.units<=2)continue;
-    const nbrs=neighbors(c,r);
-    // Priority: attack player > claim unclaimed > fortify
-    let target=nbrs.find(n=>hexes[n.c][n.r].owner==='player'&&hexes[n.c][n.r].units<h.units-1);
-    if(!target)target=nbrs.find(n=>hexes[n.c][n.r].owner===null&&hexes[n.c][n.r].terrain!=='water');
-    if(!target)continue;
-
-    const t=hexes[target.c][target.r];
-    if(t.owner==='player'){
-      const atk=h.units-1;const def=Math.max(t.units,1)+t.fort;
-      if(atk>def){
-        t.units=atk-def;t.owner='ai';t.fort=0;h.units=1;
-        ai.cities.push({c:target.c,r:target.r});
-        player.cities=player.cities.filter(x=>!(x.c===target.c&&x.r===target.r));
-        if(!player.cities.length)lose();
+  // AI logic: recruit, expand, attack
+  const aiHexes=[...map.values()].filter(h=>h.owner==='ai');
+  
+  // Recruit at city
+  const city=map.get(aiCity.q+','+aiCity.r);
+  if(city&&turn%2===0)city.army+=2;
+  
+  // Move armies toward player territory
+  aiHexes.forEach(h=>{
+    if(h.army<=1)return;
+    const neighbors=getNeighbors(h.q,h.r).map(n=>map.get(n)).filter(Boolean);
+    // Find best target: player hexes first, then neutral
+    let target=null;
+    const playerN=neighbors.filter(n=>n.owner==='player');
+    const neutralN=neighbors.filter(n=>!n.owner);
+    if(playerN.length)target=playerN.reduce((a,b)=>a.army<b.army?a:b);
+    else if(neutralN.length)target=neutralN[0];
+    
+    if(target){
+      if(target.owner==='player'){
+        const atk=h.army-1;const def=target.army+(target.fortified?2:0);
+        const chance=Math.min(.9,atk/(atk+def+.1));
+        if(Math.random()<chance){target.owner='ai';target.army=Math.max(1,atk-def);target.fortified=false;h.army=1}
+        else{h.army=Math.max(1,h.army-Math.floor(def*.5))}
       }else{
-        h.units=Math.max(1,h.units-def);t.units=Math.max(0,t.units-Math.floor(atk/2));
+        target.owner='ai';target.army=Math.min(h.army-1,3);h.army=1;
       }
-    }else if(t.owner===null){
-      t.owner='ai';t.units=h.units-1;h.units=1;
     }
+  });
+  
+  // Check win/loss
+  if(!map.get(playerCity.q+','+playerCity.r)||map.get(playerCity.q+','+playerCity.r).owner==='ai'){
+    running=false;
+    document.getElementById('fScore').textContent='Turn '+turn;
+    document.getElementById('fStats').innerHTML='AI conquered your city';
+    document.getElementById('over').classList.remove('h');return;
   }
+  
+  turn++;phase='player';
+  // Income
+  const playerHexes=[...map.values()].filter(h=>h.owner==='player');
+  income=playerHexes.length;gold+=income;
+  updateHUD();
 }
 
-function win(){
-  running=false;
-  document.getElementById('endTitle').textContent='🏆 VICTORY';
-  document.getElementById('endTitle').style.color='#f59e0b';
-  document.getElementById('endMsg').textContent=`Conquered in ${turn} turns with ${player.cities.length} cities and ${player.gold} gold.`;
-  document.getElementById('endScreen').style.display='flex';
-}
-function lose(){
-  running=false;
-  document.getElementById('endTitle').textContent='☠ DEFEATED';
-  document.getElementById('endTitle').style.color='#ef4444';
-  document.getElementById('endMsg').textContent=`Lost after ${turn} turns. The enemy had ${ai.cities.length} cities.`;
-  document.getElementById('endScreen').style.display='flex';
+function onClick(px,py){
+  if(phase!=='player'||!running)return;
+  const hex=pixelToHex(px,py);
+  const h=map.get(hex.q+','+hex.r);
+  if(!h)return;
+  
+  if(selected&&h.owner==='player'){
+    // Try to move/attack from selected to here
+    // Actually, select this hex
+    selected=h;
+  }else if(h.owner==='player'){
+    selected=h;
+  }else if(selected&&h.owner!=='player'){
+    // Attack
+    const neighbors=getNeighbors(selected.q,selected.r);
+    if(neighbors.some(n=>n===hex.q+','+hex.r)){
+      const atk=selected.army-1;
+      if(atk<=0)return;
+      const def=h.army+(h.fortified?2:0);
+      const chance=Math.min(.9,atk/(atk+def+.1));
+      if(Math.random()<chance){
+        h.owner='player';h.army=Math.max(1,atk-def);h.fortified=false;selected.army=1;
+        // Check win
+        if(h.q===aiCity.q&&h.r===aiCity.r){
+          running=false;
+          document.getElementById('winScreen').classList.remove('h');
+        }
+      }else{
+        selected.army=Math.max(1,selected.army-Math.floor(def*.5));
+      }
+      selected=null;
+    }
+  }else{
+    selected=h;
+  }
+  updateHUD();
 }
 
 function updateHUD(){
-  document.getElementById('turnEl').textContent=turn;
-  document.getElementById('goldEl').textContent=player.gold;
-  let pPop=0;for(let c=0;c<COLS;c++)for(let r=0;r<ROWS;r++){if(hexes[c][r].owner==='player')pPop+=hexes[c][r].units}
-  player.pop=pPop;
-  document.getElementById('popEl').textContent=pPop;
-  document.getElementById('citiesEl').textContent=player.cities.length;
-  document.getElementById('enemyInfo').textContent=`Enemy: ${ai.cities.length} cities`;
+  document.getElementById('turnEl').textContent='TURN '+turn;
+  document.getElementById('goldEl').textContent='Gold: '+gold+' (+'+income+')';
+  document.getElementById('phaseEl').textContent=phase==='player'?'YOUR TURN':'AI THINKING...';
+  document.getElementById('recruitBtn').classList.toggle('dis',gold<10||!selected||selected?.owner!=='player');
+  document.getElementById('fortifyBtn').classList.toggle('dis',gold<5||!selected||selected?.owner!=='player');
 }
 
-function addInfo(msg){document.getElementById('info').textContent=msg}
+function resize(){W=C.width=innerWidth;H=C.height=innerHeight}
+addEventListener('resize',resize);resize();
 
-// === RENDER ===
-function render(){
-  X.fillStyle='#0a0a1a';X.fillRect(0,0,W,H);
-  for(let c=0;c<COLS;c++)for(let r=0;r<ROWS;r++){
-    const h=hexes[c][r];if(!h)continue;
-    const p=hexToPixel(c,r);
-    // Hex
-    X.beginPath();
-    for(let i=0;i<6;i++){const a=Math.PI/3*i;X.lineTo(p.x+S*Math.cos(a),p.y+S*Math.sin(a))}
-    X.closePath();
-
-    // Fill
-    let fill=TERRAIN[h.terrain]?TERRAIN[h.terrain].color:'#1a1a2e';
-    if(h.owner==='player')fill=h.city?'#1e3a5f':'#1a2a4a';
-    else if(h.owner==='ai')fill=h.city?'#5f1e1e':'#4a1a1a';
-    X.fillStyle=fill;X.fill();
-    X.strokeStyle=h.owner==='player'?'#3b82f644':h.owner==='ai'?'#ef444444':'#ffffff11';
-    X.lineWidth=1;X.stroke();
-
+function renderLoop(){
+  if(!running){return}
+  X.fillStyle='#050510';X.fillRect(0,0,W,H);
+  
+  map.forEach(h=>{
+    const{x,y}=hexToPixel(h.q,h.r);
+    let fill='#0f172a';
+    if(h.terrain==='mountain')fill='#1e1e2e';
+    if(h.terrain==='forest')fill='#0a1a0a';
+    
+    if(h.owner==='player')fill=h.fortified?'#1e3a5f':'#1e293b';
+    else if(h.owner==='ai')fill=h.fortified?'#5f1e1e':'#3b1e1e';
+    
+    drawHex(x,y,S-1,fill,'#1e293b',1);
+    
     // Selected highlight
-    if(selected&&selected.c===c&&selected.r===r){
-      X.strokeStyle='#f59e0b';X.lineWidth=2;X.stroke();
+    if(selected&&selected.q===h.q&&selected.r===h.r){
+      drawHex(x,y,S-1,null,'#3b82f6',2);
     }
-    if(moveFrom&&moveFrom.c===c&&moveFrom.r===r){
-      X.strokeStyle='#22c55e';X.lineWidth=2;X.stroke();
+    
+    // City marker
+    if(h.q===playerCity.q&&h.r===playerCity.r){
+      X.fillStyle='#3b82f6';X.font='bold 14px sans-serif';X.textAlign='center';X.fillText('🏰',x,y+5);
     }
-
-    // City
-    if(h.city){X.font='12px sans-serif';X.textAlign='center';X.textBaseline='middle';X.fillText('🏰',p.x,p.y-6)}
-
-    // Units
-    if(h.units>0){
-      X.fillStyle=h.owner==='player'?'#3b82f6':h.owner==='ai'?'#ef4444':'#fff';
-      X.font='bold 10px Inter,sans-serif';X.textAlign='center';X.textBaseline='middle';
-      X.fillText(h.units,p.x,p.y+7);
+    if(h.q===aiCity.q&&h.r===aiCity.r){
+      X.fillStyle='#ef4444';X.font='bold 14px sans-serif';X.textAlign='center';X.fillText('🏰',x,y+5);
     }
-
-    // Fort
-    if(h.fort>0){X.font='8px sans-serif';X.fillStyle='#f59e0b88';X.fillText('🛡'+h.fort,p.x,p.y+16)}
-  }
+    
+    // Terrain icons
+    if(!h.owner){
+      if(h.terrain==='mountain'){X.fillStyle='#475569';X.font='12px sans-serif';X.textAlign='center';X.fillText('⛰',x,y+4)}
+      if(h.terrain==='forest'){X.fillStyle='#22c55e44';X.font='12px sans-serif';X.textAlign='center';X.fillText('🌲',x,y+4)}
+    }
+    
+    // Army count
+    if(h.army>0){
+      const col=h.owner==='player'?'#3b82f6':h.owner==='ai'?'#ef4444':'#64748b';
+      X.fillStyle=col;X.font='bold 10px Orbitron';X.textAlign='center';X.fillText(h.army,x,y+(h.q===playerCity.q||h.q===aiCity.q?-8:4));
+    }
+    
+    // Fortified
+    if(h.fortified){X.fillStyle='#f59e0b44';X.font='8px sans-serif';X.textAlign='center';X.fillText('🛡',x,y+S*.6)}
+  });
+  
+  animId=requestAnimationFrame(renderLoop);
 }
+
+C.addEventListener('click',e=>{const r=C.getBoundingClientRect();onClick(e.clientX-r.left,e.clientY-r.top)});
+C.addEventListener('touchstart',e=>{e.preventDefault();const r=C.getBoundingClientRect();const t=e.touches[0];onClick(t.clientX-r.left,t.clientY-r.top)},{passive:false});
 </script>
 </body>
 </html>
