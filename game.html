@@ -75,6 +75,7 @@ function initGame(){
   bgMountains=Array.from({length:12},(_,i)=>({x:i*200+W,h:40+Math.random()*80,w:100+Math.random()*100}));
   running=true;tap=false;
   document.getElementById('hud').classList.remove('hidden');
+  document.getElementById('menuHigh').textContent=highScore>0?'HIGH SCORE: '+highScore:'';
   updateHUD();
   animId=requestAnimationFrame(loop);
 }
@@ -158,7 +159,8 @@ function loop(){
   // Update particles
   particles=particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.15;p.life--;return p.life>0});
 
-  dist+=speed*.1;score+=Math.floor(speed*.05);
+  dist+=speed*.1;
+  if(frame%10===0)score+=Math.ceil(speed/3);
   if(shakeDur>0){shakeX=(Math.random()-.5)*shakeDur;shakeY=(Math.random()-.5)*shakeDur;shakeDur--}else{shakeX=0;shakeY=0}
 
   updateHUD();
@@ -170,11 +172,23 @@ function die(){
   running=false;cancelAnimationFrame(animId);shake(12);
   addParticles(player.x+player.w/2,player.y+player.h/2,'#ef4444',25);
   addParticles(player.x+player.w/2,player.y+player.h/2,'#f59e0b',15);
-  render();
-  if(score>highScore)highScore=score;
-  document.getElementById('finalScore').textContent=score;
-  document.getElementById('finalStats').innerHTML=`Distance: ${Math.floor(dist)}m<br>Gems: 💎 ${gemCount}<br>High Score: ${highScore}`;
-  setTimeout(()=>document.getElementById('deathScreen').classList.remove('hidden'),600);
+  // Animate death particles
+  let deathFrames=0;
+  function deathLoop(){
+    deathFrames++;
+    particles=particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.15;p.life--;return p.life>0});
+    if(shakeDur>0){shakeX=(Math.random()-.5)*shakeDur;shakeY=(Math.random()-.5)*shakeDur;shakeDur--}else{shakeX=0;shakeY=0}
+    render();
+    if(deathFrames<40)requestAnimationFrame(deathLoop);
+    else{
+      if(score>highScore)highScore=score;
+      document.getElementById('finalScore').textContent=score;
+      document.getElementById('finalStats').innerHTML=`Distance: ${Math.floor(dist)}m<br>Gems: 💎 ${gemCount}<br>High Score: ${highScore}`;
+      document.getElementById('menuHigh').textContent=highScore>0?'HIGH SCORE: '+highScore:'';
+      setTimeout(()=>document.getElementById('deathScreen').classList.remove('hidden'),200);
+    }
+  }
+  requestAnimationFrame(deathLoop);
 }
 
 function updateHUD(){
