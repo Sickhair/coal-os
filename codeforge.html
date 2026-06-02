@@ -28,6 +28,7 @@ iframe{flex:1;background:#fff;border:none;width:100%}
 </style>
 </head>
 <body>
+<a href="index.html" style="position:fixed;top:8px;left:8px;z-index:200;text-decoration:none;font-family:'Orbitron',sans-serif;font-size:.5rem;color:#475569;opacity:.6">← COAL OS</a>
 <div class="brand">COAL OS — CODEFORGE</div>
 <div class="top-bar">
   <div class="tab active" onclick="switchTab(0)">HTML</div>
@@ -99,7 +100,8 @@ function switchTab(i){
 
 function runCode(){
   code[currentTab]=editor.value;
-  const html=`<!DOCTYPE html><html><head><style>${code[1]}</style></head><body>${code[0]}<script>${code[2]}<\/script></body></html>`;
+  const html=`<!DOCTYPE html><html><head><style>${code[1]}</style></head><body>
+<a href="index.html" style="position:fixed;top:8px;left:8px;z-index:200;text-decoration:none;font-family:'Orbitron',sans-serif;font-size:.5rem;color:#475569;opacity:.6">← COAL OS</a>${code[0]}<script>${code[2]}<\/script></body></html>`;
   preview.srcdoc=html;
 }
 
@@ -109,7 +111,8 @@ function resetCode(){
 
 function exportCode(){
   code[currentTab]=editor.value;
-  const html=`<!DOCTYPE html>\n<html>\n<head>\n<style>\n${code[1]}\n</style>\n</head>\n<body>\n${code[0]}\n<script>\n${code[2]}\n<\/script>\n</body>\n</html>`;
+  const html=`<!DOCTYPE html>\n<html>\n<head>\n<style>\n${code[1]}\n</style>\n</head>\n<body>
+<a href="index.html" style="position:fixed;top:8px;left:8px;z-index:200;text-decoration:none;font-family:'Orbitron',sans-serif;font-size:.5rem;color:#475569;opacity:.6">← COAL OS</a>\n${code[0]}\n<script>\n${code[2]}\n<\/script>\n</body>\n</html>`;
   const blob=new Blob([html],{type:'text/html'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='codeforge.html';a.click();
 }
