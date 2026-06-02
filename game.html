@@ -27,6 +27,7 @@ canvas{display:block}
 </style>
 </head>
 <body>
+<a class="back" href="index.html" style="position:fixed;top:8px;left:8px;z-index:200;text-decoration:none;font-family:'Orbitron',sans-serif;font-size:.5rem;color:#475569;opacity:.6">← COAL OS</a>
 <canvas id="c"></canvas>
 <div class="hud hidden" id="hud">
   <div class="hud-score" id="scoreEl">0</div>
@@ -72,10 +73,8 @@ function initGame(){
   obstacles=[];gems=[];particles=[];score=0;gemCount=0;dist=0;speed=5;frame=0;shakeX=0;shakeY=0;shakeDur=0;
   bgStars=Array.from({length:80},()=>({x:Math.random()*W,y:Math.random()*groundY,s:Math.random()*2+.5,sp:Math.random()*.5+.1}));
   bgMountains=Array.from({length:12},(_,i)=>({x:i*200+W,h:40+Math.random()*80,w:100+Math.random()*100}));
-  running=true;
+  running=true;tap=false;
   document.getElementById('hud').classList.remove('hidden');
-  // Clean up particles
-  particles=particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.15;p.life--;return p.life>0});
   updateHUD();
   animId=requestAnimationFrame(loop);
 }
@@ -156,12 +155,15 @@ function loop(){
   bgStars.forEach(s=>{s.x-=s.sp*speed;if(s.x<0){s.x=W;s.y=Math.random()*player.groundY}});
   bgMountains.forEach(m=>{m.x-=speed*.15;if(m.x<-m.w){m.x=W+Math.random()*200;m.h=40+Math.random()*80;m.w=100+Math.random()*100}});
 
+  // Update particles
+  particles=particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.15;p.life--;return p.life>0});
+
   dist+=speed*.1;score+=Math.floor(speed*.05);
   if(shakeDur>0){shakeX=(Math.random()-.5)*shakeDur;shakeY=(Math.random()-.5)*shakeDur;shakeDur--}else{shakeX=0;shakeY=0}
 
   updateHUD();
   render();
-  requestAnimationFrame(loop);
+  animId=requestAnimationFrame(loop);
 }
 
 function die(){

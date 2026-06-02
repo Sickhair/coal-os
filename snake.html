@@ -29,6 +29,7 @@ canvas{display:block}
 </style>
 </head>
 <body>
+<a href="index.html" style="position:fixed;top:8px;left:8px;z-index:200;text-decoration:none;font-family:'Orbitron',sans-serif;font-size:.5rem;color:#475569;opacity:.6">← COAL OS</a>
 <canvas id="c"></canvas>
 <div class="hud hidden" id="hud">
   <div class="hud-score" id="scoreEl">0</div>
@@ -85,8 +86,9 @@ function startGame(){
   placeFood();
   updateHUD();
   clearInterval(intervalId);
+  cancelAnimationFrame(animId);
   intervalId=setInterval(tick,speed);
-  requestAnimationFrame(renderLoop);
+  animId=requestAnimationFrame(renderLoop);
 }
 
 function placeFood(){
@@ -131,7 +133,7 @@ function addParticles(x,y,color,n){
 }
 
 function die(){
-  running=false;clearInterval(intervalId);cancelAnimationFrame(animId);
+  running=false;clearInterval(intervalId);
   addParticles(snake[0].x*GRID+GRID/2,snake[0].y*GRID+GRID/2,'#ef4444',20);
   if(score>best)best=score;
   document.getElementById('finalScore').textContent=score;
@@ -209,7 +211,6 @@ function renderLoop(){
   particles=particles.filter(p=>p.life>0);
   
   if(running)animId=requestAnimationFrame(renderLoop);
-  else requestAnimationFrame(renderLoop);
 }
 
 // Keyboard
