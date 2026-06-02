@@ -115,7 +115,13 @@ function makeMove(m){
   if(gameOver)return;
   const p=board[m.fr][m.fc];
   history.push({board:cloneB(),turn,enPassant,castleRights:{...castleRights},capturedW:[...capturedW],capturedB:[...capturedB],lastMove});
-  if(board[m.tr][m.tc]){isW(board[m.tr][m.tc])?capturedW.push(board[m.tr][m.tc]):capturedB.push(board[m.tr][m.tc])}
+  if(board[m.tr][m.tc]){const cap=board[m.tr][m.tc];isW(cap)?capturedW.push(cap):capturedB.push(cap);
+    // Revoke castle rights if rook captured on starting square
+    if(cap==='R'&&m.tr===7&&m.tc===0)castleRights.wq=false;
+    if(cap==='R'&&m.tr===7&&m.tc===7)castleRights.wk=false;
+    if(cap==='r'&&m.tr===0&&m.tc===0)castleRights.bq=false;
+    if(cap==='r'&&m.tr===0&&m.tc===7)castleRights.bk=false;
+  }
   if(m.special==='enpassant'){const cap=board[m.fr][m.tc];isW(cap)?capturedW.push(cap):capturedB.push(cap)}
   board[m.tr][m.tc]=p;board[m.fr][m.fc]=null;
   if(m.special==='enpassant')board[m.fr][m.tc]=null;
