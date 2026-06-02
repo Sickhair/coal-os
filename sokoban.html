@@ -98,8 +98,8 @@ function inB(x,y){return y>=0&&y<grid.length&&x>=0&&x<grid[y].length}
 
 function checkWin(){
   for(let y=0;y<grid.length;y++)for(let x=0;x<grid[y].length;x++)
-    if(grid[y][x]==='$'||grid[y][x]==='+')return;
-  // All boxes on targets
+    if(grid[y][x]==='$')return;
+  // All boxes on targets (no unplaced $ boxes remain)
   setTimeout(()=>{
     if(currentLevel<LEVELS.length-1)loadLevel(currentLevel+1);
     else{document.getElementById('stats').textContent='ALL LEVELS COMPLETE! Moves: '+moves}
