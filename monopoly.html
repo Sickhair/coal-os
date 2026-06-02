@@ -106,7 +106,10 @@ function rollDice(){
   const total=d1+d2;
   document.getElementById('diceEl').textContent=`🎲 ${d1}+${d2}=${total}`;
   
+  const oldPos=pPos;
   pPos=(pPos+total)%SPACES.length;
+  // Collect $200 for passing GO
+  if(pPos<oldPos&&pPos!==0){pMoney+=200;log('Collected $200 for passing GO')}
   log(`You rolled ${total}, landed on ${SPACES[pPos].name}`);
   landOn(pPos,'player');
   render();
@@ -200,7 +203,9 @@ function aiTurn(){
   const d1=Math.floor(Math.random()*6)+1,d2=Math.floor(Math.random()*6)+1;
   const total=d1+d2;
   document.getElementById('diceEl').textContent=`🎲 ${d1}+${d2}=${total}`;
+  const oldA=aPos;
   aPos=(aPos+total)%SPACES.length;
+  if(aPos<oldA&&aPos!==0){aMoney+=200;log('AI collected $200 for passing GO')}
   log(`AI rolled ${total}, landed on ${SPACES[aPos].name}`);
   landOn(aPos,'ai');
   
