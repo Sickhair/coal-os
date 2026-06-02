@@ -198,7 +198,7 @@ function hintCell(){
   const[r,c]=empty[Math.floor(Math.random()*empty.length)];
   playerBoard[r][c]=solution[r][c];
   if(isComplete()){
-    gameOver=true;clearInterval(timer);
+    gameOver=true;clearInterval(interval);
     document.getElementById('status').textContent='🎉 PUZZLE COMPLETE!';
     document.getElementById('status').style.color='#10b981';
   }
