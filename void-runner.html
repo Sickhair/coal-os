@@ -130,7 +130,7 @@ function loop(){
       enemyBullets.push({x:e.x,y:e.y+e.size,vx:Math.cos(angle)*3,vy:Math.sin(angle)*3});
     }
   });
-  enemies=enemies.filter(e=>e.y<H+50);
+  enemies=enemies.filter(e=>{if(e.y>=H+50){enemiesLeft--;return false}return true});
   
   // Move enemy bullets
   enemyBullets=enemyBullets.filter(b=>{b.x+=b.vx;b.y+=b.vy;return b.x>-10&&b.x<W+10&&b.y>-10&&b.y<H+10});
