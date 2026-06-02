@@ -87,7 +87,7 @@ function getValidMoves(from,die){
   const to=p===1?from-die:from+die;
   // Check bearing off
   if(p===1&&to<0){
-    if(canBearOff(p)){return['off']}
+    if(canBearOff(p)){const farthest=getFarthest(p);if(from===farthest||to===from-die)return['off']}
   }
   if(p===2&&to>23){
     if(canBearOff(p)){const farthest=getFarthest(p);if(from===farthest||to===from+die)return['off']}
