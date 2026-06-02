@@ -87,10 +87,12 @@ function getValidMoves(from,die){
   const to=p===1?from-die:from+die;
   // Check bearing off
   if(p===1&&to<0){
-    if(canBearOff(p)){const farthest=getFarthest(p);if(from===farthest||to===from-die)return['off']}
+    if(canBearOff(p)){const farthest=getFarthest(p);if(from===farthest||die===from+1)return['off']}
+    return[];
   }
   if(p===2&&to>23){
-    if(canBearOff(p)){const farthest=getFarthest(p);if(from===farthest||to===from+die)return['off']}
+    if(canBearOff(p)){const farthest=getFarthest(p);if(from===farthest||die===24-from)return['off']}
+    return[];
   }
   if(to<0||to>23)return[];
   if(board[to].player!==null&&board[to].player!==p&&board[to].count>1)return[];
@@ -105,8 +107,8 @@ function canBearOff(p){
 }
 
 function getFarthest(p){
-  if(p===1){for(let i=0;i<=5;i++)if(board[i].player===1)return i;return 5}
-  else{for(let i=23;i>=18;i--)if(board[i].player===2)return i;return 18}
+  if(p===1){for(let i=5;i>=0;i--)if(board[i].player===1)return i;return 5}
+  else{for(let i=18;i<=23;i++)if(board[i].player===2)return i;return 18}
 }
 
 function moveChecker(from,to){
