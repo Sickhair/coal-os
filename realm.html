@@ -214,7 +214,7 @@ function onClick(px,py){
   }else if(selected&&h.owner!=='player'){
     // Attack
     const neighbors=getNeighbors(selected.q,selected.r);
-    if(neighbors.some(n=>n===hex.q+','+hex.r)){
+    if(neighbors.some(n=>n[0]===hex.q&&n[1]===hex.r)){
       const atk=selected.army-1;
       if(atk<=0)return;
       const def=h.army+(h.fortified?2:0);
