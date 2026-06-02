@@ -104,25 +104,25 @@ function playSound(track){
   if(track===0){osc.frequency.setValueAtTime(150,now);osc.frequency.exponentialRampToValueAtTime(40,now+0.1)}
 }
 
+let tickId=0;
+
 function togglePlay(){
   initAudio();
   playing=!playing;
   document.getElementById('playBtn').textContent=playing?'⏸ STOP':'▶ PLAY';
   document.getElementById('playBtn').classList.toggle('active',playing);
-  if(playing){currentStep=-1;tick()}
-  else{clearTimeout(intervalId);currentStep=-1;renderGrid()}
+  if(playing){currentStep=-1;const id=++tickId;scheduleTick(id)}
+  else{currentStep=-1;renderGrid()}
 }
 
-function tick(){
-  if(!playing)return;
+function scheduleTick(id){
+  if(!playing||id!==tickId)return;
   currentStep=(currentStep+1)%STEPS;
-  // Play sounds
   for(let t=0;t<TRACKS.length;t++){if(grid[pattern][t][currentStep])playSound(t)}
   renderGrid();
-  // Schedule next with swing
   const ms=60000/bpm/4;
   const swingMs=currentStep%2===0?0:swing*ms/100;
-  intervalId=setTimeout(tick,ms+swingMs);
+  setTimeout(()=>scheduleTick(id),ms+swingMs);
 }
 
 function updateBPM(){bpm=Math.max(60,Math.min(200,+document.getElementById('bpmInput').value))}
