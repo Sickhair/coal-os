@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>2048 — COAL OS</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+body{background:#050510;display:flex;flex-direction:column;align-items:center;min-height:100vh;font-family:'Orbitron',sans-serif;color:#e2e8f0;overflow-x:hidden}
+a.back{position:fixed;top:8px;left:8px;z-index:200;text-decoration:none;font-size:.5rem;color:#475569;opacity:.6}
+.brand{font-size:.4rem;letter-spacing:4px;color:#334155;margin:8px 0 4px;text-transform:uppercase;text-align:center}
+.title{font-size:.85rem;font-weight:900;color:#f59e0b;text-shadow:0 0 20px #f59e0b44;letter-spacing:2px;margin-bottom:6px}
+.hud{display:flex;gap:12px;margin-bottom:8px;font-size:.5rem;flex-wrap:wrap;justify-content:center}
+.status{font-size:.45rem;color:#94a3b8;margin-bottom:6px;min-height:14px;text-align:center}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;width:min(85vw,340px);padding:6px;background:#0a1628;border:2px solid #1e293b;border-radius:8px;margin-bottom:10px}
+.cell{aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:900;transition:all .12s}
+.cell.empty{background:#0f172a}
+.cell.t2{background:#1e293b;color:#94a3b8;font-size:min(5vw,20px)}
+.cell.t4{background:#1e3a2a;color:#22c55e;font-size:min(5vw,20px)}
+.cell.t8{background:#2a1e0a;color:#f97316;font-size:min(5vw,20px)}
+.cell.t16{background:#3a1a0a;color:#ef4444;font-size:min(5vw,20px)}
+.cell.t32{background:#3a0a2a;color:#ec4899;font-size:min(5vw,20px)}
+.cell.t64{background:#0a1a3a;color:#3b82f6;font-size:min(5vw,20px)}
+.cell.t128{background:#1a1a3a;color:#8b5cf6;font-size:min(4.5vw,18px)}
+.cell.t256{background:#3a1a1a;color:#f43f5e;font-size:min(4.5vw,18px)}
+.cell.t512{background:#0a2a2a;color:#14b8a6;font-size:min(4.5vw,18px)}
+.cell.t1024{background:#1a2a0a;color:#84cc16;font-size:min(4vw,16px)}
+.cell.t2048{background:#f59e0b33;color:#f59e0b;font-size:min(4vw,16px);box-shadow:0 0 20px #f59e0b44}
+.cell.tbig{background:#ef444433;color:#ef4444;font-size:min(3.5vw,14px)}
+.cell.new{animation:pop-in .15s ease-out}
+.cell.merged{animation:pop-merge .2s ease-out}
+@keyframes pop-in{from{transform:scale(0)}to{transform:scale(1)}}
+@keyframes pop-merge{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
+.actions{display:flex;gap:4px;margin-bottom:6px}
+.btn{background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:.25rem .6rem;border-radius:4px;font-family:inherit;font-size:.45rem;cursor:pointer}
+.btn:hover{background:#334155;color:#e2e8f0}
+.btn.primary{border-color:#f59e0b;color:#f59e0b}
+.overlay{position:fixed;inset:0;background:#050510dd;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100}
+.overlay h2{font-size:.8rem;margin-bottom:8px}
+.overlay p{font-size:.5rem;color:#64748b;margin-bottom:16px}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← COAL OS</a>
+<div class="brand">COAL OS</div>
+<div class="title">🔥 2048</div>
+<div class="hud">
+  <span style="color:#f59e0b;font-weight:700">SCORE: <span id="score">0</span></span>
+  <span style="color:#334155">|</span>
+  <span style="color:#475569">BEST: <span id="best">0</span></span>
+</div>
+<div class="status" id="status">Swipe or use arrow keys</div>
+<div class="grid" id="grid"></div>
+<div class="actions">
+  <button class="btn primary" onclick="newGame()">NEW GAME</button>
+</div>
+
+<div class="overlay" id="gameOver" style="display:none">
+  <h2 id="goTitle" style="color:#ef4444">Game Over</h2>
+  <p id="goInfo"></p>
+  <button class="btn primary" onclick="newGame()" style="font-size:.7rem;padding:.5rem 2rem">TRY AGAIN</button>
+</div>
+
+<script>
+const SIZE=4;
+let grid,score,best=0,animCells,gameOver_flag;
+
+function newGame(){
+  grid=Array.from({length:SIZE},()=>Array(SIZE).fill(0));
+  score=0;gameOver_flag=false;animCells={};
+  document.getElementById('gameOver').style.display='none';
+  addRandom();addRandom();
+  render();
+}
+
+function addRandom(){
+  const empty=[];
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++)if(grid[r][c]===0)empty.push([r,c]);
+  if(empty.length===0)return false;
+  const[r,c]=empty[Math.floor(Math.random()*empty.length)];
+  grid[r][c]=Math.random()<.9?2:4;
+  animCells[r+'_'+c]='new';
+  return true;
+}
+
+function slide(row){
+  // Remove zeros
+  let arr=row.filter(x=>x!==0);
+  let merged=[];
+  let scoreGain=0;
+  // Merge
+  for(let i=0;i<arr.length-1;i++){
+    if(arr[i]===arr[i+1]){
+      arr[i]*=2;
+      scoreGain+=arr[i];
+      arr.splice(i+1,1);
+      merged.push(i);
+    }
+  }
+  // Pad with zeros
+  while(arr.length<SIZE)arr.push(0);
+  return{row:arr,scoreGain,merged};
+}
+
+function move(dir){
+  if(gameOver_flag)return false;
+  animCells={};
+  let moved=false;
+  let totalScore=0;
+  
+  const old=grid.map(r=>[...r]);
+  
+  if(dir==='left'){
+    for(let r=0;r<SIZE;r++){
+      const result=slide(grid[r]);
+      grid[r]=result.row;
+      totalScore+=result.scoreGain;
+    }
+  }else if(dir==='right'){
+    for(let r=0;r<SIZE;r++){
+      const result=slide(grid[r].reverse());
+      grid[r]=result.row.reverse();
+      totalScore+=result.scoreGain;
+    }
+  }else if(dir==='up'){
+    for(let c=0;c<SIZE;c++){
+      const col=grid.map(r=>r[c]);
+      const result=slide(col);
+      for(let r=0;r<SIZE;r++)grid[r][c]=result.row[r];
+      totalScore+=result.scoreGain;
+    }
+  }else if(dir==='down'){
+    for(let c=0;c<SIZE;c++){
+      const col=grid.map(r=>r[c]).reverse();
+      const result=slide(col);
+      const reversed=result.row.reverse();
+      for(let r=0;r<SIZE;r++)grid[r][c]=reversed[r];
+      totalScore+=result.scoreGain;
+    }
+  }
+  
+  // Check if moved
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){
+    if(grid[r][c]!==old[r][c])moved=true;
+  }
+  
+  if(moved){
+    score+=totalScore;
+    if(score>best)best=score;
+    addRandom();
+    
+    // Check for 2048
+    for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){
+      if(grid[r][c]===2048&&!gameOver_flag){
+        // Just keep playing, show congrats once
+      }
+    }
+    
+    // Check game over
+    if(!canMove()){
+      gameOver_flag=true;
+      document.getElementById('goTitle').textContent='Game Over';
+      document.getElementById('goTitle').style.color='#ef4444';
+      document.getElementById('goInfo').textContent='Final score: '+score;
+      document.getElementById('gameOver').style.display='flex';
+    }
+    
+    render();
+  }
+  
+  return moved;
+}
+
+function canMove(){
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){
+    if(grid[r][c]===0)return true;
+    if(c<SIZE-1&&grid[r][c]===grid[r][c+1])return true;
+    if(r<SIZE-1&&grid[r][c]===grid[r+1][c])return true;
+  }
+  return false;
+}
+
+function getCellClass(val){
+  if(val<=2048)return't'+val;
+  return'tbig';
+}
+
+function render(){
+  const el=document.getElementById('grid');el.innerHTML='';
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){
+    const d=document.createElement('div');
+    const val=grid[r][c];
+    d.className='cell '+(val===0?'empty':getCellClass(val));
+    if(animCells[r+'_'+c])d.classList.add(animCells[r+'_'+c]);
+    d.textContent=val===0?'':val;
+    el.appendChild(d);
+  }
+  document.getElementById('score').textContent=score;
+  document.getElementById('best').textContent=best;
+}
+
+// Keyboard
+document.addEventListener('keydown',e=>{
+  const map={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down'};
+  if(map[e.key]){e.preventDefault();move(map[e.key])}
+});
+
+// Touch/swipe
+let touchStart=null;
+document.addEventListener('touchstart',e=>{
+  const t=e.touches[0];touchStart={x:t.clientX,y:t.clientY};
+},{passive:true});
+document.addEventListener('touchend',e=>{
+  if(!touchStart)return;
+  const t=e.changedTouches[0];
+  const dx=t.clientX-touchStart.x,dy=t.clientY-touchStart.y;
+  const absDx=Math.abs(dx),absDy=Math.abs(dy);
+  if(Math.max(absDx,absDy)<30)return; // too short
+  if(absDx>absDy){move(dx>0?'right':'left')}
+  else{move(dy>0?'down':'up')}
+  touchStart=null;
+},{passive:true});
+
+newGame();
+</script>
+</body>
+</html>
