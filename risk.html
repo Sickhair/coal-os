@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Risk — COAL OS</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+body{background:#050510;display:flex;flex-direction:column;align-items:center;min-height:100vh;font-family:'Orbitron',sans-serif;color:#e2e8f0;overflow:hidden}
+canvas{display:block}
+.ov{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 30%,#0a1628,#050510);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;text-align:center;padding:1.5rem}
+.ov.h{display:none}
+.brand{font-size:.4rem;letter-spacing:4px;color:#334155;margin-bottom:.8rem;text-transform:uppercase}
+.tt{font-size:1.2rem;font-weight:900;letter-spacing:2px}
+.st{font-size:.5rem;color:#475569;letter-spacing:3px;margin:.4rem 0 1rem}
+.bn{background:transparent;border:2px solid currentColor;color:inherit;padding:.6rem 2rem;border-radius:8px;font-family:'Orbitron',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:3px;cursor:pointer}
+.hint{font-size:.4rem;color:#334155;margin-top:1rem;letter-spacing:2px}
+.hud{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:.4rem .6rem;z-index:50;font-size:.5rem;background:#0a162888;pointer-events:none}
+.bar{position:fixed;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:4px;z-index:60;flex-wrap:wrap;justify-content:center}
+.abtn{padding:4px 10px;background:#1e293b88;border:1px solid #33415566;color:#94a3b8;border-radius:4px;font-family:inherit;font-size:.45rem;cursor:pointer}
+.abtn:active{background:#334155;color:#fff}
+.abtn.dis{opacity:.3;cursor:not-allowed}
+.abtn.active{border-color:#f59e0b;color:#f59e0b}
+.msg{position:fixed;bottom:50px;left:50%;transform:translateX(-50%);font-size:.5rem;color:#f59e0b;z-index:60;text-align:center;pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hud hidden" id="hud">
+  <div style="color:#3b82f6" id="phaseEl">DEPLOY</div>
+  <div style="color:#64748b" id="turnEl">TURN 1</div>
+  <div style="color:#22c55e" id="armyEl">Armies: 0</div>
+</div>
+<div class="bar h" id="bar">
+  <button class="abtn active" id="deployBtn" onclick="setPhase('deploy')">DEPLOY</button>
+  <button class="abtn" id="attackBtn" onclick="setPhase('attack')">⚔ ATTACK</button>
+  <button class="abtn" id="fortifyBtn" onclick="setPhase('fortify')">FORTIFY</button>
+  <button class="abtn" id="endBtn" onclick="endTurn()">END TURN ▶</button>
+</div>
+<div class="msg h" id="msg"></div>
+
+<div class="ov" id="menu">
+  <div class="brand">COAL OS</div>
+  <div class="tt" style="color:#ef4444">🌍 GLOBAL RISK</div>
+  <div class="st">CONQUER THE WORLD</div>
+  <button class="bn" style="color:#ef4444;border-color:#ef4444" onclick="startGame()">CONQUER</button>
+  <div class="hint">TAP TERRITORIES • DICE COMBAT • TAKE OVER THE MAP</div>
+</div>
+<div class="ov h" id="winScreen">
+  <div class="brand">COAL OS</div>
+  <div class="tt" id="winTitle" style="color:#22c55e">🏆 VICTORY!</div>
+  <div style="font-size:.6rem;color:#64748b;margin:.5rem 0" id="winInfo"></div>
+  <button class="bn" style="color:#22c55e;border-color:#22c55e" onclick="startGame()">AGAIN</button>
+</div>
+<script>
+const C=document.getElementById('c'),X=C.getContext('2d');
+let W,H,territories,adjacency,phase,turn,playerPool,aiPool,running,animId,selected,attacking;
+
+// Simplified world map as grid of territories
+const GRID_W=12,GRID_H=8;
+const CONTINENTS=[
+  {name:'N. America',color:'#1e3a5f',territories:[[0,0],[1,0],[2,0],[3,0],[0,1],[1,1],[2,1]],bonus:3},
+  {name:'S. America',color:'#1a3a1a',territories:[[1,4],[2,4],[3,4],[2,5]],bonus:2},
+  {name:'Europe',color:'#3a1a3a',territories:[[5,0],[6,0],[7,0],[5,1],[6,1]],bonus:3},
+  {name:'Africa',color:'#3a3a1a',territories:[[5,3],[6,3],[7,3],[6,4],[7,4]],bonus:2},
+  {name:'Asia',color:'#1a2a3a',territories:[[8,0],[9,0],[10,0],[11,0],[8,1],[9,1],[10,1],[11,1],[9,2],[10,2]],bonus:5},
+  {name:'Australia',color:'#2a1a1a',territories:[[9,5],[10,5],[11,5],[10,6],[11,6]],bonus:2},
+];
+
+function generateAdjacency(){
+  adjacency=new Map();
+  territories.forEach((t,i)=>{
+    const neighbors=[];
+    // Grid neighbors (4-directional + wrap)
+    const dirs=[[0,-1],[0,1],[-1,0],[1,0]];
+    dirs.forEach(([dx,dy])=>{
+      const nx=t.gx+dx,ny=t.gy+dy;
+      const ni=territories.findIndex(o=>o.gx===nx&&o.gy===ny);
+      if(ni>=0)neighbors.push(ni);
+    });
+    // Bridge connections for continents
+    // N.America <-> Europe
+    if(t.gx===3&&t.gy===0){const e=territories.findIndex(o=>o.gx===5&&o.gy===0);if(e>=0)neighbors.push(e)}
+    if(t.gx===5&&t.gy===0){const e=territories.findIndex(o=>o.gx===3&&o.gy===0);if(e>=0)neighbors.push(e)}
+    // N.America <-> Asia (wrapping)
+    if(t.gx===0&&t.gy===0){const e=territories.findIndex(o=>o.gx===11&&o.gy===0);if(e>=0)neighbors.push(e)}
+    if(t.gx===11&&t.gy===0){const e=territories.findIndex(o=>o.gx===0&&o.gy===0);if(e>=0)neighbors.push(e)}
+    // S.America <-> Africa
+    if(t.gx===3&&t.gy===4){const e=territories.findIndex(o=>o.gx===5&&o.gy===3);if(e>=0)neighbors.push(e)}
+    if(t.gx===5&&t.gy===3){const e=territories.findIndex(o=>o.gx===3&&t.gy===4);if(e>=0)neighbors.push(e)}
+    adjacency.set(i,neighbors);
+  });
+}
+
+function startGame(){
+  resize();
+  document.getElementById('menu').classList.add('h');
+  document.getElementById('winScreen').classList.add('h');
+  document.getElementById('hud').classList.remove('h');
+  document.getElementById('bar').classList.remove('h');
+  
+  // Create territories
+  territories=[];
+  let id=0;
+  CONTINENTS.forEach(cont=>{
+    cont.territories.forEach(([gx,gy])=>{
+      territories.push({id:id++,gx,gy,owner:null,armies:0,continent:cont.name,cColor:cont.color});
+    });
+  });
+  
+  generateAdjacency();
+  
+  // Distribute territories
+  const shuffled=[...Array(territories.length).keys()].sort(()=>Math.random()-.5);
+  shuffled.forEach((ti,i)=>{
+    territories[ti].owner=i%2===0?'player':'ai';
+    territories[ti].armies=1+Math.floor(Math.random()*2);
+  });
+  
+  playerPool=getBonus('player')+3;
+  aiPool=getBonus('ai')+3;
+  turn=1;phase='deploy';selected=null;attacking=null;running=true;
+  updateHUD();
+  animId=requestAnimationFrame(renderLoop);
+}
+
+function getBonus(owner){
+  let bonus=0;
+  CONTINENTS.forEach(cont=>{
+    const all=cont.territories.every(([gx,gy])=>territories.find(t=>t.gx===gx&&t.gy===gy)?.owner===owner);
+    if(all)bonus+=cont.bonus;
+  });
+  const count=territories.filter(t=>t.owner===owner).length;
+  bonus+=Math.max(1,Math.floor(count/3));
+  return bonus;
+}
+
+function setPhase(p){
+  phase=p;selected=null;attacking=null;
+  document.querySelectorAll('.abtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(p+'Btn')?.classList.add('active');
+  updateHUD();
+}
+
+function endTurn(){
+  if(phase==='deploy'&&playerPool>0){showMsg('Deploy all armies first!');return}
+  
+  // AI turn
+  setPhase('deploy');
+  aiPool=getBonus('ai');
+  
+  // AI deploy
+  const aiTerrs=territories.filter(t=>t.owner==='ai');
+  while(aiPool>0){
+    // Prefer territories bordering player
+    const border=aiTerrs.filter(t=>adjacency.get(t.id).some(n=>territories[n].owner==='player'));
+    const pick=border.length?border[Math.floor(Math.random()*border.length)]:aiTerrs[Math.floor(Math.random()*aiTerrs.length)];
+    pick.armies++;aiPool--;
+  }
+  
+  // AI attack
+  for(let i=0;i<3;i++){
+    const aiBorder=aiTerrs.filter(t=>t.armies>2&&adjacency.get(t.id).some(n=>territories[n].owner==='player'));
+    if(!aiBorder.length)break;
+    const atk=aiBorder[Math.floor(Math.random()*aiBorder.length)];
+    const targets=adjacency.get(atk.id).filter(n=>territories[n].owner==='player');
+    if(!targets.length)continue;
+    const def=territories[targets[Math.floor(Math.random()*targets.length)]];
+    doBattle(atk,def);
+  }
+  
+  // AI fortify
+  const aiSafe=aiTerrs.filter(t=>t.armies>3&&!adjacency.get(t.id).some(n=>territories[n].owner==='player'));
+  const aiFrontier=aiTerrs.filter(t=>adjacency.get(t.id).some(n=>territories[n].owner==='player'));
+  if(aiSafe.length&&aiFrontier.length){
+    const src=aiSafe.reduce((a,b)=>a.armies>b.armies?a:b);
+    const dst=aiFrontier[Math.floor(Math.random()*aiFrontier.length)];
+    const move=Math.max(1,src.armies-1);
+    src.armies-=move;dst.armies+=move;
+  }
+  
+  turn++;
+  playerPool=getBonus('player');
+  phase='deploy';selected=null;
+  updateHUD();
+  checkWin();
+}
+
+function doBattle(atkTerr,defTerr){
+  const atkDice=Math.min(3,atkTerr.armies-1);
+  const defDice=Math.min(2,defTerr.armies);
+  let atkRolls=[],defRolls=[];
+  for(let i=0;i<atkDice;i++)atkRolls.push(Math.floor(Math.random()*6)+1);
+  for(let i=0;i<defDice;i++)defRolls.push(Math.floor(Math.random()*6)+1);
+  atkRolls.sort((a,b)=>b-a);defRolls.sort((a,b)=>b-a);
+  const rounds=Math.min(atkRolls.length,defRolls.length);
+  for(let i=0;i<rounds;i++){
+    if(atkRolls[i]>defRolls[i])defTerr.armies--;
+    else atkTerr.armies--;
+  }
+  if(defTerr.armies<=0){
+    defTerr.owner=atkTerr.owner;
+    const move=Math.max(1,atkTerr.armies-1);
+    defTerr.armies=move;atkTerr.armies-=move;
+  }
+}
+
+function handleTerrClick(ti){
+  if(!running)return;
+  const t=territories[ti];
+  
+  if(phase==='deploy'){
+    if(t.owner!=='player'||playerPool<=0)return;
+    t.armies++;playerPool--;
+    updateHUD();
+  }else if(phase==='attack'){
+    if(!selected){
+      if(t.owner==='player'&&t.armies>1){selected=t;showMsg('Select target')}
+      return;
+    }
+    if(t.owner==='player'){selected=t;showMsg('Select enemy target');return}
+    if(!adjacency.get(selected.id).includes(ti)){showMsg('Not adjacent!');return}
+    if(selected.armies<=1){showMsg('Need more armies!');return}
+    doBattle(selected,t);
+    selected=null;
+    updateHUD();checkWin();
+  }else if(phase==='fortify'){
+    if(!selected){
+      if(t.owner==='player'&&t.armies>1){selected=t;showMsg('Select destination')}
+      return;
+    }
+    if(t.owner!=='player'||!adjacency.get(selected.id).includes(ti)){selected=null;return}
+    const move=selected.armies-1;
+    t.armies+=move;selected.armies=1;selected=null;
+    setPhase('deploy');
+    updateHUD();
+  }
+}
+
+function checkWin(){
+  const pCount=territories.filter(t=>t.owner==='player').length;
+  const aCount=territories.filter(t=>t.owner==='ai').length;
+  if(pCount===territories.length){
+    running=false;
+    document.getElementById('winTitle').textContent='🏆 CONQUERED!';
+    document.getElementById('winTitle').style.color='#22c55e';
+    document.getElementById('winInfo').textContent='World domination in '+turn+' turns!';
+    document.getElementById('winScreen').classList.remove('h');
+  }else if(aCount===territories.length){
+    running=false;
+    document.getElementById('winTitle').textContent='DEFEATED';
+    document.getElementById('winTitle').style.color='#ef4444';
+    document.getElementById('winInfo').textContent='AI conquered the world';
+    document.getElementById('winScreen').classList.remove('h');
+  }
+}
+
+function showMsg(txt){const el=document.getElementById('msg');el.textContent=txt;el.classList.remove('h');setTimeout(()=>el.classList.add('h'),2000)}
+
+function updateHUD(){
+  document.getElementById('phaseEl').textContent=phase.toUpperCase()+(playerPool>0?' (+'+playerPool+')':'');
+  document.getElementById('turnEl').textContent='TURN '+turn;
+  const pCount=territories.filter(t=>t.owner==='player').length;
+  const total=territories.length;
+  document.getElementById('armyEl').textContent=pCount+'/'+total+' territories';
+  
+  document.getElementById('deployBtn').classList.toggle('dis',playerPool<=0&&phase==='deploy');
+}
+
+function resize(){W=C.width=innerWidth;H=C.height=innerHeight}
+addEventListener('resize',resize);resize();
+
+function renderLoop(){
+  if(!running){return}
+  X.fillStyle='#050510';X.fillRect(0,0,W,H);
+  
+  const cellW=W/GRID_W,cellH=(H-40)/GRID_H;
+  const pad=3;
+  
+  territories.forEach(t=>{
+    const x=t.gx*cellW+pad,y=t.gy*cellH+pad,w=cellW-pad*2,h=cellH-pad*2;
+    
+    // Territory color
+    let fill=t.cColor;
+    if(t.owner==='player')fill='#1e293b';
+    else if(t.owner==='ai')fill='#3b1e1e';
+    
+    // Highlight selected
+    if(selected&&selected.id===t.id){X.shadowColor='#f59e0b';X.shadowBlur=12}
+    
+    X.fillStyle=fill;X.beginPath();X.roundRect?X.roundRect(x,y,w,h,6):X.rect(x,y,w,h);X.fill();
+    X.strokeStyle=t.owner==='player'?'#3b82f644':t.owner==='ai'?'#ef444444':'#334155';
+    X.lineWidth=selected&&selected.id===t.id?2:1;X.stroke();
+    X.shadowBlur=0;
+    
+    // Army count
+    X.fillStyle=t.owner==='player'?'#3b82f6':t.owner==='ai'?'#ef4444':'#475569';
+    X.font='bold '+Math.min(16,cellH*.35)+'px Orbitron';X.textAlign='center';X.textBaseline='middle';
+    X.fillText(t.armies,x+w/2,y+h/2);
+    
+    // Continent label (small)
+    X.fillStyle='#334155';X.font=Math.min(7,cellW*.12)+'px Orbitron';
+    X.fillText(t.continent,x+w/2,y+h-4);
+  });
+  
+  // Connection lines between adjacent territories
+  X.strokeStyle='#1e293b33';X.lineWidth=1;
+  adjacency.forEach((neighbors,i)=>{
+    const t=territories[i];
+    const x1=t.gx*cellW+cellW/2,y1=t.gy*cellH+cellH/2;
+    neighbors.forEach(ni=>{
+      if(ni>i){
+        const t2=territories[ni];
+        const x2=t2.gx*cellW+cellW/2,y2=t2.gy*cellH+cellH/2;
+        X.beginPath();X.moveTo(x1,y1);X.lineTo(x2,y2);X.stroke();
+      }
+    });
+  });
+  
+  animId=requestAnimationFrame(renderLoop);
+}
+
+C.addEventListener('click',e=>{
+  const r=C.getBoundingClientRect();
+  const cellW=W/GRID_W,cellH=(H-40)/GRID_H;
+  const gx=Math.floor((e.clientX-r.left)/cellW),gy=Math.floor((e.clientY-r.top)/cellH);
+  const ti=territories.findIndex(t=>t.gx===gx&&t.gy===gy);
+  if(ti>=0)handleTerrClick(ti);
+});
+C.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  const r=C.getBoundingClientRect();const t=e.touches[0];
+  const cellW=W/GRID_W,cellH=(H-40)/GRID_H;
+  const gx=Math.floor((t.clientX-r.left)/cellW),gy=Math.floor((t.clientY-r.top)/cellH);
+  const ti=territories.findIndex(t=>t.gx===gx&&t.gy===gy);
+  if(ti>=0)handleTerrClick(ti);
+},{passive:false});
+</script>
+</body>
+</html>

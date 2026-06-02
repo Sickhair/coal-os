@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Settlers of Coal — COAL OS</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+body{background:#050510;overflow:hidden;font-family:'Orbitron',sans-serif;color:#e2e8f0;touch-action:none}
+canvas{display:block}
+.ov{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 30%,#0a1628,#050510);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;text-align:center;padding:1.5rem}
+.ov.h{display:none}
+.brand{font-size:.4rem;letter-spacing:4px;color:#334155;margin-bottom:.8rem;text-transform:uppercase}
+.tt{font-size:1.1rem;font-weight:900;letter-spacing:2px;text-shadow:0 0 30px currentColor66}
+.st{font-size:.5rem;color:#475569;letter-spacing:3px;margin:.4rem 0 1rem}
+.bn{background:transparent;border:2px solid currentColor;color:inherit;padding:.6rem 2rem;border-radius:8px;font-family:'Orbitron',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:3px;cursor:pointer}
+.bn:active{filter:brightness(1.5)}
+.hint{font-size:.4rem;color:#334155;margin-top:1rem;letter-spacing:2px}
+.hud{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:.4rem .6rem;z-index:50;font-size:.5rem;background:#0a162888}
+.hud .res{display:flex;gap:6px}.hud .res span{font-weight:700}
+.r-wood{color:#22c55e}.r-brick{color:#ef4444}.r-wheat{color:#f59e0b}.r-sheep{color:#a3e635}.r-ore{color:#6b7280}.r-vp{color:#a855f7}
+.actions{position:fixed;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:4px;z-index:60;flex-wrap:wrap;justify-content:center}
+.abtn{padding:4px 10px;background:#1e293b88;border:1px solid #33415566;color:#94a3b8;border-radius:4px;font-family:inherit;font-size:.45rem;cursor:pointer;white-space:nowrap}
+.abtn:active{background:#334155;color:#fff}
+.abtn.dis{opacity:.3;cursor:not-allowed}
+.msg{position:fixed;bottom:55px;left:50%;transform:translateX(-50%);font-size:.5rem;color:#f59e0b;z-index:60;text-align:center;pointer-events:none;text-shadow:0 0 10px #000}
+.trade-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#0f172a;border:2px solid #334155;border-radius:8px;padding:12px;z-index:70;text-align:center;min-width:280px}
+.trade-panel h3{font-size:.6rem;margin-bottom:8px;color:#f59e0b}
+.trade-row{display:flex;align-items:center;justify-content:center;gap:4px;margin:4px 0;font-size:.5rem}
+.trade-row button{width:24px;height:24px;background:#1e293b;border:1px solid #334155;color:#fff;border-radius:4px;font-size:.8rem;cursor:pointer}
+.trade-row span{width:20px;text-align:center}
+.trade-btns{display:flex;gap:6px;justify-content:center;margin-top:8px}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hud hidden" id="hud">
+  <div class="res">
+    <span class="r-wood" id="rWood">🪵0</span>
+    <span class="r-brick" id="rBrick">🧱0</span>
+    <span class="r-wheat" id="rWheat">🌾0</span>
+    <span class="r-sheep" id="rSheep">🐑0</span>
+    <span class="r-ore" id="rOre">⛏0</span>
+  </div>
+  <div><span class="r-vp" id="vpEl">VP: 0</span></div>
+  <div style="color:#64748b" id="turnEl">TURN 1</div>
+</div>
+<div class="actions h" id="actions">
+  <button class="abtn" id="roadBtn" onclick="buildRoad()">🛤 ROAD</button>
+  <button class="abtn" id="settleBtn" onclick="buildSettlement()">🏠 SETTLE</button>
+  <button class="abtn" id="cityBtn" onclick="upgradeCity()">🏰 CITY</button>
+  <button class="abtn" id="tradeBtn" onclick="showTrade()">🔄 TRADE</button>
+  <button class="abtn" id="endBtn" onclick="endTurn()">END TURN ▶</button>
+</div>
+<div class="msg h" id="msg"></div>
+
+<div class="ov" id="menu">
+  <div class="brand">COAL OS</div>
+  <div class="tt" style="color:#f59e0b">🏘 SETTLERS OF COAL</div>
+  <div class="st">BUILD • TRADE • SETTLE</div>
+  <button class="bn" style="color:#f59e0b;border-color:#f59e0b" onclick="startGame()">PLAY</button>
+  <div class="hint">BUILD SETTLEMENTS & ROADS • FIRST TO 10 VP WINS</div>
+</div>
+<div class="ov h" id="winScreen">
+  <div class="brand">COAL OS</div>
+  <div class="tt" style="color:#22c55e">🏆 VICTORY!</div>
+  <div style="font-size:.6rem;color:#64748b;margin:.5rem 0" id="winInfo"></div>
+  <button class="bn" style="color:#22c55e;border-color:#22c55e" onclick="startGame()">AGAIN</button>
+</div>
+<div class="trade-panel h" id="tradePanel">
+  <h3>MARITIME TRADE (4:1)</h3>
+  <div class="trade-row"><span class="r-wood">Give 🪵</span><button onclick="tradeGive='wood';tradeGiveN=Math.min(4,res.wood)">−</button><span id="tgWood">0</span><button onclick="if(res.wood>tgWoodN)tgWoodN++">+</button></div>
+  <div class="trade-row"><span>Want:</span>
+    <button class="abtn" onclick="tradeGet='wood'">🪵</button>
+    <button class="abtn" onclick="tradeGet='brick'">🧱</button>
+    <button class="abtn" onclick="tradeGet='wheat'">🌾</button>
+    <button class="abtn" onclick="tradeGet='sheep'">🐑</button>
+    <button class="abtn" onclick="tradeGet='ore'">⛏</button>
+  </div>
+  <div class="trade-btns">
+    <button class="abtn" onclick="doTrade()">TRADE</button>
+    <button class="abtn" onclick="hideTrade()">CANCEL</button>
+  </div>
+</div>
+
+<script>
+const C=document.getElementById('c'),X=C.getContext('2d');
+const HEX_SIZE=32;
+const RES_TYPES=['wood','brick','wheat','sheep','ore'];
+const RES_COLORS={wood:'#22c55e',brick:'#ef4444',wheat:'#f59e0b',sheep:'#a3e635',ore:'#6b7280'};
+const RES_EMOJI={wood:'🪵',brick:'🧱',wheat:'🌾',sheep:'🐑',ore:'⛏'};
+const TILE_COLORS={wood:'#1a3a1a',brick:'#3a1a1a',wheat:'#3a3a1a',sheep:'#1a3a1a',ore:'#2a2a2a',desert:'#1a1a1a'};
+
+let W,H,tiles,vertices,edges,settlements,roads,playerRes,aiRes,turn,phase,robberHex,selectedVertex,running,animId,diceResult;
+let tradeGive='wood',tradeGet='brick';
+
+// Hex grid for Catan (19 tiles)
+function generateBoard(){
+  const boardRadius=2;
+  tiles=[];vertices=new Map();edges=new Map();settlements=new Map();roads=new Map();
+  
+  // Generate hex positions (axial coords)
+  const hexCoords=[];
+  for(let q=-boardRadius;q<=boardRadius;q++){
+    for(let r=-boardRadius;r<=boardRadius;r++){
+      if(Math.abs(q+r)<=boardRadius)hexCoords.push({q,r});
+    }
+  }
+  
+  // Assign resources (no desert for simplicity, just resources)
+  const pool=[];
+  // Standard Catan distribution
+  for(let i=0;i<4;i++)pool.push('wheat');
+  for(let i=0;i<4;i++)pool.push('sheep');
+  for(let i=0;i<4;i++)pool.push('wood');
+  for(let i=0;i<3;i++)pool.push('brick');
+  for(let i=0;i<3;i++)pool.push('ore');
+  // Shuffle
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
+  
+  // Number tokens (skip 7 = robber)
+  const numbers=[2,3,3,4,4,5,5,6,6,8,8,9,9,10,10,11,11,12];
+  for(let i=numbers.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[numbers[i],numbers[j]]=[numbers[j],numbers[i]]}
+  
+  hexCoords.forEach((hc,i)=>{
+    const res=i<pool.length?pool[i]:'desert';
+    const num=i<numbers.length?numbers[i]:0;
+    tiles.push({q:hc.q,r:hc.r,resource:res,number:res==='desert'?0:num});
+  });
+  
+  robberHex=null;
+}
+
+function hexToPixel(q,r){
+  const x=HEX_SIZE*1.5*q+W/2;
+  const y=HEX_SIZE*Math.sqrt(3)*(r+q/2)+H/2;
+  return{x,y};
+}
+
+function getTileVertices(q,r){
+  // 6 corners of hex
+  const{x,y}=hexToPixel(q,r);
+  const verts=[];
+  for(let i=0;i<6;i++){
+    const a=Math.PI/3*i-Math.PI/6;
+    verts.push({x:x+HEX_SIZE*Math.cos(a),y:y+HEX_SIZE*Math.sin(a)});
+  }
+  return verts;
+}
+
+function vertexKey(x,y){return Math.round(x)+'_'+Math.round(y)}
+
+function startGame(){
+  resize();
+  document.getElementById('menu').classList.add('h');
+  document.getElementById('winScreen').classList.add('h');
+  document.getElementById('hud').classList.remove('h');
+  document.getElementById('actions').classList.remove('h');
+  
+  playerRes={wood:0,brick:0,wheat:0,sheep:0,ore:0};
+  aiRes={wood:0,brick:0,wheat:0,sheep:0,ore:0};
+  turn=1;phase='player';running=true;selectedVertex=null;
+  generateBoard();
+  
+  // Place initial settlements for player and AI
+  // Player: top area
+  placeInitialSettlement('player',tiles[0]);
+  placeInitialSettlement('ai',tiles[tiles.length-1]);
+  
+  rollDice();
+  updateHUD();
+  animId=requestAnimationFrame(renderLoop);
+}
+
+function placeInitialSettlement(owner,tile){
+  const verts=getTileVertices(tile.q,tile.r);
+  const v=verts[0];
+  const key=vertexKey(v.x,v.y);
+  settlements.set(key,{owner,x:v.x,y:v.y,level:1});
+  // Also get resources from adjacent tiles
+  if(owner==='player')getResourceFromTile(tile,playerRes);
+  else getResourceFromTile(tile,aiRes);
+}
+
+function getResourceFromTile(tile,res){
+  if(tile.resource!=='desert')res[tile.resource]++;
+}
+
+function rollDice(){
+  const d1=Math.floor(Math.random()*6)+1;
+  const d2=Math.floor(Math.random()*6)+1;
+  diceResult=d1+d2;
+  showMsg('Rolled '+d1+' + '+d2+' = '+diceResult);
+  
+  // Distribute resources
+  tiles.forEach(tile=>{
+    if(tile.number===diceResult){
+      // Check all settlements adjacent
+      settlements.forEach(s=>{
+        const{x,y}=hexToPixel(tile.q,tile.r);
+        if(Math.hypot(s.x-x,s.y-y)<HEX_SIZE*1.2){
+          if(s.owner==='player')getResourceFromTile(tile,playerRes);
+          else getResourceFromTile(tile,aiRes);
+        }
+      });
+    }
+  });
+  updateHUD();
+}
+
+function buildRoad(){
+  if(phase!=='player')return;
+  if(playerRes.brick<1||playerRes.wood<1){showMsg('Need 1 🧱 + 1 🪵');return}
+  showMsg('Tap a spot next to your settlement for road');
+  phase='placeRoad';
+}
+
+function buildSettlement(){
+  if(phase!=='player')return;
+  if(playerRes.brick<1||playerRes.wood<1||playerRes.wheat<1||playerRes.sheep<1){showMsg('Need 🧱🪵🌾🐑');return}
+  showMsg('Tap an empty vertex near your road');
+  phase='placeSettlement';
+}
+
+function upgradeCity(){
+  if(phase!=='player')return;
+  if(playerRes.wheat<2||playerRes.ore<3){showMsg('Need 2🌾 + 3⛏');return}
+  showMsg('Tap your settlement to upgrade');
+  phase='placeCity';
+}
+
+function showTrade(){document.getElementById('tradePanel').classList.remove('h')}
+function hideTrade(){document.getElementById('tradePanel').classList.add('h')}
+
+function doTrade(){
+  const cost=4;
+  if(playerRes[tradeGive]<cost){showMsg('Need 4 '+tradeGive);return}
+  playerRes[tradeGive]-=cost;playerRes[tradeGet]++;
+  hideTrade();updateHUD();showMsg('Traded 4 '+tradeGive+' → 1 '+tradeGet);
+}
+
+function endTurn(){
+  if(phase!=='player')return;
+  phase='ai';
+  updateHUD();
+  setTimeout(aiTurn,800);
+}
+
+function aiTurn(){
+  // Simple AI: try to build stuff
+  // Roll dice for AI
+  const d1=Math.floor(Math.random()*6)+1,d2=Math.floor(Math.random()*6)+1;
+  const aiDice=d1+d2;
+  tiles.forEach(tile=>{
+    if(tile.number===aiDice){
+      settlements.forEach(s=>{
+        const{x,y}=hexToPixel(tile.q,tile.r);
+        if(Math.hypot(s.x-x,s.y-y)<HEX_SIZE*1.2&&s.owner==='ai')getResourceFromTile(tile,aiRes);
+      });
+    }
+  });
+  
+  // AI tries to build settlement
+  if(aiRes.brick>=1&&aiRes.wood>=1&&aiRes.wheat>=1&&aiRes.sheep>=1){
+    // Find empty vertex near AI settlements
+    const aiSettlements=[...settlements.values()].filter(s=>s.owner==='ai');
+    for(const s of aiSettlements){
+      const spots=getTileVertices(tiles[0].q,tiles[0].r); // simplified
+      // Try all tiles for a nearby spot
+      for(const tile of tiles){
+        const verts=getTileVertices(tile.q,tile.r);
+        for(const v of verts){
+          const key=vertexKey(v.x,v.y);
+          if(!settlements.has(key)&&Math.hypot(v.x-s.x,v.y-s.y)<HEX_SIZE*2.5){
+            // Check distance from other settlements
+            let tooClose=false;
+            settlements.forEach(os=>{if(Math.hypot(os.x-v.x,os.y-v.y)<HEX_SIZE*.9)tooClose=true});
+            if(!tooClose){
+              settlements.set(key,{owner:'ai',x:v.x,y:v.y,level:1});
+              aiRes.brick--;aiRes.wood--;aiRes.wheat--;aiRes.sheep--;
+              break;
+            }
+          }
+        }
+        if(aiRes.brick<1)break;
+      }
+      if(aiRes.brick<1)break;
+    }
+  }
+  
+  // AI tries to upgrade
+  if(aiRes.wheat>=2&&aiRes.ore>=3){
+    settlements.forEach((s,key)=>{
+      if(s.owner==='ai'&&s.level===1&&aiRes.wheat>=2&&aiRes.ore>=3){
+        s.level=2;aiRes.wheat-=2;aiRes.ore-=3;
+      }
+    });
+  }
+  
+  // Check win
+  checkWin();
+  
+  turn++;phase='player';
+  rollDice();
+  updateHUD();
+}
+
+function checkWin(){
+  let playerVP=0,aiVP=0;
+  settlements.forEach(s=>{if(s.owner==='player')playerVP+=s.level;if(s.owner==='ai')aiVP+=s.level});
+  
+  if(playerVP>=10){
+    running=false;
+    document.getElementById('winInfo').textContent='You won with '+playerVP+' VP in '+turn+' turns!';
+    document.getElementById('winScreen').classList.remove('h');
+  }else if(aiVP>=10){
+    running=false;
+    document.getElementById('winInfo').textContent='AI wins with '+aiVP+' VP';
+    document.getElementById('winScreen').querySelector('.tt').style.color='#ef4444';
+    document.getElementById('winScreen').querySelector('.tt').textContent='DEFEATED';
+    document.getElementById('winScreen').classList.remove('h');
+  }
+}
+
+function showMsg(txt){const el=document.getElementById('msg');el.textContent=txt;el.classList.remove('h');setTimeout(()=>el.classList.add('h'),2500)}
+
+function updateHUD(){
+  document.getElementById('rWood').textContent='🪵'+playerRes.wood;
+  document.getElementById('rBrick').textContent='🧱'+playerRes.brick;
+  document.getElementById('rWheat').textContent='🌾'+playerRes.wheat;
+  document.getElementById('rSheep').textContent='🐑'+playerRes.sheep;
+  document.getElementById('rOre').textContent='⛏'+playerRes.ore;
+  
+  let vp=0;settlements.forEach(s=>{if(s.owner==='player')vp+=s.level});
+  document.getElementById('vpEl').textContent='VP: '+vp;
+  document.getElementById('turnEl').textContent='TURN '+turn+(phase==='ai'?' (AI)':'');
+  
+  document.getElementById('roadBtn').classList.toggle('dis',phase!=='player'||playerRes.brick<1||playerRes.wood<1);
+  document.getElementById('settleBtn').classList.toggle('dis',phase!=='player'||playerRes.brick<1||playerRes.wood<1||playerRes.wheat<1||playerRes.sheep<1);
+  document.getElementById('cityBtn').classList.toggle('dis',phase!=='player'||playerRes.wheat<2||playerRes.ore<3);
+}
+
+function handleClick(px,py){
+  if(!running)return;
+  
+  if(phase==='placeSettlement'){
+    // Find nearest vertex
+    let bestKey=null,bestDist=Infinity;
+    tiles.forEach(tile=>{
+      getTileVertices(tile.q,tile.r).forEach(v=>{
+        const key=vertexKey(v.x,v.y);
+        const d=Math.hypot(px-v.x,py-v.y);
+        if(d<20&&d<bestDist&&!settlements.has(key)){
+          // Check near player road or settlement
+          let near=false;
+          settlements.forEach(s=>{if(s.owner==='player'&&Math.hypot(s.x-v.x,s.y-v.y)<HEX_SIZE*2)near=true});
+          // Check not too close to other settlements
+          let tooClose=false;
+          settlements.forEach(os=>{if(Math.hypot(os.x-v.x,os.y-v.y)<HEX_SIZE*.9)tooClose=true});
+          if(near&&!tooClose){bestKey=key;bestDist=d;bestVertex={x:v.x,y:v.y}}
+        }
+      });
+    });
+    if(bestKey){
+      settlements.set(bestKey,{owner:'player',x:bestVertex.x,y:bestVertex.y,level:1});
+      playerRes.brick--;playerRes.wood--;playerRes.wheat--;playerRes.sheep--;
+      phase='player';updateHUD();checkWin();
+    }
+    return;
+  }
+  
+  if(phase==='placeCity'){
+    let bestKey=null,bestDist=Infinity;
+    settlements.forEach((s,key)=>{
+      const d=Math.hypot(px-s.x,py-s.y);
+      if(d<20&&d<bestDist&&s.owner==='player'&&s.level===1){bestKey=key;bestDist=d}
+    });
+    if(bestKey){
+      settlements.get(bestKey).level=2;
+      playerRes.wheat-=2;playerRes.ore-=3;
+      phase='player';updateHUD();checkWin();
+    }
+    return;
+  }
+}
+
+function resize(){W=C.width=innerWidth;H=C.height=innerHeight}
+addEventListener('resize',resize);resize();
+
+let bestVertex=null;
+
+function renderLoop(){
+  if(!running){return}
+  X.fillStyle='#050510';X.fillRect(0,0,W,H);
+  
+  // Draw tiles
+  tiles.forEach(tile=>{
+    const{x,y}=hexToPixel(tile.q,tile.r);
+    const col=TILE_COLORS[tile.resource]||'#1a1a1a';
+    
+    // Hex
+    X.beginPath();
+    for(let i=0;i<6;i++){
+      const a=Math.PI/3*i-Math.PI/6;
+      const px=x+HEX_SIZE*Math.cos(a),py=y+HEX_SIZE*Math.sin(a);
+      if(i===0)X.moveTo(px,py);else X.lineTo(px,py);
+    }
+    X.closePath();X.fillStyle=col;X.fill();X.strokeStyle='#334155';X.lineWidth=2;X.stroke();
+    
+    // Number token
+    if(tile.number>0){
+      X.fillStyle=diceResult===tile.number?'#f59e0b':'#1e293b';
+      X.beginPath();X.arc(x,y,10,0,Math.PI*2);X.fill();
+      X.strokeStyle=diceResult===tile.number?'#f59e0b':'#475569';X.lineWidth=1;X.stroke();
+      X.fillStyle=diceResult===tile.number?'#000':'#e2e8f0';
+      X.font='bold 9px Orbitron';X.textAlign='center';X.fillText(tile.number,x,y+3);
+    }
+    
+    // Resource icon
+    X.font='12px sans-serif';X.textAlign='center';
+    if(tile.resource!=='desert')X.fillText(RES_EMOJI[tile.resource],x,y+22);
+  });
+  
+  // Draw settlements
+  settlements.forEach(s=>{
+    if(s.level===2){
+      // City
+      X.fillStyle=s.owner==='player'?'#3b82f6':'#ef4444';
+      X.fillRect(s.x-8,s.y-8,16,16);
+      X.strokeStyle='#fff';X.lineWidth=1;X.strokeRect(s.x-8,s.y-8,16,16);
+      X.fillStyle='#fff';X.font='8px sans-serif';X.textAlign='center';X.fillText('🏰',s.x,s.y+3);
+    }else{
+      // Settlement
+      X.fillStyle=s.owner==='player'?'#3b82f6':'#ef4444';
+      X.beginPath();
+      X.moveTo(s.x,s.y-10);X.lineTo(s.x+8,s.y);X.lineTo(s.x+8,s.y+6);X.lineTo(s.x-8,s.y+6);X.lineTo(s.x-8,s.y);X.closePath();
+      X.fill();X.strokeStyle='#fff';X.lineWidth=1;X.stroke();
+    }
+  });
+  
+  // Dice display
+  X.fillStyle='#f59e0b';X.font='bold 14px Orbitron';X.textAlign='center';
+  X.fillText('🎲 '+diceResult,W/2,H-65);
+  
+  animId=requestAnimationFrame(renderLoop);
+}
+
+C.addEventListener('click',e=>{const r=C.getBoundingClientRect();handleClick(e.clientX-r.left,e.clientY-r.top)});
+C.addEventListener('touchstart',e=>{e.preventDefault();const r=C.getBoundingClientRect();const t=e.touches[0];handleClick(t.clientX-r.left,t.clientY-r.top)},{passive:false});
+</script>
+</body>
+</html>
