@@ -97,7 +97,7 @@ function placeFood(){
 }
 
 function setDir(x,y){
-  if(dir.x===-x&&dir.y===-y)return;
+  if(nextDir.x===-x&&nextDir.y===-y)return;
   nextDir={x,y};
 }
 
@@ -135,10 +135,32 @@ function addParticles(x,y,color,n){
 function die(){
   running=false;clearInterval(intervalId);
   addParticles(snake[0].x*GRID+GRID/2,snake[0].y*GRID+GRID/2,'#ef4444',20);
-  if(score>best)best=score;
-  document.getElementById('finalScore').textContent=score;
-  document.getElementById('finalStats').innerHTML=`Length: ${snake.length}<br>Best: ${best}`;
-  setTimeout(()=>document.getElementById('deathScreen').classList.remove('hidden'),500);
+  // Keep rendering death particles
+  let df=0;
+  function deathLoop(){
+    df++;frame++;
+    particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.15;p.life--});
+    particles=particles.filter(p=>p.life>0);
+    trail=trail.filter(t=>{t.life--;return t.life>0});
+    // Re-render
+    X.fillStyle='#050510';X.fillRect(0,0,C.width,C.height);
+    X.strokeStyle='#22c55e08';X.lineWidth=1;
+    for(let x=0;x<=cols;x++){X.beginPath();X.moveTo(x*GRID,0);X.lineTo(x*GRID,rows*GRID);X.stroke()}
+    for(let y=0;y<=rows;y++){X.beginPath();X.moveTo(0,y*GRID);X.lineTo(cols*GRID,y*GRID);X.stroke()}
+    snake.forEach((s,i)=>{X.fillStyle=i===0?'#ef4444':'#22c55e';X.globalAlpha=1-i/snake.length*.5;X.beginPath();X.roundRect(s.x*GRID+2,s.y*GRID+2,GRID-4,GRID-4,3);X.fill()});
+    X.globalAlpha=1;
+    particles.forEach(p=>{const a=p.life/p.maxLife;X.fillStyle=p.color;X.globalAlpha=a;X.beginPath();X.arc(p.x,p.y,p.size*a,0,Math.PI*2);X.fill()});
+    X.globalAlpha=1;
+    if(df<30)requestAnimationFrame(deathLoop);
+    else{
+      if(score>best)best=score;
+      document.getElementById('menuHigh').textContent=best>0?'HIGH SCORE: '+best:'';
+      document.getElementById('finalScore').textContent=score;
+      document.getElementById('finalStats').innerHTML=`Length: ${snake.length}<br>Best: ${best}`;
+      setTimeout(()=>document.getElementById('deathScreen').classList.remove('hidden'),200);
+    }
+  }
+  requestAnimationFrame(deathLoop);
 }
 
 function updateHUD(){
