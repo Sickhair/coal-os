@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>COAL OS — Jarvis Interface</title>
+  <title>COAL OS â€” Jarvis Interface</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#000a14">
@@ -483,7 +483,7 @@
   <!-- Top Bar -->
   <div class="top-bar">
     <div class="top-bar-left">
-      <div class="logo-text">COAL <span class="diamond">◆</span> OS</div>
+      <div class="logo-text">COAL <span class="diamond">â—†</span> OS</div>
       <div class="status-dot"></div>
     </div>
     <div class="top-bar-right">
@@ -496,7 +496,7 @@
 
     <!-- System Stats -->
     <div class="panel">
-      <div class="panel-title">⬡ System Status</div>
+      <div class="panel-title">â¬¡ System Status</div>
       <div class="stat-row"><span class="stat-label">HOST</span><span class="stat-value">DESKTOP-NHCADFO</span></div>
       <div class="stat-row"><span class="stat-label">UPTIME</span><span class="stat-value" id="uptime">--</span></div>
       <div class="stat-row"><span class="stat-label">MODEL</span><span class="stat-value">zai/glm-5.1</span></div>
@@ -506,7 +506,7 @@
 
     <!-- Arc Reactor -->
     <div class="panel arc-reactor-panel">
-      <div class="panel-title">⬡ Core Interface</div>
+      <div class="panel-title">â¬¡ Core Interface</div>
       <div class="arc-reactor">
         <div class="arc-ring arc-ring-1"></div>
         <div class="arc-ring arc-ring-2"></div>
@@ -517,14 +517,14 @@
         </div>
       </div>
       <div class="voice-section">
-        <button class="voice-btn" id="voiceBtn" onclick="toggleVoice()">🎤 Voice</button>
+        <button class="voice-btn" id="voiceBtn" onclick="toggleVoice()">ðŸŽ¤ Voice</button>
         <div class="voice-text" id="voiceText">Tap to speak</div>
       </div>
     </div>
 
     <!-- Market Ticker -->
     <div class="panel">
-      <div class="panel-title">⬡ Market Feed</div>
+      <div class="panel-title">â¬¡ Market Feed</div>
       <div class="ticker-item">
         <span class="ticker-symbol">USO</span>
         <span class="ticker-price" id="usoPrice"><span class="loading">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></span>
@@ -566,34 +566,34 @@
 
     <!-- Projects -->
     <div class="panel">
-      <div class="panel-title">⬡ Projects</div>
+      <div class="panel-title">â¬¡ Projects</div>
       <div id="projectsList">
         <div class="project-item">
           <div class="project-name">Foreclosure Feed</div>
           <div class="progress-bar"><div class="progress-fill" style="width:80%"></div></div>
-          <div class="project-pct">80% — Live, ToS done</div>
+          <div class="project-pct">80% â€” Live, ToS done</div>
         </div>
         <div class="project-item">
           <div class="project-name">Dere Digital</div>
           <div class="progress-bar"><div class="progress-fill" style="width:65%"></div></div>
-          <div class="project-pct">65% — Templates pending</div>
+          <div class="project-pct">65% â€” Templates pending</div>
         </div>
         <div class="project-item">
           <div class="project-name">QuickFix</div>
           <div class="progress-bar"><div class="progress-fill" style="width:70%"></div></div>
-          <div class="project-pct">70% — Security fixes</div>
+          <div class="project-pct">70% â€” Security fixes</div>
         </div>
         <div class="project-item">
           <div class="project-name">Harvest Time</div>
           <div class="progress-bar"><div class="progress-fill" style="width:55%"></div></div>
-          <div class="project-pct">55% — Frontend wiring</div>
+          <div class="project-pct">55% â€” Frontend wiring</div>
         </div>
       </div>
     </div>
 
     <!-- Weather Detail -->
     <div class="panel">
-      <div class="panel-title">⬡ Weather</div>
+      <div class="panel-title">â¬¡ Weather</div>
       <div class="weather-temp" id="weatherTempFull"><span class="loading">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
       <div class="weather-desc" id="weatherDescFull">Loading...</div>
       <div class="weather-location">Shelby Township, MI 48315</div>
@@ -606,7 +606,7 @@
 
     <!-- Crons -->
     <div class="panel">
-      <div class="panel-title">⬡ Scheduled Tasks</div>
+      <div class="panel-title">â¬¡ Scheduled Tasks</div>
       <div class="cron-item"><span class="cron-name">Daily Journal</span><span class="cron-next">9 PM</span></div>
       <div class="cron-item"><span class="cron-name">Memory Maint.</span><span class="cron-next">Sun 3 AM</span></div>
       <div class="cron-item"><span class="cron-name">Health Check</span><span class="cron-next">6 AM</span></div>
@@ -617,78 +617,79 @@
       <div class="launcher-header">
         <div class="launcher-logo">C</div>
         <div><div class="launcher-title">COAL APPS</div><div class="launcher-subtitle">Your portable toolkit</div></div>
-        <div class="launcher-count" id="appCount">46 APPS</div>
+        <div class="launcher-count" id="appCount">47 APPS</div>
       </div>
 
-      <div class="cat-label">🎮 GAMES</div>
+      <div class="cat-label">ðŸŽ® GAMES</div>
       <div class="app-grid">
-        <a class="app-card" href="game.html"><div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)">💎</div><div class="app-name" style="color:#f59e0b">Diamond Runner</div><div class="app-tag">Arcade</div></a>
-        <a class="app-card" href="snake.html"><div class="app-icon" style="background:linear-gradient(135deg,#22c55e,#16a34a)">🐍</div><div class="app-name" style="color:#22c55e">Neon Serpent</div><div class="app-tag">Classic</div></a>
-        <a class="app-card" href="tower-siege.html"><div class="app-icon" style="background:linear-gradient(135deg,#ef4444,#b91c1c)">🏰</div><div class="app-name" style="color:#ef4444">Tower Siege</div><div class="app-tag">Tower Defense</div></a>
-        <a class="app-card" href="depths.html"><div class="app-icon" style="background:linear-gradient(135deg,#a855f7,#7c3aed)">⚔</div><div class="app-name" style="color:#a855f7">Depths of Coal</div><div class="app-tag">Roguelike</div></a>
-        <a class="app-card" href="void-runner.html"><div class="app-icon" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">🚀</div><div class="app-name" style="color:#3b82f6">Void Runner</div><div class="app-tag">Shooter</div></a>
-        <a class="app-card" href="cardforge.html"><div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#92400e)">🃏</div><div class="app-name" style="color:#f59e0b">Card Forge</div><div class="app-tag">Deckbuilder</div></a>
-        <a class="app-card" href="realm.html"><div class="app-icon" style="background:linear-gradient(135deg,#22c55e,#065f46)">🗺</div><div class="app-name" style="color:#22c55e">Realm Conquest</div><div class="app-tag">Strategy</div></a>
-        <a class="app-card" href="neonblade.html"><div class="app-icon" style="background:linear-gradient(135deg,#00ffaa,#059669)">⚔</div><div class="app-name" style="color:#00ffaa">Neon Blade</div><div class="app-tag">Endless Runner</div></a>
-        <a class="app-card" href="chess.html"><div class="app-icon" style="background:linear-gradient(135deg,#e2e8f0,#94a3b8)">♟</div><div class="app-name" style="color:#e2e8f0">Chess</div><div class="app-tag">vs AI</div></a>
-        <a class="app-card" href="stacktower.html"><div class="app-icon" style="background:linear-gradient(135deg,#22c55e,#16a34a)">🏗</div><div class="app-name" style="color:#22c55e">Stack Tower</div><div class="app-tag">Arcade</div></a>
-        <a class="app-card" href="neonbreaker.html"><div class="app-icon" style="background:linear-gradient(135deg,#06b6d4,#0891b2)">💎</div><div class="app-name" style="color:#06b6d4">Neon Breaker</div><div class="app-tag">Breakout</div></a>
-        <a class="app-card" href="minesweep.html"><div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#92400e)">💎</div><div class="app-name" style="color:#f59e0b">Mine Sweep</div><div class="app-tag">Puzzle</div></a>
-        <a class="app-card" href="wordmine.html"><div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)">📝</div><div class="app-name" style="color:#f59e0b">Word Mine</div><div class="app-tag">Word Puzzle</div></a>
-        <a class="app-card" href="sokoban.html"><div class="app-icon" style="background:linear-gradient(135deg,#a855f7,#7c3aed)">📦</div><div class="app-name" style="color:#a855f7">Sokoban</div><div class="app-tag">Puzzle</div></a>
-        <a class="app-card" href="catan.html"><div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#92400e)">🏘</div><div class="app-name" style="color:#f59e0b">Settlers of Coal</div><div class="app-tag">Board Game</div></a>
-        <a class="app-card" href="risk.html"><div class="app-icon" style="background:linear-gradient(135deg,#ef4444,#b91c1c)">🌍</div><div class="app-name" style="color:#ef4444">Global Risk</div><div class="app-tag">Board Game</div></a>
-        <a class="app-card" href="clue.html"><div class="app-icon" style="background:linear-gradient(135deg,#a855f7,#7c3aed)">🔍</div><div class="app-name" style="color:#a855f7">Coal Clue</div><div class="app-tag">Deduction</div></a>
-        <a class="app-card" href="monopoly.html"><div class="app-icon" style="background:linear-gradient(135deg,#22c55e,#16a34a)">💰</div><div class="app-name" style="color:#22c55e">Coal Monopoly</div><div class="app-tag">Board Game</div></a>
-        <a class="app-card" href="battleship.html"><div class="app-icon" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">🚢</div><div class="app-name" style="color:#3b82f6">Battleship</div><div class="app-tag">Classic</div></a>
-        <a class="app-card" href="connect4.html"><div class="app-icon" style="background:linear-gradient(135deg,#ef4444,#f59e0b)">🔴</div><div class="app-name" style="color:#ef4444">Connect Four</div><div class="app-tag">Classic</div></a>
-        <a class="app-card" href="checkers.html"><div class="app-icon" style="background:linear-gradient(135deg,#ef4444,#b91c1c)">⬤</div><div class="app-name" style="color:#ef4444">Checkers</div><div class="app-tag">Classic</div></a>
-        <a class="app-card" href="yahtzee.html"><div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#92400e)">🎲</div><div class="app-name" style="color:#f59e0b">Yahtzee</div><div class="app-tag">Dice</div></a>
-        <a class="app-card" href="backgammon.html"><div class="app-icon" style="background:linear-gradient(135deg,#8b4513,#5a2d0c)">🎲</div><div class="app-name" style="color:#8b4513">Backgammon</div><div class="app-tag">Classic</div></a>
-        <a class="app-card" href="dominoes.html"><div class="app-icon" style="background:linear-gradient(135deg,#60a5fa,#1e40af)">🁣</div><div class="app-name" style="color:#60a5fa">Dominoes</div><div class="app-tag">Classic</div></a>
-        <a class="app-card" href="rummy.html"><div class="app-icon" style="background:linear-gradient(135deg,#f97316,#c2410c)">🎲</div><div class="app-name" style="color:#f97316">Rummy Tiles</div><div class="app-tag">Card Game</div></a>
+        <a class="app-card" href="game.html"><div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)">ðŸ’Ž</div><div class="app-name" style="color:#f59e0b">Diamond Runner</div><div class="app-tag">Arcade</div></a>
+        <a class="app-card" href="snake.html"><div class="app-icon" style="background:linear-gradient(135deg,#22c55e,#16a34a)">ðŸ</div><div class="app-name" style="color:#22c55e">Neon Serpent</div><div class="app-tag">Classic</div></a>
+        <a class="app-card" href="tower-siege.html"><div class="app-icon" style="background:linear-gradient(135deg,#ef4444,#b91c1c)">ðŸ°</div><div class="app-name" style="color:#ef4444">Tower Siege</div><div class="app-tag">Tower Defense</div></a>
+        <a class="app-card" href="depths.html"><div class="app-icon" style="background:linear-gradient(135deg,#a855f7,#7c3aed)">âš”</div><div class="app-name" style="color:#a855f7">Depths of Coal</div><div class="app-tag">Roguelike</div></a>
+        <a class="app-card" href="void-runner.html"><div class="app-icon" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">ðŸš€</div><div class="app-name" style="color:#3b82f6">Void Runner</div><div class="app-tag">Shooter</div></a>
+        <a class="app-card" href="cardforge.html"><div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#92400e)">ðŸƒ</div><div class="app-name" style="color:#f59e0b">Card Forge</div><div class="app-tag">Deckbuilder</div></a>
+        <a class="app-card" href="realm.html"><div class="app-icon" style="background:linear-gradient(135deg,#22c55e,#065f46)">ðŸ—º</div><div class="app-name" style="color:#22c55e">Realm Conquest</div><div class="app-tag">Strategy</div></a>
+        <a class="app-card" href="neonblade.html"><div class="app-icon" style="background:linear-gradient(135deg,#00ffaa,#059669)">âš”</div><div class="app-name" style="color:#00ffaa">Neon Blade</div><div class="app-tag">Endless Runner</div></a>
+        <a class="app-card" href="chess.html"><div class="app-icon" style="background:linear-gradient(135deg,#e2e8f0,#94a3b8)">â™Ÿ</div><div class="app-name" style="color:#e2e8f0">Chess</div><div class="app-tag">vs AI</div></a>
+        <a class="app-card" href="stacktower.html"><div class="app-icon" style="background:linear-gradient(135deg,#22c55e,#16a34a)">ðŸ—</div><div class="app-name" style="color:#22c55e">Stack Tower</div><div class="app-tag">Arcade</div></a>
+        <a class="app-card" href="neonbreaker.html"><div class="app-icon" style="background:linear-gradient(135deg,#06b6d4,#0891b2)">ðŸ’Ž</div><div class="app-name" style="color:#06b6d4">Neon Breaker</div><div class="app-tag">Breakout</div></a>
+        <a class="app-card" href="minesweep.html"><div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#92400e)">ðŸ’Ž</div><div class="app-name" style="color:#f59e0b">Mine Sweep</div><div class="app-tag">Puzzle</div></a>
+        <a class="app-card" href="wordmine.html"><div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)">ðŸ“</div><div class="app-name" style="color:#f59e0b">Word Mine</div><div class="app-tag">Word Puzzle</div></a>
+        <a class="app-card" href="sokoban.html"><div class="app-icon" style="background:linear-gradient(135deg,#a855f7,#7c3aed)">ðŸ“¦</div><div class="app-name" style="color:#a855f7">Sokoban</div><div class="app-tag">Puzzle</div></a>
+        <a class="app-card" href="catan.html"><div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#92400e)">ðŸ˜</div><div class="app-name" style="color:#f59e0b">Settlers of Coal</div><div class="app-tag">Board Game</div></a>
+        <a class="app-card" href="risk.html"><div class="app-icon" style="background:linear-gradient(135deg,#ef4444,#b91c1c)">ðŸŒ</div><div class="app-name" style="color:#ef4444">Global Risk</div><div class="app-tag">Board Game</div></a>
+        <a class="app-card" href="clue.html"><div class="app-icon" style="background:linear-gradient(135deg,#a855f7,#7c3aed)">ðŸ”</div><div class="app-name" style="color:#a855f7">Coal Clue</div><div class="app-tag">Deduction</div></a>
+        <a class="app-card" href="monopoly.html"><div class="app-icon" style="background:linear-gradient(135deg,#22c55e,#16a34a)">ðŸ’°</div><div class="app-name" style="color:#22c55e">Coal Monopoly</div><div class="app-tag">Board Game</div></a>
+        <a class="app-card" href="battleship.html"><div class="app-icon" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">ðŸš¢</div><div class="app-name" style="color:#3b82f6">Battleship</div><div class="app-tag">Classic</div></a>
+        <a class="app-card" href="connect4.html"><div class="app-icon" style="background:linear-gradient(135deg,#ef4444,#f59e0b)">ðŸ”´</div><div class="app-name" style="color:#ef4444">Connect Four</div><div class="app-tag">Classic</div></a>
+        <a class="app-card" href="checkers.html"><div class="app-icon" style="background:linear-gradient(135deg,#ef4444,#b91c1c)">â¬¤</div><div class="app-name" style="color:#ef4444">Checkers</div><div class="app-tag">Classic</div></a>
+        <a class="app-card" href="yahtzee.html"><div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#92400e)">ðŸŽ²</div><div class="app-name" style="color:#f59e0b">Yahtzee</div><div class="app-tag">Dice</div></a>
+        <a class="app-card" href="backgammon.html"><div class="app-icon" style="background:linear-gradient(135deg,#8b4513,#5a2d0c)">ðŸŽ²</div><div class="app-name" style="color:#8b4513">Backgammon</div><div class="app-tag">Classic</div></a>
+        <a class="app-card" href="dominoes.html"><div class="app-icon" style="background:linear-gradient(135deg,#60a5fa,#1e40af)">ðŸ£</div><div class="app-name" style="color:#60a5fa">Dominoes</div><div class="app-tag">Classic</div></a>
+        <a class="app-card" href="rummy.html"><div class="app-icon" style="background:linear-gradient(135deg,#f97316,#c2410c)">ðŸŽ²</div><div class="app-name" style="color:#f97316">Rummy Tiles</div><div class="app-tag">Card Game</div></a>
+        <a class="app-card" href="mahjong.html"><div class="app-icon" style="background:linear-gradient(135deg,#f43f5e,#be123c)">ðŸ€„</div><div class="app-name" style="color:#f43f5e">Mahjong</div><div class="app-tag">Puzzle</div></a>
       </div>
 
-      <div class="cat-label">🛠 TOOLS</div>
+      <div class="cat-label">ðŸ›  TOOLS</div>
       <div class="app-grid">
-        <a class="app-card" href="takeoff.html"><div class="app-icon" style="background:linear-gradient(135deg,#06b6d4,#0e7490)">📐</div><div class="app-name" style="color:#06b6d4">Takeoff Pro</div><div class="app-tag">Blueprint</div></a>
-        <a class="app-card" href="atocs.html"><div class="app-icon" style="background:linear-gradient(135deg,#ef4444,#b91c1c)">🚀</div><div class="app-name" style="color:#ef4444">ATOCS</div><div class="app-tag">Launch Control</div></a>
+        <a class="app-card" href="takeoff.html"><div class="app-icon" style="background:linear-gradient(135deg,#06b6d4,#0e7490)">ðŸ“</div><div class="app-name" style="color:#06b6d4">Takeoff Pro</div><div class="app-tag">Blueprint</div></a>
+        <a class="app-card" href="atocs.html"><div class="app-icon" style="background:linear-gradient(135deg,#ef4444,#b91c1c)">ðŸš€</div><div class="app-name" style="color:#ef4444">ATOCS</div><div class="app-tag">Launch Control</div></a>
         <a class="app-card" href="hash.html"><div class="app-icon" style="background:linear-gradient(135deg,#06b6d4,#0891b2)">#</div><div class="app-name" style="color:#06b6d4">Hash Forge</div><div class="app-tag">Crypto</div></a>
-        <a class="app-card" href="cipher-key.html"><div class="app-icon" style="background:linear-gradient(135deg,#ec4899,#be185d)">🔑</div><div class="app-name" style="color:#ec4899">Cipher Key</div><div class="app-tag">Passwords</div></a>
-        <a class="app-card" href="chroma.html"><div class="app-icon" style="background:linear-gradient(135deg,#f43f5e,#be123c)">🎨</div><div class="app-name" style="color:#f43f5e">Chroma Lab</div><div class="app-tag">Colors</div></a>
-        <a class="app-card" href="base64.html"><div class="app-icon" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)">⚙</div><div class="app-name" style="color:#8b5cf6">Base64 Lab</div><div class="app-tag">Encode</div></a>
-        <a class="app-card" href="morse.html"><div class="app-icon" style="background:linear-gradient(135deg,#22c55e,#16a34a)">📡</div><div class="app-name" style="color:#22c55e">Morse Encoder</div><div class="app-tag">Audio</div></a>
-        <a class="app-card" href="binary-clock.html"><div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)">🕐</div><div class="app-name" style="color:#f59e0b">Binary Clock</div><div class="app-tag">Time</div></a>
-        <a class="app-card" href="pomo.html"><div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)">🍅</div><div class="app-name" style="color:#f59e0b">Pomo Focus</div><div class="app-tag">Timer</div></a>
-        <a class="app-card" href="wheel.html"><div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)">🎡</div><div class="app-name" style="color:#f59e0b">Decision Wheel</div><div class="app-tag">Fun</div></a>
-        <a class="app-card" href="markdownpad.html"><div class="app-icon" style="background:linear-gradient(135deg,#10b981,#059669)">📝</div><div class="app-name" style="color:#10b981">MarkdownPad</div><div class="app-tag">Editor</div></a>
-        <a class="app-card" href="codeforge.html"><div class="app-icon" style="background:linear-gradient(135deg,#58a6ff,#3b82f6)">⚡</div><div class="app-name" style="color:#58a6ff">CodeForge</div><div class="app-tag">Code Editor</div></a>
-        <a class="app-card" href="pixelforge.html"><div class="app-icon" style="background:linear-gradient(135deg,#ec4899,#be185d)">🎨</div><div class="app-name" style="color:#ec4899">Pixel Forge</div><div class="app-tag">Pixel Art</div></a>
-        <a class="app-card" href="hexlinks.html"><div class="app-icon" style="background:linear-gradient(135deg,#a855f7,#7c3aed)">🔮</div><div class="app-name" style="color:#a855f7">Hex Links</div><div class="app-tag">Puzzle</div></a>
+        <a class="app-card" href="cipher-key.html"><div class="app-icon" style="background:linear-gradient(135deg,#ec4899,#be185d)">ðŸ”‘</div><div class="app-name" style="color:#ec4899">Cipher Key</div><div class="app-tag">Passwords</div></a>
+        <a class="app-card" href="chroma.html"><div class="app-icon" style="background:linear-gradient(135deg,#f43f5e,#be123c)">ðŸŽ¨</div><div class="app-name" style="color:#f43f5e">Chroma Lab</div><div class="app-tag">Colors</div></a>
+        <a class="app-card" href="base64.html"><div class="app-icon" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)">âš™</div><div class="app-name" style="color:#8b5cf6">Base64 Lab</div><div class="app-tag">Encode</div></a>
+        <a class="app-card" href="morse.html"><div class="app-icon" style="background:linear-gradient(135deg,#22c55e,#16a34a)">ðŸ“¡</div><div class="app-name" style="color:#22c55e">Morse Encoder</div><div class="app-tag">Audio</div></a>
+        <a class="app-card" href="binary-clock.html"><div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)">ðŸ•</div><div class="app-name" style="color:#f59e0b">Binary Clock</div><div class="app-tag">Time</div></a>
+        <a class="app-card" href="pomo.html"><div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)">ðŸ…</div><div class="app-name" style="color:#f59e0b">Pomo Focus</div><div class="app-tag">Timer</div></a>
+        <a class="app-card" href="wheel.html"><div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)">ðŸŽ¡</div><div class="app-name" style="color:#f59e0b">Decision Wheel</div><div class="app-tag">Fun</div></a>
+        <a class="app-card" href="markdownpad.html"><div class="app-icon" style="background:linear-gradient(135deg,#10b981,#059669)">ðŸ“</div><div class="app-name" style="color:#10b981">MarkdownPad</div><div class="app-tag">Editor</div></a>
+        <a class="app-card" href="codeforge.html"><div class="app-icon" style="background:linear-gradient(135deg,#58a6ff,#3b82f6)">âš¡</div><div class="app-name" style="color:#58a6ff">CodeForge</div><div class="app-tag">Code Editor</div></a>
+        <a class="app-card" href="pixelforge.html"><div class="app-icon" style="background:linear-gradient(135deg,#ec4899,#be185d)">ðŸŽ¨</div><div class="app-name" style="color:#ec4899">Pixel Forge</div><div class="app-tag">Pixel Art</div></a>
+        <a class="app-card" href="hexlinks.html"><div class="app-icon" style="background:linear-gradient(135deg,#a855f7,#7c3aed)">ðŸ”®</div><div class="app-name" style="color:#a855f7">Hex Links</div><div class="app-tag">Puzzle</div></a>
       </div>
 
-      <div class="cat-label">🎵 CREATIVE</div>
+      <div class="cat-label">ðŸŽµ CREATIVE</div>
       <div class="app-grid">
-        <a class="app-card" href="art.html"><div class="app-icon" style="background:linear-gradient(135deg,#a855f7,#7c3aed)">🎨</div><div class="app-name" style="color:#a855f7">Neural Canvas</div><div class="app-tag">Generative Art</div></a>
-        <a class="app-card" href="spectrum.html"><div class="app-icon" style="background:linear-gradient(135deg,#a855f7,#7c3aed)">📊</div><div class="app-name" style="color:#a855f7">Spectrum</div><div class="app-tag">Visualizer</div></a>
-        <a class="app-card" href="djcoal.html"><div class="app-icon" style="background:linear-gradient(135deg,#ef4444,#b91c1c)">🎧</div><div class="app-name" style="color:#ef4444">DJ Coal</div><div class="app-tag">Mix Deck</div></a>
-        <a class="app-card" href="beatforge.html"><div class="app-icon" style="background:linear-gradient(135deg,#f97316,#c2410c)">🔥</div><div class="app-name" style="color:#f97316">Beat Forge</div><div class="app-tag">Drum Machine</div></a>
-        <a class="app-card" href="memory.html"><div class="app-icon" style="background:linear-gradient(135deg,#a78bfa,#5b21b6)">🧠</div><div class="app-name" style="color:#a78bfa">Memory Match</div><div class="app-tag">Puzzle</div></a>
+        <a class="app-card" href="art.html"><div class="app-icon" style="background:linear-gradient(135deg,#a855f7,#7c3aed)">ðŸŽ¨</div><div class="app-name" style="color:#a855f7">Neural Canvas</div><div class="app-tag">Generative Art</div></a>
+        <a class="app-card" href="spectrum.html"><div class="app-icon" style="background:linear-gradient(135deg,#a855f7,#7c3aed)">ðŸ“Š</div><div class="app-name" style="color:#a855f7">Spectrum</div><div class="app-tag">Visualizer</div></a>
+        <a class="app-card" href="djcoal.html"><div class="app-icon" style="background:linear-gradient(135deg,#ef4444,#b91c1c)">ðŸŽ§</div><div class="app-name" style="color:#ef4444">DJ Coal</div><div class="app-tag">Mix Deck</div></a>
+        <a class="app-card" href="beatforge.html"><div class="app-icon" style="background:linear-gradient(135deg,#f97316,#c2410c)">ðŸ”¥</div><div class="app-name" style="color:#f97316">Beat Forge</div><div class="app-tag">Drum Machine</div></a>
+        <a class="app-card" href="memory.html"><div class="app-icon" style="background:linear-gradient(135deg,#a78bfa,#5b21b6)">ðŸ§ </div><div class="app-name" style="color:#a78bfa">Memory Match</div><div class="app-tag">Puzzle</div></a>
       </div>
 
-      <div class="cat-label">💼 BUSINESS</div>
+      <div class="cat-label">ðŸ’¼ BUSINESS</div>
       <div class="app-grid">
-        <a class="app-card" href="invoiceforge.html"><div class="app-icon" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">📄</div><div class="app-name" style="color:#3b82f6">InvoiceForge</div><div class="app-tag">Invoicing</div></a>
-        <a class="app-card" href="coaltimer.html"><div class="app-icon" style="background:linear-gradient(135deg,#22c55e,#16a34a)">⏱</div><div class="app-name" style="color:#22c55e">CoalTimer</div><div class="app-tag">Time Tracker</div></a>
-        <a class="app-card" href="forgeboard.html"><div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)">📋</div><div class="app-name" style="color:#f59e0b">ForgeBoard</div><div class="app-tag">Project Mgmt</div></a>
-        <a class="app-card" href="vaultpad.html"><div class="app-icon" style="background:linear-gradient(135deg,#a855f7,#7c3aed)">🔒</div><div class="app-name" style="color:#a855f7">VaultPad</div><div class="app-tag">Encrypted Notes</div></a>
-        <a class="app-card" href="formcraft.html"><div class="app-icon" style="background:linear-gradient(135deg,#06b6d4,#0e7490)">📝</div><div class="app-name" style="color:#06b6d4">FormCraft</div><div class="app-tag">Form Builder</div></a>
+        <a class="app-card" href="invoiceforge.html"><div class="app-icon" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">ðŸ“„</div><div class="app-name" style="color:#3b82f6">InvoiceForge</div><div class="app-tag">Invoicing</div></a>
+        <a class="app-card" href="coaltimer.html"><div class="app-icon" style="background:linear-gradient(135deg,#22c55e,#16a34a)">â±</div><div class="app-name" style="color:#22c55e">CoalTimer</div><div class="app-tag">Time Tracker</div></a>
+        <a class="app-card" href="forgeboard.html"><div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)">ðŸ“‹</div><div class="app-name" style="color:#f59e0b">ForgeBoard</div><div class="app-tag">Project Mgmt</div></a>
+        <a class="app-card" href="vaultpad.html"><div class="app-icon" style="background:linear-gradient(135deg,#a855f7,#7c3aed)">ðŸ”’</div><div class="app-name" style="color:#a855f7">VaultPad</div><div class="app-tag">Encrypted Notes</div></a>
+        <a class="app-card" href="formcraft.html"><div class="app-icon" style="background:linear-gradient(135deg,#06b6d4,#0e7490)">ðŸ“</div><div class="app-name" style="color:#06b6d4">FormCraft</div><div class="app-tag">Form Builder</div></a>
       </div>
     </div>
 
     <!-- Chat -->
     <div class="panel chat-panel" style="grid-column: 1 / -1;">
-      <div class="panel-title">⬡ Direct Interface</div>
+      <div class="panel-title">â¬¡ Direct Interface</div>
       <div class="chat-messages" id="chatMessages">
         <div class="chat-msg"><div class="sender">COAL</div><div class="text">Systems online. All panels operational.</div></div>
       </div>
@@ -791,11 +792,11 @@
         const desc = cur.weatherDesc[0].value;
         const wind = cur.windspeedMiles+' mph';
         const humid = cur.humidity+'%';
-        const feels = cur.FeelsLikeF+'°F';
+        const feels = cur.FeelsLikeF+'Â°F';
 
-        document.getElementById('weatherTemp').textContent = tempF+'°F';
+        document.getElementById('weatherTemp').textContent = tempF+'Â°F';
         document.getElementById('weatherDesc').textContent = desc;
-        document.getElementById('weatherTempFull').textContent = tempF+'°F';
+        document.getElementById('weatherTempFull').textContent = tempF+'Â°F';
         document.getElementById('weatherDescFull').textContent = desc;
         document.getElementById('weatherWind').textContent = wind;
         document.getElementById('weatherHumid').textContent = humid;
@@ -901,3 +902,4 @@
   </script>
 </body>
 </html>
+
