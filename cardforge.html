@@ -217,7 +217,7 @@ function endTurn(){
   if(playerHP<=0){die();return}
   
   pickIntent();
-  energy=maxEnergy;block=0;
+  energy=maxEnergy;block=0;enemyBlock=0;
   drawCards(5);
   render();
 }
