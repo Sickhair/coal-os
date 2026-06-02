@@ -150,6 +150,7 @@ function clickCard(source,idx,cardIdx){
       render();return;
     }
     // Try to place
+    if(selected.cards.length!==1){selected=null;render();return}
     const card=selected.cards[0];
     if(canPlaceOnFoundation(card,fi)){
       removeSelected();
@@ -210,6 +211,7 @@ function clickEmptyTableau(col){
 function clickEmptyFoundation(fi){
   if(gameOver)return;
   if(!selected)return;
+  if(selected.cards.length!==1){selected=null;render();return}
   const card=selected.cards[0];
   if(canPlaceOnFoundation(card,fi)){
     removeSelected();
