@@ -149,7 +149,7 @@ function startWave(){
   document.getElementById('waveScreen').classList.add('h');
   enemies.push(...waveEnemies);
   waveActive=true;
-  animId=requestAnimationFrame(loop);
+  if(!animId)animId=requestAnimationFrame(loop);
 }
 
 function placeTower(c,r){
@@ -197,7 +197,7 @@ function loop(){
       const ex=ep.x+(np.x-ep.x)*e.progress;
       const ey=ep.y+(np.y-ep.y)*e.progress;
       const d=Math.hypot(tp.x-ex,tp.y-ey)/CELL;
-      if(d<=tt.range&&e.pathIdx>bestDist)return;// prefer furthest
+      if(d<=tt.range&&e.pathIdx<bestDist)return;// prefer furthest along path
       if(d<=tt.range){best=e;bestDist=e.pathIdx}
     });
     if(best){
@@ -244,7 +244,7 @@ function loop(){
   
   // Wave complete
   if(waveActive&&enemies.length===0){
-    waveActive=false;gold+=wave*10;nextWave();return;
+    waveActive=false;gold+=wave*10;cancelAnimationFrame(animId);animId=0;nextWave();return;
   }
   
   // Update toolbar gold display
