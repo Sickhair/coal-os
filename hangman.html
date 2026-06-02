@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Hangman — COAL OS</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+body{background:#050510;display:flex;flex-direction:column;align-items:center;min-height:100vh;font-family:'Orbitron',sans-serif;color:#e2e8f0;overflow-x:hidden}
+a.back{position:fixed;top:8px;left:8px;z-index:200;text-decoration:none;font-size:.5rem;color:#475569;opacity:.6}
+.brand{font-size:.4rem;letter-spacing:4px;color:#334155;margin:8px 0 4px;text-transform:uppercase;text-align:center}
+.title{font-size:.85rem;font-weight:900;color:#a855f7;text-shadow:0 0 20px #a855f744;letter-spacing:2px;margin-bottom:8px}
+.status{font-size:.5rem;color:#94a3b8;margin-bottom:6px;min-height:14px;text-align:center}
+.canvas-wrap{margin-bottom:8px}
+canvas{border-radius:8px;background:#0a0e1a;border:1px solid #1e293b}
+.word{display:flex;gap:6px;justify-content:center;margin-bottom:10px;flex-wrap:wrap}
+.letter{width:min(10vw,36px);height:min(12vw,44px);border-bottom:3px solid #334155;display:flex;align-items:center;justify-content:center;font-size:min(6vw,24px);font-weight:900;color:#e2e8f0;transition:all .2s}
+.letter.revealed{border-color:#10b981;color:#10b981}
+.letter.wrong-reveal{border-color:#ef4444;color:#ef4444}
+.keyboard{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;max-width:95vw;margin-bottom:8px}
+.key{width:min(8vw,32px);height:min(8vw,32px);background:#1e293b;border:1px solid #334155;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:min(4vw,14px);font-weight:700;cursor:pointer;transition:all .15s;color:#94a3b8}
+.key:hover{background:#334155;color:#e2e8f0}
+.key.correct{background:#10b98122;border-color:#10b981;color:#10b981;pointer-events:none}
+.key.wrong{background:#ef444422;border-color:#ef444488;color:#ef444488;pointer-events:none}
+.key:disabled{opacity:.2;pointer-events:none}
+.hud{display:flex;gap:12px;margin-bottom:6px;font-size:.48rem}
+.btn{background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:.25rem .6rem;border-radius:4px;font-family:inherit;font-size:.45rem;cursor:pointer}
+.btn:hover{background:#334155;color:#e2e8f0}
+.btn.primary{border-color:#a855f7;color:#a855f7}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← COAL OS</a>
+<div class="brand">COAL OS</div>
+<div class="title">💀 HANGMAN</div>
+<div class="hud">
+  <span style="color:#10b981">Wins: <span id="wins">0</span></span>
+  <span style="color:#334155">|</span>
+  <span style="color:#ef4444">Losses: <span id="losses">0</span></span>
+  <span style="color:#334155">|</span>
+  <span style="color:#f59e0b">❤️ <span id="lives">6</span></span>
+</div>
+<div class="status" id="status">Guess the word!</div>
+<div class="canvas-wrap"><canvas id="canvas" width="200" height="180"></canvas></div>
+<div class="word" id="word"></div>
+<div class="keyboard" id="keyboard"></div>
+<button class="btn primary" onclick="newGame()">NEW WORD</button>
+
+<script>
+const WORDS=[
+  'JAVASCRIPT','ALGORITHM','FUNCTION','VARIABLE','DATABASE','COMPUTER','NETWORK','PROGRAM',
+  'PYTHON','GITHUB','TERMINAL','BROWSER','DESIGN','SECURITY','CRYPTO','ELEMENT',
+  'QUANTUM','ELECTRIC','DINOSAUR','PLANET','GALAXY','VOLCANO','CRYSTAL','PHOENIX',
+  'DRAGON','WIZARD','KNIGHT','CASTLE','BRIDGE','ROCKET','OCEAN','MOUNTAIN',
+  'THUNDER','LIGHTNING','TORNADO','ECLIPSE','NEBULA','ASTEROID','COMPASS','ANCHOR',
+  'PARADOX','ENIGMA','SPHINX','LABYRINTH','OBSIDIAN','SAPPHIRE','EMERALD','AMETHYST',
+  'MERCURY','SATURN','JUPITER','NEPTUNE','ORBIT','GRAVITY','HORIZON','PHANTOM',
+  'SPECTRUM','FUSION','CIPHER','MATRIX','VECTOR','PIXEL','VERTEX','SHADER',
+  'KERNEL','BINARY','SYNTAX','COMPILER','DEBUGGER','PROTOCOL','FIRMWARE','HARDWARE'
+];
+
+let word,guessed,wrong,lives,wins=0,losses=0,gameOver;
+
+function newGame(){
+  word=WORDS[Math.floor(Math.random()*WORDS.length)];
+  guessed=new Set();wrong=[];lives=6;gameOver=false;
+  render();drawHangman();
+  document.getElementById('status').textContent='Guess the word!';
+  document.getElementById('status').style.color='#94a3b8';
+  document.getElementById('lives').textContent=lives;
+}
+
+function guess(letter){
+  if(gameOver||guessed.has(letter))return;
+  guessed.add(letter);
+  
+  if(word.includes(letter)){
+    // Correct
+    document.getElementById('status').textContent='✓ Correct!';
+    document.getElementById('status').style.color='#10b981';
+  }else{
+    // Wrong
+    wrong.push(letter);lives--;
+    document.getElementById('lives').textContent=lives;
+    document.getElementById('status').textContent='✗ Wrong!';
+    document.getElementById('status').style.color='#ef4444';
+    drawHangman();
+  }
+  
+  // Check win
+  if(word.split('').every(l=>guessed.has(l))){
+    gameOver=true;wins++;
+    document.getElementById('wins').textContent=wins;
+    document.getElementById('status').textContent='🎉 YOU GOT IT!';
+    document.getElementById('status').style.color='#10b981';
+  }
+  
+  // Check lose
+  if(lives<=0){
+    gameOver=true;losses++;
+    document.getElementById('losses').textContent=losses;
+    document.getElementById('status').textContent='💀 The word was: '+word;
+    document.getElementById('status').style.color='#ef4444';
+  }
+  
+  render();
+}
+
+function drawHangman(){
+  const c=document.getElementById('canvas');
+  const X=c.getContext('2d');
+  X.clearRect(0,0,200,180);
+  X.strokeStyle='#334155';X.lineWidth=2;X.lineCap='round';
+  
+  // Gallows (always drawn)
+  X.beginPath();X.moveTo(20,170);X.lineTo(80,170);X.stroke(); // base
+  X.beginPath();X.moveTo(50,170);X.lineTo(50,20);X.stroke(); // pole
+  X.beginPath();X.moveTo(50,20);X.lineTo(130,20);X.stroke(); // top
+  X.beginPath();X.moveTo(130,20);X.lineTo(130,40);X.stroke(); // rope
+  
+  // Body parts (draw based on wrong count)
+  X.strokeStyle='#a855f7';X.lineWidth=3;
+  
+  if(wrong.length>=1){X.beginPath();X.arc(130,55,15,0,Math.PI*2);X.stroke()} // head
+  if(wrong.length>=2){X.beginPath();X.moveTo(130,70);X.lineTo(130,120);X.stroke()} // body
+  if(wrong.length>=3){X.beginPath();X.moveTo(130,85);X.lineTo(105,105);X.stroke()} // left arm
+  if(wrong.length>=4){X.beginPath();X.moveTo(130,85);X.lineTo(155,105);X.stroke()} // right arm
+  if(wrong.length>=5){X.beginPath();X.moveTo(130,120);X.lineTo(105,150);X.stroke()} // left leg
+  if(wrong.length>=6){
+    X.beginPath();X.moveTo(130,120);X.lineTo(155,150);X.stroke(); // right leg
+    // X eyes
+    X.strokeStyle='#ef4444';X.lineWidth=2;
+    X.beginPath();X.moveTo(123,50);X.lineTo(128,55);X.stroke();
+    X.beginPath();X.moveTo(128,50);X.lineTo(123,55);X.stroke();
+    X.beginPath();X.moveTo(132,50);X.lineTo(137,55);X.stroke();
+    X.beginPath();X.moveTo(137,50);X.lineTo(132,55);X.stroke();
+  }
+}
+
+function render(){
+  // Word
+  const wEl=document.getElementById('word');wEl.innerHTML='';
+  word.split('').forEach(l=>{
+    const d=document.createElement('div');d.className='letter';
+    if(guessed.has(l)){d.classList.add('revealed');d.textContent=l}
+    else if(gameOver&&lives<=0){d.classList.add('wrong-reveal');d.textContent=l}
+    wEl.appendChild(d);
+  });
+  
+  // Keyboard
+  const kEl=document.getElementById('keyboard');kEl.innerHTML='';
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach(l=>{
+    const d=document.createElement('div');d.className='key';
+    if(guessed.has(l)){
+      d.classList.add(word.includes(l)?'correct':'wrong');
+    }
+    if(gameOver)d.classList.add('disabled');
+    d.textContent=l;
+    d.onclick=()=>guess(l);
+    kEl.appendChild(d);
+  });
+}
+
+// Keyboard input
+document.addEventListener('keydown',e=>{
+  const l=e.key.toUpperCase();
+  if(l.length===1&&l>='A'&&l<='Z')guess(l);
+});
+
+newGame();
+</script>
+</body>
+</html>

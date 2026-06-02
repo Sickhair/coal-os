@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Tic-Tac-Toe — COAL OS</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+body{background:#050510;display:flex;flex-direction:column;align-items:center;min-height:100vh;font-family:'Orbitron',sans-serif;color:#e2e8f0;overflow-x:hidden}
+a.back{position:fixed;top:8px;left:8px;z-index:200;text-decoration:none;font-size:.5rem;color:#475569;opacity:.6}
+.brand{font-size:.4rem;letter-spacing:4px;color:#334155;margin:8px 0 4px;text-transform:uppercase;text-align:center}
+.title{font-size:.85rem;font-weight:900;letter-spacing:2px;margin-bottom:8px}
+.mode-row{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap;justify-content:center}
+.btn{background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:.3rem .8rem;border-radius:4px;font-family:inherit;font-size:.5rem;cursor:pointer;transition:all .15s}
+.btn:hover{background:#334155;color:#e2e8f0}
+.btn.active{border-color:#10b981;color:#10b981}
+.btn:disabled{opacity:.3;cursor:not-allowed}
+.status{font-size:.5rem;color:#94a3b8;margin-bottom:8px;min-height:14px;text-align:center}
+.board{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;width:min(75vw,280px);height:min(75vw,280px);margin-bottom:12px}
+.cell{background:#0f172a;border:2px solid #1e293b;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:min(15vw,60px);cursor:pointer;transition:all .15s}
+.cell:hover{background:#1e293b;border-color:#334155}
+.cell.x{color:#10b981;text-shadow:0 0 20px #10b98144}
+.cell.o{color:#ef4444;text-shadow:0 0 20px #ef444444}
+.cell.win{background:#10b98122;border-color:#10b98188;animation:pulse .6s infinite alternate}
+.cell.win-o{background:#ef444422;border-color:#ef444488;animation:pulse .6s infinite alternate}
+@keyframes pulse{from{box-shadow:0 0 5px currentColor}to{box-shadow:0 0 20px currentColor}}
+.score{display:flex;gap:16px;margin-bottom:10px;font-size:.5rem;align-items:center}
+.score span{min-width:40px;text-align:center}
+.diff{display:flex;gap:4px;margin-bottom:8px}
+.diff .btn{font-size:.42rem;padding:.2rem .5rem}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← COAL OS</a>
+<div class="brand">COAL OS</div>
+<div class="title" style="color:#10b981;text-shadow:0 0 20px #10b98144">✕ ○ TIC-TAC-TOE</div>
+<div class="score">
+  <span style="color:#10b981" id="xScore">X: 0</span>
+  <span style="color:#334155" id="draws">Draw: 0</span>
+  <span style="color:#ef4444" id="oScore">O: 0</span>
+</div>
+<div class="diff">
+  <button class="btn active" onclick="setDiff(0)">Easy</button>
+  <button class="btn" onclick="setDiff(1)">Medium</button>
+  <button class="btn" onclick="setDiff(2)">Hard</button>
+</div>
+<div class="status" id="status">Your turn (X)</div>
+<div class="board" id="board"></div>
+<div class="mode-row">
+  <button class="btn" onclick="resetGame()">NEW GAME</button>
+  <button class="btn" onclick="resetScore()">RESET SCORE</button>
+</div>
+
+<script>
+let board,turn,gameOver,xWins,oWins,drawCount,difficulty=0,winCells=[];
+const LINES=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+
+function setDiff(d){
+  difficulty=d;
+  document.querySelectorAll('.diff .btn').forEach((b,i)=>b.className='btn'+(i===d?' active':''));
+  resetGame();
+}
+
+function resetScore(){xWins=0;oWins=0;drawCount=0;updateScore();resetGame()}
+
+function resetGame(){
+  board=Array(9).fill(null);turn='X';gameOver=false;winCells=[];
+  render();updateStatus();
+}
+
+function updateScore(){
+  document.getElementById('xScore').textContent='X: '+xWins;
+  document.getElementById('oScore').textContent='O: '+oWins;
+  document.getElementById('draws').textContent='Draw: '+drawCount;
+}
+
+function updateStatus(){
+  if(gameOver){
+    if(winCells.length>0){
+      document.getElementById('status').textContent=(board[winCells[0]]==='X'?'X':'O')+' wins!';
+      document.getElementById('status').style.color=board[winCells[0]]==='X'?'#10b981':'#ef4444';
+    }else{
+      document.getElementById('status').textContent="It's a draw!";
+      document.getElementById('status').style.color='#f59e0b';
+    }
+  }else{
+    document.getElementById('status').textContent=turn==='X'?'Your turn (X)':'AI thinking...';
+    document.getElementById('status').style.color=turn==='X'?'#10b981':'#ef4444';
+  }
+}
+
+function checkWin(b){
+  for(const[a,c,d]of LINES){
+    if(b[a]&&b[a]===b[c]&&b[a]===b[d])return{winner:b[a],cells:[a,c,d]};
+  }
+  if(b.every(x=>x!==null))return{winner:'draw',cells:[]};
+  return null;
+}
+
+function clickCell(i){
+  if(gameOver||board[i]||turn!=='X')return;
+  board[i]='X';
+  const result=checkWin(board);
+  if(result){handleResult(result);return}
+  turn='O';render();updateStatus();
+  setTimeout(aiMove,300);
+}
+
+function aiMove(){
+  if(gameOver)return;
+  let move;
+  if(difficulty===0){
+    // Easy: random valid
+    const empty=board.map((v,i)=>v===null?i:-1).filter(i=>i>=0);
+    move=empty[Math.floor(Math.random()*empty.length)];
+  }else if(difficulty===1){
+    // Medium: 50% optimal, 50% random
+    if(Math.random()<.5){
+      move=minimax(board,'O',0).move;
+    }else{
+      const empty=board.map((v,i)=>v===null?i:-1).filter(i=>i>=0);
+      move=empty[Math.floor(Math.random()*empty.length)];
+    }
+  }else{
+    // Hard: unbeatable minimax
+    move=minimax(board,'O',0).move;
+  }
+  
+  if(move===undefined||move===null){
+    // Fallback
+    const empty=board.map((v,i)=>v===null?i:-1).filter(i=>i>=0);
+    move=empty[0];
+  }
+  
+  board[move]='O';
+  const result=checkWin(board);
+  if(result){handleResult(result);return}
+  turn='X';render();updateStatus();
+}
+
+function minimax(b,player,depth){
+  const result=checkWin(b);
+  if(result){
+    if(result.winner==='O')return{score:10-depth};
+    if(result.winner==='X')return{score:depth-10};
+    return{score:0};
+  }
+  
+  const moves=[];
+  for(let i=0;i<9;i++){
+    if(b[i]===null){
+      b[i]=player;
+      const score=minimax(b,player==='O'?'X':'O',depth+1).score;
+      b[i]=null;
+      moves.push({move:i,score});
+    }
+  }
+  
+  if(player==='O'){
+    // Maximizing
+    let best=moves.reduce((a,b)=>b.score>a.score?b:a);
+    return best;
+  }else{
+    // Minimizing
+    let best=moves.reduce((a,b)=>b.score<a.score?b:a);
+    return best;
+  }
+}
+
+function handleResult(result){
+  gameOver=true;
+  winCells=result.cells;
+  if(result.winner==='X')xWins++;
+  else if(result.winner==='O')oWins++;
+  else drawCount++;
+  updateScore();render();updateStatus();
+}
+
+function render(){
+  const el=document.getElementById('board');el.innerHTML='';
+  for(let i=0;i<9;i++){
+    const d=document.createElement('div');d.className='cell';
+    if(board[i]==='X')d.classList.add('x');
+    if(board[i]==='O')d.classList.add('o');
+    if(winCells.includes(i)){
+      d.classList.add(board[i]==='X'?'win':'win-o');
+    }
+    d.textContent=board[i]||'';
+    d.onclick=()=>clickCell(i);
+    el.appendChild(d);
+  }
+}
+
+xWins=0;oWins=0;drawCount=0;resetGame();
+</script>
+</body>
+</html>
