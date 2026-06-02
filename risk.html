@@ -93,7 +93,7 @@ function generateAdjacency(){
     if(t.gx===11&&t.gy===0){const e=territories.findIndex(o=>o.gx===0&&o.gy===0);if(e>=0)neighbors.push(e)}
     // S.America <-> Africa
     if(t.gx===3&&t.gy===4){const e=territories.findIndex(o=>o.gx===5&&o.gy===3);if(e>=0)neighbors.push(e)}
-    if(t.gx===5&&t.gy===3){const e=territories.findIndex(o=>o.gx===3&&t.gy===4);if(e>=0)neighbors.push(e)}
+    if(t.gx===5&&t.gy===3){const e=territories.findIndex(o=>o.gx===3&&o.gy===4);if(e>=0)neighbors.push(e)}
     adjacency.set(i,neighbors);
   });
 }
