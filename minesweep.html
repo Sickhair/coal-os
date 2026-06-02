@@ -137,21 +137,22 @@ function render(){
   // Click handlers
   el.querySelectorAll('.cell').forEach(cell=>{
     const cx=+cell.dataset.x,cy=+cell.dataset.y;
-    cell.onclick=()=>{mode==='dig'?dig(cx,cy):toggleFlag(cx,cy)};
+    cell.onclick=()=>{if(longPressed){longPressed=false;return}mode==='dig'?dig(cx,cy):toggleFlag(cx,cy)};
     cell.oncontextmenu=e=>{e.preventDefault();toggleFlag(cx,cy)};
   });
 }
 
 // Long press to flag on mobile
-let lpt=null;
+let lpt=null,longPressed=false;
 document.addEventListener('touchstart',e=>{
   const cell=e.target.closest('.cell');
   if(!cell)return;
+  longPressed=false;
   lpt=setTimeout(()=>{
-    toggleFlag(+cell.dataset.x,+cell.dataset.y);lpt=null;
+    toggleFlag(+cell.dataset.x,+cell.dataset.y);longPressed=true;lpt=null;
   },400);
 },{passive:true});
-document.addEventListener('touchend',()=>{if(lpt){clearTimeout(lpt);lpt=null}},{passive:true});
+document.addEventListener('touchend',e=>{if(lpt){clearTimeout(lpt);lpt=null}},{passive:true});
 document.addEventListener('touchmove',()=>{if(lpt){clearTimeout(lpt);lpt=null}},{passive:true});
 
 newGame(9,9,10);
