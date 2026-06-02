@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Checkers — COAL OS</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+body{background:#050510;display:flex;flex-direction:column;align-items:center;min-height:100vh;font-family:'Orbitron',sans-serif;color:#e2e8f0;overflow:hidden}
+.brand{font-size:.4rem;letter-spacing:4px;color:#334155;margin:6px 0 2px;text-transform:uppercase}
+.title{font-size:.9rem;font-weight:900;color:#ef4444;text-shadow:0 0 20px #ef444444;letter-spacing:2px;margin-bottom:4px}
+.status{font-size:.55rem;color:#64748b;margin-bottom:6px;min-height:16px;text-align:center}
+.board{display:inline-grid;grid-template-columns:repeat(8,1fr);gap:0;border:3px solid #1e293b;border-radius:4px;overflow:hidden;margin-bottom:8px}
+.cell{width:min(11vw,46px);height:min(11vw,46px);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative}
+.cell.dark{background:#1e293b}.cell.light{background:#0f172a}
+.cell.selected{box-shadow:inset 0 0 0 3px #f59e0b}
+.cell.can-move::after{content:'';width:30%;height:30%;border-radius:50%;background:#22c55e44;position:absolute}
+.cell.can-jump::after{content:'';width:30%;height:30%;border-radius:50%;background:#ef444444;position:absolute}
+.piece{width:75%;height:75%;border-radius:50%;position:relative}
+.piece.p1{background:#ef4444;box-shadow:0 2px 8px #ef444466}
+.piece.p2{background:#334155;border:2px solid #64748b;box-shadow:0 2px 8px #00000066}
+.piece.king::after{content:'♛';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:min(6vw,22px);color:#f59e0b}
+.actions{display:flex;gap:6px}
+.btn{background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:.3rem .8rem;border-radius:4px;font-family:inherit;font-size:.5rem;cursor:pointer}
+.btn:active{background:#334155;color:#fff}
+</style>
+</head>
+<body>
+<div class="brand">COAL OS</div>
+<div class="title">⬤ CHECKERS</div>
+<div class="status" id="status">Your turn (red)</div>
+<div class="board" id="board"></div>
+<div class="actions">
+  <button class="btn" onclick="resetGame()">NEW GAME</button>
+</div>
+<script>
+const SIZE=8;
+let board,selected,turn,jumpChain,gameOver;
+
+function resetGame(){
+  board=Array(SIZE).fill(null).map(()=>Array(SIZE).fill(0));
+  // Player 1 (bottom, red) = 1, Player 2 (top, dark) = 2, Kings = 3/4
+  for(let r=0;r<3;r++)for(let c=0;c<SIZE;c++)if((r+c)%2===1)board[r][c]=2;
+  for(let r=5;r<8;r++)for(let c=0;c<SIZE;c++)if((r+c)%2===1)board[r][c]=1;
+  selected=null;turn=1;jumpChain=null;gameOver=false;
+  render();updateStatus();
+}
+
+function isPlayer(p,player){return player===1?(p===1||p===3):(p===2||p===4)}
+function isKing(p){return p===3||p===4}
+function canMoveAny(player){
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){
+    if(!isPlayer(board[r][c],player))continue;
+    if(getMoves(r,c).length||getJumps(r,c).length)return true;
+  }return false;
+}
+
+function getMoves(r,c){
+  const p=board[r][c];if(!p)return[];
+  const moves=[];const dir=isPlayer(p,1)?-1:1;
+  const dirs=isKing(p)?[dir,-dir]:[dir];
+  dirs.forEach(d=>{
+    [-1,1].forEach(dc=>{
+      const nr=r+d,nc=c+dc;
+      if(nr>=0&&nr<SIZE&&nc>=0&&nc<SIZE&&board[nr][nc]===0)moves.push({r:nr,c:nc});
+    });
+  });
+  return moves;
+}
+
+function getJumps(r,c){
+  const p=board[r][c];if(!p)return[];
+  const jumps=[];const dir=isPlayer(p,1)?-1:1;
+  const dirs=isKing(p)?[dir,-dir]:[dir];
+  const enemy=turn===1?2:1;
+  dirs.forEach(d=>{
+    [-1,1].forEach(dc=>{
+      const mr=r+d,mc=c+dc,jr=r+d*2,jc=c+dc*2;
+      if(jr>=0&&jr<SIZE&&jc>=0&&jc<SIZE&&board[jr][jc]===0&&board[mr][mc]!==0&&isPlayer(board[mr][mc],enemy))
+        jumps.push({r:jr,c:jc,capR:mr,capC:mc});
+    });
+  });
+  return jumps;
+}
+
+function clickCell(r,c){
+  if(gameOver||turn!==1)return;
+  
+  // If in jump chain, can only continue jumping
+  if(jumpChain){
+    const jumps=getJumps(jumpChain.r,jumpChain.c);
+    const jump=jumps.find(j=>j.r===r&&j.c===c);
+    if(jump){
+      doMove(jumpChain.r,jumpChain.c,jump);
+      // Check for more jumps
+      const moreJumps=getJumps(jump.r,jump.c);
+      if(moreJumps.length){jumpChain={r:jump.r,c:jump.c};selected={r:jump.r,c:jump.c};render();return}
+      jumpChain=null;selected=null;turn=2;render();updateStatus();setTimeout(aiTurn,500);return;
+    }
+    return;
+  }
+  
+  // Select piece
+  if(board[r][c]!==0&&isPlayer(board[r][c],1)){selected={r,c};render();return}
+  
+  if(!selected)return;
+  
+  // Try jump first (mandatory)
+  const jumps=getJumps(selected.r,selected.c);
+  if(jumps.length){
+    const jump=jumps.find(j=>j.r===r&&j.c===c);
+    if(jump){
+      doMove(selected.r,selected.c,jump);
+      const moreJumps=getJumps(jump.r,jump.c);
+      if(moreJumps.length){jumpChain={r:jump.r,c:jump.c};selected={r:jump.r,c:jump.c};render();return}
+      selected=null;turn=2;render();updateStatus();setTimeout(aiTurn,500);return;
+    }
+    return; // Must jump
+  }
+  
+  // Try move
+  const moves=getMoves(selected.r,selected.c);
+  const move=moves.find(m=>m.r===r&&m.c===c);
+  if(move){
+    doMove(selected.r,selected.c,move);
+    selected=null;turn=2;render();updateStatus();setTimeout(aiTurn,500);
+  }
+}
+
+function doMove(fr,fc,target){
+  board[target.r][target.c]=board[fr][fc];
+  board[fr][fc]=0;
+  if(target.capR!==undefined)board[target.capR][target.capC]=0;
+  // King promotion
+  const p=board[target.r][target.c];
+  if(p===1&&target.r===0)board[target.r][target.c]=3;
+  if(p===2&&target.r===SIZE-1)board[target.r][target.c]=4;
+}
+
+function aiTurn(){
+  if(gameOver)return;
+  // AI: prioritize jumps, then moves
+  let bestMove=null,bestScore=-Infinity;
+  
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){
+    if(!isPlayer(board[r][c],2))continue;
+    
+    // Check jumps
+    const jumps=getJumps(r,c);
+    for(const j of jumps){
+      let score=10+Math.random()*2;
+      if(j.r===SIZE-1)score+=5; // promote
+      if(score>bestScore){bestScore=score;bestMove={fr:r,fc:c,target:j}}
+    }
+    // Check moves
+    const moves=getMoves(r,c);
+    for(const m of moves){
+      let score=1+Math.random()*2;
+      if(m.r===SIZE-1)score+=5;
+      if(score>bestScore){bestScore=score;bestMove={fr:r,fc:c,target:m}}
+    }
+  }
+  
+  if(bestMove){
+    doMove(bestMove.fr,bestMove.fc,bestMove.target);
+    // Multi-jump for AI (simplified: just one jump per turn)
+  }
+  
+  // Check game over
+  turn=1;
+  if(!canMoveAny(1)){gameOver=true;document.getElementById('status').textContent='AI WINS!';return}
+  if(!canMoveAny(2)){gameOver=true;document.getElementById('status').textContent='YOU WIN!';return}
+  updateStatus();render();
+}
+
+function updateStatus(){
+  if(!gameOver)document.getElementById('status').textContent=turn===1?'Your turn (red)':'AI thinking...';
+}
+
+function render(){
+  const el=document.getElementById('board');el.innerHTML='';
+  el.style.gridTemplateColumns=`repeat(${SIZE},min(11vw,46px))`;
+  
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){
+    const d=document.createElement('div');
+    d.className='cell '+((r+c)%2===0?'light':'dark');
+    
+    if(selected&&selected.r===r&&selected.c===c)d.classList.add('selected');
+    
+    // Show valid moves
+    if(selected&&!jumpChain){
+      const jumps=getJumps(selected.r,selected.c);
+      const moves=getJumps(selected.r,selected.c).length?[]:getMoves(selected.r,selected.c);
+      if(jumps.find(j=>j.r===r&&j.c===c))d.classList.add('can-jump');
+      if(moves.find(m=>m.r===r&&m.c===c))d.classList.add('can-move');
+    }
+    if(jumpChain){
+      const jumps=getJumps(jumpChain.r,jumpChain.c);
+      if(jumps.find(j=>j.r===r&&j.c===c))d.classList.add('can-jump');
+    }
+    
+    if(board[r][c]!==0){
+      const p=document.createElement('div');
+      p.className='piece '+(isPlayer(board[r][c],1)?'p1':'p2');
+      if(isKing(board[r][c]))p.classList.add('king');
+      d.appendChild(p);
+    }
+    
+    d.onclick=()=>clickCell(r,c);
+    el.appendChild(d);
+  }
+}
+
+resetGame();
+</script>
+</body>
+</html>
