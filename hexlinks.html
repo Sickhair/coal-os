@@ -99,71 +99,58 @@ function generateLevel(){
   offsetX=W/2-(cols*hexSize*Math.sqrt(3))/2;
   offsetY=H/2-(rows*hexSize*1.5)/2+30;
 
-  // Create a connected path through the grid
   grid=[];
-  for(let r=0;r<rows;r++){grid[r]=[];for(let c=0;c<cols;c++)grid[r][c]={conns:[],onPath:false}}
+  for(let r=0;r<rows;r++){grid[r]=[];for(let c=0;c<cols;c++)grid[r][c]=null}
 
-  // Random walk from (0,0) to (cols-1,rows-1)
-  sourceCol=0;sourceRow=0;
-  let path=[{c:0,r:0}];let visited=new Set();visited.add('0,0');
-  let cur={c:0,r:0};
+  // Build spanning tree via randomized DFS
+  const visited=new Set();
+  const treeEdges=new Map(); // key -> Set of direction indices
+  const stack=[{c:0,r:0}];
+  visited.add('0,0');
   
-  // BFS to create spanning tree
-  let edges=[];
-  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+  while(stack.length){
+    const cur=stack[stack.length-1];
+    // Get unvisited neighbors
     const neighbors=[];
     for(let d=0;d<6;d++){
-      const nc=c+DIRS[d][0],nr=r+DIRS[d][1];
-      if(nc>=0&&nc<cols&&nr>=0&&nr<rows)neighbors.push({c:nc,r:nr,d});
+      const n=getNeighbor(cur.c,cur.r,d);
+      if(n&&!visited.has(n.c+','+n.r))neighbors.push({...n,d});
     }
-    for(const n of neighbors){
-      const key1=r+','+c,key2=n.r+','+n.c;
-      if(Math.random()<.4)edges.push({r1:r,c1:c,r2:n.r,c2:n.c,d1:n.d,d2:(n.d+3)%6});
-    }
+    if(!neighbors.length){stack.pop();continue}
+    // Pick random neighbor
+    const pick=neighbors[Math.floor(Math.random()*neighbors.length)];
+    const key1=cur.c+','+cur.r,key2=pick.c+','+pick.r;
+    if(!treeEdges.has(key1))treeEdges.set(key1,new Set());
+    if(!treeEdges.has(key2))treeEdges.set(key2,new Set());
+    treeEdges.get(key1).add(pick.d);
+    treeEdges.get(key2).add((pick.d+3)%6);
+    visited.add(key2);
+    stack.push({c:pick.c,r:pick.r});
   }
-
-  // Just give each cell random connections and let player solve
-  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
-    const numConns=2;// all pipes have 2 connections (straight or bend)
-    let conns=[];
-    const base=Math.floor(Math.random()*6);
-    const bend=Math.random()>.5;
-    if(bend){conns=[base,(base+2)%6]}// bend: skip 1
-    else{conns=[base,(base+3)%6]}// straight: opposite
-    // Randomize rotation (scramble)
-    const rot=Math.floor(Math.random()*5)+1;
-    for(let i=0;i<rot;i++)conns=rotateConns(conns);
-    grid[r][c]={conns,correct:[...conns],onPath:false};
-    // Store the "solved" state as rotation 0
-    const solved=[...conns];
-    for(let i=0;i<6-rot;i++)solved.push(solved.shift());// unscramble... actually this is complex
-  }
-
-  // Simpler approach: each cell has connections, player clicks to rotate
-  // Check if all adjacent connected cells match
-  // Win = source connected to all reachable cells form a spanning tree
   
-  // Actually, simplest: generate a solved puzzle then scramble rotations
-  // Let's just make a grid where everything starts disconnected, player rotates to connect all
+  // Assign solved connections from tree edges, then scramble
   for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
-    const base=Math.floor(Math.random()*6);
-    const bend=Math.random()>.5;
-    let solved;
-    if(bend)solved=[base,(base+2)%6];
-    else solved=[base,(base+3)%6];
-    
-    // Scramble
+    const key=c+','+r;
+    const edgeDirs=treeEdges.has(key)?[...treeEdges.get(key)]:[];
+    // Each cell needs connections matching its tree edges
+    let solvedConns=edgeDirs.sort((a,b)=>a-b);
+    // Add random extra connection for cells with only 1 tree edge (dead ends)
+    // to make them 2-connection pipes (required by rotation mechanic)
+    if(solvedConns.length===1){
+      // Add a non-tree neighbor direction that won't connect to anything useful
+      // Actually, just keep it as 1-connection — it's fine for the game
+    }
+    // Scramble: rotate random times (1-5)
     const rot=Math.floor(Math.random()*5)+1;
-    let scrambled=[...solved];
-    for(let i=0;i<rot;i++)scrambled=rotateConns(scrambled);
-    
-    grid[r][c]={conns:scrambled,solved,rotations:rot};
+    let conns=[...solvedConns];
+    for(let i=0;i<rot;i++)conns=rotateConns(conns);
+    grid[r][c]={conns,solvedConns,rotations:rot};
   }
 
   moves=0;running=true;solved=false;
   document.getElementById('hud').classList.remove('hidden');
   document.getElementById('movesEl').textContent='Moves: 0';
-  document.getElementById('lvlEl').textContent='Level '+level;
+    document.getElementById('lvlEl').textContent='Level '+level;
 }
 
 function getNeighbor(c,r,dir){
