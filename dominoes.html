@@ -167,6 +167,17 @@ function aiTurn(){
   }
   
   // Can't play, pass
+  if(!hand.some(b=>canPlayAny(b))){
+    // Both blocked → end game
+    gameOver=true;
+    const pSum=hand.reduce((s,b)=>s+b[0]+b[1],0);
+    const aSum=aiHand.reduce((s,b)=>s+b[0]+b[1],0);
+    const el=document.getElementById('status');
+    if(pSum<aSum){el.textContent='Blocked! You win (lower pip count)!';el.style.color='#22c55e'}
+    else if(aSum<pSum){el.textContent='Blocked! AI wins (lower pip count)!';el.style.color='#ef4444'}
+    else{el.textContent='Blocked! Draw!';el.style.color='#f59e0b'}
+    render();return;
+  }
   document.getElementById('status').textContent='AI passes';
   turn=1;render();updateStatus();
 }
@@ -184,6 +195,17 @@ function updateStatus(){
     document.getElementById('status').style.color='#64748b';
     // Auto pass if can't play
     if(turn===1&&!hand.some(b=>canPlayAny(b))&&boneyard.length===0){
+      // Check if AI also can't play → blocked game
+      if(!aiHand.some(b=>canPlayAny(b))){
+        gameOver=true;
+        const pSum=hand.reduce((s,b)=>s+b[0]+b[1],0);
+        const aSum=aiHand.reduce((s,b)=>s+b[0]+b[1],0);
+        const el=document.getElementById('status');
+        if(pSum<aSum){el.textContent='Blocked! You win (lower pip count)!';el.style.color='#22c55e'}
+        else if(aSum<pSum){el.textContent='Blocked! AI wins (lower pip count)!';el.style.color='#ef4444'}
+        else{el.textContent='Blocked! Draw!';el.style.color='#f59e0b'}
+        render();return;
+      }
       setTimeout(()=>{turn=2;render();updateStatus();if(turn===2)setTimeout(aiTurn,700)},1000);
     }
   }
