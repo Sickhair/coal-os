@@ -31,9 +31,14 @@ canvas{display:block}
 .trade-row button{width:24px;height:24px;background:#1e293b;border:1px solid #334155;color:#fff;border-radius:4px;font-size:.8rem;cursor:pointer}
 .trade-row span{width:20px;text-align:center}
 .trade-btns{display:flex;gap:6px;justify-content:center;margin-top:8px}
+
+.brand{font-size:.4rem;letter-spacing:4px;color:#334155;margin-bottom:6px;text-transform:uppercase;font-family:"Orbitron",sans-serif;text-align:center}
+.back-link{position:fixed;top:8px;left:8px;z-index:200;text-decoration:none;font-family:"Orbitron",sans-serif;font-size:.5rem;letter-spacing:1px;color:#475569;opacity:.6;transition:opacity .2s}
+.back-link:hover{opacity:1;color:#e2e8f0}
 </style>
 </head>
 <body>
+<a class="back-link" href="index.html">← COAL OS</a>
 <canvas id="c"></canvas>
 <div class="hud hidden" id="hud">
   <div class="res">
@@ -68,7 +73,7 @@ canvas{display:block}
   <div style="font-size:.6rem;color:#64748b;margin:.5rem 0" id="winInfo"></div>
   <button class="bn" style="color:#22c55e;border-color:#22c55e" onclick="startGame()">AGAIN</button>
 </div>
-<div class="trade-panel h" id="tradePanel">
+<div class="trade-panel" id="tradePanel" style="display:none">
   <h3>MARITIME TRADE (4:1)</h3>
   <div class="trade-row"><span class="r-wood">Give 🪵</span><button onclick="tradeGive='wood';tradeGiveN=Math.min(4,res.wood)">−</button><span id="tgWood">0</span><button onclick="if(res.wood>tgWoodN)tgWoodN++">+</button></div>
   <div class="trade-row"><span>Want:</span>
@@ -398,28 +403,36 @@ function renderLoop(){
   tiles.forEach(tile=>{
     const{x,y}=hexToPixel(tile.q,tile.r);
     const col=TILE_COLORS[tile.resource]||'#1a1a1a';
+    const isActive=diceResult===tile.number&&tile.number>0;
     
-    // Hex
+    // Hex with gradient
     X.beginPath();
     for(let i=0;i<6;i++){
       const a=Math.PI/3*i-Math.PI/6;
       const px=x+HEX_SIZE*Math.cos(a),py=y+HEX_SIZE*Math.sin(a);
       if(i===0)X.moveTo(px,py);else X.lineTo(px,py);
     }
-    X.closePath();X.fillStyle=col;X.fill();X.strokeStyle='#334155';X.lineWidth=2;X.stroke();
+    X.closePath();
+    // Gradient fill
+    const grad=X.createRadialGradient(x-3,y-3,0,x,y,HEX_SIZE);
+    grad.addColorStop(0,col);grad.addColorStop(1,'#050510');
+    X.fillStyle=grad;X.fill();
+    X.strokeStyle=isActive?'#f59e0b':'#1e293b';X.lineWidth=isActive?2:1;X.stroke();
+    // Inner border glow
+    if(isActive){X.shadowColor='#f59e0b';X.shadowBlur=12;X.strokeStyle='#f59e0b44';X.stroke();X.shadowBlur=0}
     
     // Number token
     if(tile.number>0){
-      X.fillStyle=diceResult===tile.number?'#f59e0b':'#1e293b';
-      X.beginPath();X.arc(x,y,10,0,Math.PI*2);X.fill();
-      X.strokeStyle=diceResult===tile.number?'#f59e0b':'#475569';X.lineWidth=1;X.stroke();
-      X.fillStyle=diceResult===tile.number?'#000':'#e2e8f0';
-      X.font='bold 9px Orbitron';X.textAlign='center';X.fillText(tile.number,x,y+3);
+      X.fillStyle=isActive?'#f59e0b':'#0f172a';
+      X.beginPath();X.arc(x,y,11,0,Math.PI*2);X.fill();
+      X.strokeStyle=isActive?'#f59e0b':'#334155';X.lineWidth=isActive?2:1;X.stroke();
+      X.fillStyle=isActive?'#000':'#e2e8f0';
+      X.font='bold 10px Orbitron';X.textAlign='center';X.textBaseline='middle';X.fillText(tile.number,x,y);
     }
     
-    // Resource icon
-    X.font='12px sans-serif';X.textAlign='center';
-    if(tile.resource!=='desert')X.fillText(RES_EMOJI[tile.resource],x,y+22);
+    // Resource icon below token
+    X.textBaseline='alphabetic';X.font='14px sans-serif';X.textAlign='center';
+    if(tile.resource!=='desert')X.fillText(RES_EMOJI[tile.resource],x,y+24);
   });
   
   // Draw settlements

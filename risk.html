@@ -23,9 +23,14 @@ canvas{display:block}
 .abtn.dis{opacity:.3;cursor:not-allowed}
 .abtn.active{border-color:#f59e0b;color:#f59e0b}
 .msg{position:fixed;bottom:50px;left:50%;transform:translateX(-50%);font-size:.5rem;color:#f59e0b;z-index:60;text-align:center;pointer-events:none}
+
+.brand{font-size:.4rem;letter-spacing:4px;color:#334155;margin-bottom:6px;text-transform:uppercase;font-family:"Orbitron",sans-serif;text-align:center}
+.back-link{position:fixed;top:8px;left:8px;z-index:200;text-decoration:none;font-family:"Orbitron",sans-serif;font-size:.5rem;letter-spacing:1px;color:#475569;opacity:.6;transition:opacity .2s}
+.back-link:hover{opacity:1;color:#e2e8f0}
 </style>
 </head>
 <body>
+<a class="back-link" href="index.html">← COAL OS</a>
 <canvas id="c"></canvas>
 <div class="hud hidden" id="hud">
   <div style="color:#3b82f6" id="phaseEl">DEPLOY</div>
@@ -282,15 +287,15 @@ function renderLoop(){
     const x=t.gx*cellW+pad,y=t.gy*cellH+pad,w=cellW-pad*2,h=cellH-pad*2;
     
     // Territory color
-    let fill=t.cColor;
-    if(t.owner==='player')fill='#1e293b';
-    else if(t.owner==='ai')fill='#3b1e1e';
+    let fill=t.cColor||'#0f172a';
+    if(t.owner==='player')fill='#162a40';
+    else if(t.owner==='ai')fill='#401620';
     
     // Highlight selected
-    if(selected&&selected.id===t.id){X.shadowColor='#f59e0b';X.shadowBlur=12}
+    if(selected&&selected.id===t.id){X.shadowColor='#f59e0b';X.shadowBlur=15}
     
     X.fillStyle=fill;X.beginPath();X.roundRect?X.roundRect(x,y,w,h,6):X.rect(x,y,w,h);X.fill();
-    X.strokeStyle=t.owner==='player'?'#3b82f644':t.owner==='ai'?'#ef444444':'#334155';
+    X.strokeStyle=selected&&selected.id===t.id?'#f59e0b':t.owner==='player'?'#3b82f655':t.owner==='ai'?'#ef444455':'#1e293b';
     X.lineWidth=selected&&selected.id===t.id?2:1;X.stroke();
     X.shadowBlur=0;
     
