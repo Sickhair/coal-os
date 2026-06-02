@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Clue — COAL OS</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+body{background:#050510;display:flex;flex-direction:column;align-items:center;min-height:100vh;font-family:'Orbitron',sans-serif;color:#e2e8f0;overflow-x:hidden}
+.brand{font-size:.4rem;letter-spacing:4px;color:#334155;margin:8px 0 4px;text-transform:uppercase}
+.title{font-size:1rem;font-weight:900;color:#a855f7;text-shadow:0 0 20px #a855f744;letter-spacing:2px;margin-bottom:6px}
+.top-bar{display:flex;gap:8px;align-items:center;margin-bottom:6px;font-size:.55rem;flex-wrap:wrap;justify-content:center}
+.btn{background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:.3rem .8rem;border-radius:4px;font-family:inherit;font-size:.5rem;cursor:pointer;letter-spacing:1px}
+.btn:active{background:#334155;color:#fff}
+.btn.primary{border-color:#a855f7;color:#a855f7}
+.game-area{width:min(95vw,500px);margin-bottom:8px}
+.room-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-bottom:8px}
+.room{padding:6px 4px;background:#0f172a;border:1px solid #1e293b;border-radius:4px;text-align:center;font-size:.45rem;cursor:pointer;transition:all .15s;letter-spacing:1px}
+.room:hover{border-color:#a855f733}
+.room.current{border-color:#22c55e;background:#22c55e11;color:#22c55e}
+.room.visited{border-color:#47556966}
+.room .icon{font-size:1rem;margin-bottom:2px}
+.hand{display:flex;gap:3px;flex-wrap:wrap;justify-content:center;margin-bottom:8px}
+.card{padding:4px 8px;background:#1e293b;border:1px solid #334155;border-radius:4px;font-size:.4rem;letter-spacing:1px}
+.card.suspect{border-color:#ef444444;color:#ef4444}
+.card.weapon{border-color:#f59e0b44;color:#f59e0b}
+.card.room-card{border-color:#3b82f644;color:#3b82f6}
+.detective{width:min(95vw,500px);margin-bottom:8px}
+.det-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;font-size:.38rem}
+.det-header{padding:3px;background:#1e293b;text-align:center;font-weight:700;letter-spacing:1px}
+.det-header.s{background:#ef444422;color:#ef4444}.det-header.w{background:#f59e0b22;color:#f59e0b}.det-header.r{background:#3b82f622;color:#3b82f6}
+.det-cell{padding:2px 4px;background:#0f172a;text-align:center;cursor:pointer;border:1px solid transparent}
+.det-cell:hover{border-color:#334155}
+.det-cell.yes{background:#22c55e22;color:#22c55e}.det-cell.no{background:#ef444422;color:#ef4444}.det-cell.maybe{background:#f59e0b11;color:#f59e0b88}
+.log{font-size:.4rem;color:#64748b;width:min(95vw,500px);line-height:1.5;margin-bottom:6px;max-height:80px;overflow-y:auto}
+.suggest-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#0f172a;border:2px solid #a855f7;border-radius:8px;padding:12px;z-index:70;text-align:center;min-width:280px}
+.suggest-panel h3{font-size:.6rem;margin-bottom:8px;color:#a855f7}
+.suggest-panel select{background:#1e293b;border:1px solid #334155;color:#e2e8f0;padding:4px;border-radius:4px;font-family:inherit;font-size:.5rem;width:90%;margin:3px 0}
+.suggest-btns{display:flex;gap:6px;justify-content:center;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="brand">COAL OS</div>
+<div class="title">🔍 COAL CLUE</div>
+<div class="top-bar" id="topBar">
+  <span style="color:#64748b" id="turnEl">TURN 1</span>
+  <span style="color:#22c55e" id="locEl">📍 Entrance</span>
+  <button class="btn primary" id="moveBtn" onclick="showMovePhase()">MOVE</button>
+  <button class="btn primary" id="suggestBtn" onclick="showSuggest()">SUGGEST</button>
+  <button class="btn" id="accuseBtn" onclick="showAccuse()">ACCUSE</button>
+  <button class="btn" onclick="endTurn()">END TURN</button>
+</div>
+<div class="hand" id="hand"></div>
+<div class="game-area">
+  <div class="room-grid" id="roomGrid"></div>
+</div>
+<div class="detective" id="detSheet"></div>
+<div class="log" id="logEl"></div>
+
+<div class="suggest-panel" id="suggestPanel" style="display:none">
+  <h3 id="suggestTitle">MAKE A SUGGESTION</h3>
+  <select id="suspectSelect"></select>
+  <select id="weaponSelect"></select>
+  <select id="roomSelect"></select>
+  <div class="suggest-btns">
+    <button class="btn primary" id="suggestConfirm">SUGGEST</button>
+    <button class="btn" onclick="hideSuggest()">CANCEL</button>
+  </div>
+</div>
+
+<div id="menuOverlay" style="position:fixed;inset:0;background:radial-gradient(ellipse at 50% 30%,#0a1628,#050510);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;text-align:center;padding:1.5rem">
+  <div class="brand">COAL OS</div>
+  <div class="title">🔍 COAL CLUE</div>
+  <div style="font-size:.5rem;color:#475569;letter-spacing:3px;margin:.5rem 0 1rem">DEDUCTION BOARD GAME</div>
+  <button class="btn primary" style="padding:.6rem 2rem;font-size:.65rem" onclick="startGame()">PLAY</button>
+</div>
+
+<div id="resultOverlay" style="position:fixed;inset:0;background:radial-gradient(ellipse at 50% 30%,#0a1628,#050510);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:100;text-align:center;padding:1.5rem">
+  <div class="brand">COAL OS</div>
+  <div id="resultTitle" style="font-size:1.2rem;font-weight:900;margin:.5rem 0"></div>
+  <div id="resultInfo" style="font-size:.6rem;color:#64748b;margin:.5rem 0;line-height:1.8"></div>
+  <button class="btn primary" style="padding:.5rem 1.5rem;font-size:.6rem" onclick="startGame()">AGAIN</button>
+</div>
+
+<script>
+const SUSPECTS=['Scarlet','Mustard','White','Green','Peacock','Plum'];
+const WEAPONS=['Knife','Candlestick','Revolver','Rope','Pipe','Wrench'];
+const ROOMS=['Study','Hall','Lounge','Library','Billiard','Dining','Kitchen','Ballroom','Conservatory','Entrance'];
+const SUSPECT_COLORS=['#ef4444','#f59e0b','#e2e8f0','#22c55e','#3b82f6','#a855f7'];
+const ROOM_ICONS=['📚','🏛','🛋','📖','🎱','🍽','🍳','🎭','🌿','🚪'];
+
+let solution,playerHand,detSheet,playerLoc,turn,phase,logLines,gameOver;
+let aiLocations,aiKnownCards;
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+
+function startGame(){
+  document.getElementById('menuOverlay').style.display='none';
+  document.getElementById('resultOverlay').style.display='none';
+  
+  // Create solution
+  const s=shuffle([...SUSPECTS])[0];
+  const w=shuffle([...WEAPONS])[0];
+  const r=shuffle([...ROOMS.slice(0,9)])[0]; // exclude Entrance from solution
+  solution={suspect:s,weapon:w,room:r};
+  
+  // Deal remaining cards
+  const deck=shuffle([
+    ...SUSPECTS.filter(x=>x!==s).map(x=>({type:'suspect',name:x})),
+    ...WEAPONS.filter(x=>x!==w).map(x=>({type:'weapon',name:x})),
+    ...ROOMS.filter(x=>x!==r).map(x=>({type:'room',name:x})),
+  ]);
+  
+  playerHand=deck.slice(0,Math.floor(deck.length/2));
+  const aiHand=deck.slice(Math.floor(deck.length/2));
+  
+  // Detective sheet: null=unknown, true=has, false=doesn't have
+  detSheet={};
+  [...SUSPECTS,...WEAPONS,...ROOMS].forEach(n=>detSheet[n]=null);
+  playerHand.forEach(c=>detSheet[c.name]=false); // player has these, so they're not the solution
+  
+  playerLoc=9; // Entrance (index 9)
+  turn=1;phase='move';logLines=[];gameOver=false;
+  aiLocations=SUSPECTS.map((_,i)=>i); // AI suspects start in their "home" rooms
+  aiKnownCards=new Set(aiHand.map(c=>c.name));
+  
+  // Mark AI cards as seen by AI
+  aiHand.forEach(c=>{});
+  
+  renderHand();
+  renderRooms();
+  renderDetSheet();
+  updateHUD();
+  log('Game started. You are at the Entrance. Find who, where, and with what!');
+}
+
+function renderHand(){
+  const el=document.getElementById('hand');el.innerHTML='';
+  playerHand.forEach(c=>{
+    const d=document.createElement('div');
+    d.className='card '+(c.type==='suspect'?'suspect':c.type==='weapon'?'weapon':'room-card');
+    d.textContent=c.name;
+    el.appendChild(d);
+  });
+}
+
+function renderRooms(){
+  const el=document.getElementById('roomGrid');el.innerHTML='';
+  ROOMS.forEach((r,i)=>{
+    const d=document.createElement('div');
+    d.className='room'+(i===playerLoc?' current':'');
+    d.innerHTML=`<div class="icon">${ROOM_ICONS[i]}</div>${r}`;
+    d.onclick=()=>moveToRoom(i);
+    el.appendChild(d);
+  });
+}
+
+function renderDetSheet(){
+  const el=document.getElementById('detSheet');
+  let html='<div class="det-grid">';
+  html+='<div class="det-header s">SUSPECTS</div><div class="det-header w">WEAPONS</div><div class="det-header r">ROOMS</div>';
+  for(let i=0;i<6;i++){
+    const sn=SUSPECTS[i],wn=WEAPONS[i],rn=ROOMS[i];
+    html+=detCell(sn)+detCell(wn)+detCell(rn);
+  }
+  // Extra rooms
+  for(let i=6;i<ROOMS.length;i++){
+    html+='<div></div><div></div>'+detCell(ROOMS[i]);
+  }
+  html+='</div>';
+  el.innerHTML=html;
+  
+  // Click handlers
+  el.querySelectorAll('.det-cell').forEach(cell=>{
+    cell.onclick=()=>{
+      const name=cell.dataset.name;
+      if(!name)return;
+      const cur=detSheet[name];
+      detSheet[name]=cur===null?false:cur===false?true:null;
+      renderDetSheet();
+    };
+  });
+}
+
+function detCell(name){
+  const v=detSheet[name];
+  const cls=v===false?'no':v===true?'yes':'maybe';
+  return`<div class="det-cell ${cls}" data-name="${name}">${name}<br>${v===false?'✗':v===true?'✓':'?'}</div>`;
+}
+
+function moveToRoom(i){
+  if(gameOver||phase!=='move')return;
+  if(i===playerLoc){log('Already here!');return}
+  playerLoc=i;phase='suggest';
+  log('Moved to '+ROOMS[i]);
+  renderRooms();updateHUD();
+}
+
+function showSuggest(){
+  if(gameOver||playerLoc===9){log('Cannot suggest at Entrance');return}
+  const panel=document.getElementById('suggestPanel');
+  document.getElementById('suggestTitle').textContent='SUGGESTION';
+  document.getElementById('suggestConfirm').textContent='SUGGEST';
+  document.getElementById('suggestConfirm').onclick=doSuggest;
+  
+  const ss=document.getElementById('suspectSelect');
+  ss.innerHTML=SUSPECTS.map(s=>`<option>${s}</option>`).join('');
+  const ws=document.getElementById('weaponSelect');
+  ws.innerHTML=WEAPONS.map(w=>`<option>${w}</option>`).join('');
+  const rs=document.getElementById('roomSelect');
+  rs.value=ROOMS[playerLoc];rs.innerHTML=`<option>${ROOMS[playerLoc]}</option>`;rs.disabled=true;
+  
+  panel.style.display='block';
+}
+
+function showAccuse(){
+  if(gameOver)return;
+  const panel=document.getElementById('suggestPanel');
+  document.getElementById('suggestTitle').textContent='⚠ FINAL ACCUSATION';
+  document.getElementById('suggestConfirm').textContent='ACCUSE';
+  document.getElementById('suggestConfirm').onclick=doAccuse;
+  
+  const ss=document.getElementById('suspectSelect');ss.innerHTML=SUSPECTS.map(s=>`<option>${s}</option>`).join('');ss.disabled=false;
+  const ws=document.getElementById('weaponSelect');ws.innerHTML=WEAPONS.map(w=>`<option>${w}</option>`).join('');ws.disabled=false;
+  const rs=document.getElementById('roomSelect');rs.innerHTML=ROOMS.slice(0,9).map(r=>`<option>${r}</option>`).join('');rs.disabled=false;
+  
+  panel.style.display='block';
+}
+
+function hideSuggest(){document.getElementById('suggestPanel').style.display='none'}
+
+function doSuggest(){
+  const suspect=document.getElementById('suspectSelect').value;
+  const weapon=document.getElementById('weaponSelect').value;
+  const room=ROOMS[playerLoc];
+  hideSuggest();
+  
+  log(`Suggestion: ${suspect} with ${weapon} in ${room}`);
+  
+  // AI reveals a card if they have one
+  const matching=playerHand.filter(c=>c.name===suspect||c.name===weapon||c.name===room);
+  // Actually check AI's cards (the ones player doesn't have)
+  const allCards=[
+    ...SUSPECTS.map(s=>({type:'suspect',name:s})),
+    ...WEAPONS.map(w=>({type:'weapon',name:w})),
+    ...ROOMS.map(r=>({type:'room',name:r})),
+  ];
+  const aiCards=allCards.filter(c=>!playerHand.some(h=>h.name===c.name)&&c.name!==solution.suspect&&c.name!==solution.weapon&&c.name!==solution.room);
+  
+  const shown=aiCards.find(c=>c.name===suspect||c.name===weapon||c.name===room);
+  if(shown){
+    log(`AI shows you: ${shown.name} — it's NOT the solution`);
+    detSheet[shown.name]=false;
+  }else{
+    log('AI cannot disprove — could be the answer!');
+  }
+  
+  renderDetSheet();
+  phase='move'; // allow another move or end turn
+}
+
+function doAccuse(){
+  const suspect=document.getElementById('suspectSelect').value;
+  const weapon=document.getElementById('weaponSelect').value;
+  const room=document.getElementById('roomSelect').value;
+  hideSuggest();
+  
+  log(`ACCUSATION: ${suspect} / ${weapon} / ${room}`);
+  
+  if(suspect===solution.suspect&&weapon===solution.weapon&&room===solution.room){
+    gameOver=true;
+    document.getElementById('resultTitle').textContent='🏆 CORRECT!';
+    document.getElementById('resultTitle').style.color='#22c55e';
+    document.getElementById('resultInfo').innerHTML=`${suspect} with the ${weapon} in the ${room}!<br>Solved in ${turn} turns`;
+    document.getElementById('resultOverlay').style.display='flex';
+  }else{
+    gameOver=true;
+    document.getElementById('resultTitle').textContent='❌ WRONG!';
+    document.getElementById('resultTitle').style.color='#ef4444';
+    document.getElementById('resultInfo').innerHTML=`It was ${solution.suspect} with the ${solution.weapon} in the ${solution.room}`;
+    document.getElementById('resultOverlay').style.display='flex';
+  }
+}
+
+function endTurn(){
+  if(gameOver)return;
+  
+  // AI turn: simple deduction attempt
+  // AI marks cards it knows
+  const unknown=[...SUSPECTS,...WEAPONS,...ROOMS.slice(0,9)].filter(n=>!aiKnownCards.has(n));
+  
+  // Random chance AI solves based on remaining unknowns
+  if(unknown.length<=3&&Math.random()<.3){
+    // AI tries to solve
+    const aiSuspect=unknown.find(n=>SUSPECTS.includes(n))||solution.suspect;
+    const aiWeapon=unknown.find(n=>WEAPONS.includes(n))||solution.weapon;
+    const aiRoom=unknown.find(n=>ROOMS.includes(n))||solution.room;
+    
+    if(aiSuspect===solution.suspect&&aiWeapon===solution.weapon&&aiRoom===solution.room){
+      gameOver=true;
+      document.getElementById('resultTitle').textContent='AI SOLVED IT!';
+      document.getElementById('resultTitle').style.color='#ef4444';
+      document.getElementById('resultInfo').innerHTML=`AI found: ${solution.suspect} / ${solution.weapon} / ${solution.room}`;
+      document.getElementById('resultOverlay').style.display='flex';
+      return;
+    }
+  }
+  
+  // AI learns from suggestion (simplified: randomly learns a card)
+  if(Math.random()<.4){
+    const learnable=[...SUSPECTS,...WEAPONS,...ROOMS].filter(n=>!aiKnownCards.has(n));
+    if(learnable.length)aiKnownCards.add(learnable[Math.floor(Math.random()*learnable.length)]);
+  }
+  
+  turn++;phase='move';
+  updateHUD();
+  log('Turn '+turn+' — Your move');
+}
+
+function updateHUD(){
+  document.getElementById('turnEl').textContent='TURN '+turn;
+  document.getElementById('locEl').textContent='📍 '+ROOMS[playerLoc];
+}
+
+function log(msg){logLines.unshift(msg);if(logLines.length>10)logLines.pop();
+  document.getElementById('logEl').innerHTML=logLines.join('<br>')}
+</script>
+</body>
+</html>

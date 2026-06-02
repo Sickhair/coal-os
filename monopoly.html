@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Monopoly — COAL OS</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+body{background:#050510;display:flex;flex-direction:column;align-items:center;min-height:100vh;font-family:'Orbitron',sans-serif;color:#e2e8f0;overflow-x:hidden}
+.brand{font-size:.4rem;letter-spacing:4px;color:#334155;margin:6px 0 2px;text-transform:uppercase}
+.title{font-size:.9rem;font-weight:900;color:#22c55e;text-shadow:0 0 20px #22c55e44;letter-spacing:2px;margin-bottom:4px}
+.hud{display:flex;gap:8px;align-items:center;margin-bottom:4px;font-size:.5rem;flex-wrap:wrap;justify-content:center}
+.board{display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(7,1fr);gap:1px;width:min(95vw,420px);height:min(95vw,420px);margin-bottom:6px}
+.space{background:#0f172a;border:1px solid #1e293b;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:.3rem;padding:1px;text-align:center;position:relative;cursor:pointer}
+.space.corner{background:#1e293b;font-size:.35rem}
+.space .color-bar{position:absolute;top:0;left:0;right:0;height:4px}
+.space.owned-player{border-color:#3b82f6}
+.space.owned-ai{border-color:#ef4444}
+.space .tokens{font-size:.5rem;margin-top:1px}
+.player-info{display:flex;gap:12px;margin-bottom:4px;font-size:.5rem;flex-wrap:wrap;justify-content:center}
+.player-info .money{font-weight:700}
+.actions{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;margin-bottom:4px}
+.btn{background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:.25rem .6rem;border-radius:4px;font-family:inherit;font-size:.45rem;cursor:pointer}
+.btn:active{background:#334155;color:#fff}
+.btn.primary{border-color:#22c55e;color:#22c55e}
+.log{font-size:.38rem;color:#64748b;max-width:95vw;text-align:center;line-height:1.4;max-height:60px;overflow-y:auto}
+.dice{font-size:1.5rem;margin:4px}
+</style>
+</head>
+<body>
+<div class="brand">COAL OS</div>
+<div class="title">💰 COAL MONOPOLY</div>
+<div class="player-info">
+  <div style="color:#3b82f6">YOU: $<span class="money" id="pMoney">1500</span></div>
+  <div style="color:#ef4444">AI: $<span class="money" id="aMoney">1500</span></div>
+  <div style="color:#64748b" id="turnLabel">YOUR TURN</div>
+</div>
+<div class="dice" id="diceEl">🎲</div>
+<div class="actions">
+  <button class="btn primary" id="rollBtn" onclick="rollDice()">🎲 ROLL</button>
+  <button class="btn" id="buyBtn" onclick="buyProperty()" style="display:none">BUY</button>
+  <button class="btn" id="passBtn" onclick="passBuy()" style="display:none">PASS</button>
+</div>
+<div class="board" id="board"></div>
+<div class="log" id="logEl"></div>
+
+<script>
+// Board: 24 spaces (simplified Monopoly)
+const SPACES=[
+  {name:'GO',type:'go',color:null,price:0},
+  {name:'Mediterranean',type:'property',color:'#8b4513',price:60,rent:[2,10,30,90,160,250]},
+  {name:'Community Chest',type:'chest',color:null,price:0},
+  {name:'Baltic',type:'property',color:'#8b4513',price:60,rent:[4,20,60,180,320,450]},
+  {name:'Income Tax',type:'tax',color:null,price:0},
+  {name:'Reading RR',type:'railroad',color:null,price:200,rent:25},
+  {name:'Oriental',type:'property',color:'#06b6d4',price:100,rent:[6,30,90,270,400,550]},
+  {name:'Chance',type:'chance',color:null,price:0},
+  {name:'Vermont',type:'property',color:'#06b6d4',price:100,rent:[6,30,90,270,400,550]},
+  {name:'Connecticut',type:'property',color:'#06b6d4',price:120,rent:[8,40,100,300,450,600]},
+  // Row 2 (sides)
+  {name:'Jail',type:'jail',color:null,price:0},
+  {name:'St. Charles',type:'property',color:'#a855f7',price:140,rent:[10,50,150,450,625,750]},
+  {name:'Electric Co',type:'utility',color:null,price:150,rent:0},
+  {name:'States',type:'property',color:'#a855f7',price:140,rent:[10,50,150,450,625,750]},
+  {name:'Virginia',type:'property',color:'#a855f7',price:160,rent:[12,60,180,500,700,900]},
+  {name:'Penn RR',type:'railroad',color:null,price:200,rent:25},
+  {name:'St. James',type:'property',color:'#f59e0b',price:180,rent:[14,70,200,550,750,950]},
+  {name:'Community Chest',type:'chest',color:null,price:0},
+  {name:'Tennessee',type:'property',color:'#f59e0b',price:180,rent:[14,70,200,550,750,950]},
+  {name:'New York',type:'property',color:'#f59e0b',price:200,rent:[16,80,220,600,800,1000]},
+  // Row 3
+  {name:'Free Parking',type:'parking',color:null,price:0},
+  {name:'Kentucky',type:'property',color:'#ef4444',price:220,rent:[18,90,250,700,875,1050]},
+  {name:'Chance',type:'chance',color:null,price:0},
+  {name:'Indiana',type:'property',color:'#ef4444',price:220,rent:[18,90,250,700,875,1050]},
+  {name:'Illinois',type:'property',color:'#ef4444',price:240,rent:[20,100,300,750,925,1100]},
+];
+
+// Assign grid positions (7x7, perimeter)
+// Top row: spaces 0-4 (right to left), corners at ends
+// Sides wrap around
+
+let pPos=0,aPos=0,pMoney=1500,aMoney=1500,properties,turn,phase,logLines,gameOver;
+
+function initProperties(){
+  properties=SPACES.map((s,i)=>({...s,idx:i,owner:null,houses:0}));
+}
+
+function startGame(){
+  pPos=0;aPos=0;pMoney=1500;aMoney=1500;
+  turn='player';phase='roll';logLines=[];gameOver=false;
+  initProperties();render();updateInfo();
+  log('Game started! Roll the dice.');
+}
+
+function rollDice(){
+  if(phase!=='roll'||turn!=='player')return;
+  const d1=Math.floor(Math.random()*6)+1;
+  const d2=Math.floor(Math.random()*6)+1;
+  const total=d1+d2;
+  document.getElementById('diceEl').textContent=`🎲 ${d1}+${d2}=${total}`;
+  
+  pPos=(pPos+total)%SPACES.length;
+  log(`You rolled ${total}, landed on ${SPACES[pPos].name}`);
+  landOn(pPos,'player');
+  render();
+}
+
+function landOn(pos,who){
+  const space=properties[pos];
+  const money=who==='player'?pMoney:aMoney;
+  const setMoney=who==='player'?(v)=>{pMoney=v}:v=>{aMoney=v};
+  
+  if(space.type==='property'||space.type==='railroad'||space.type==='utility'){
+    if(!space.owner){
+      if(who==='player'){
+        if(pMoney>=space.price){
+          phase='buy';
+          document.getElementById('buyBtn').style.display='';
+          document.getElementById('passBtn').style.display='';
+          document.getElementById('rollBtn').style.display='none';
+          log(`${space.name} is available for $${space.price}`);
+          return;
+        }
+      }else{
+        // AI auto-buys if can afford
+        if(aMoney>=space.price){space.owner='ai';aMoney-=space.price;log(`AI bought ${space.name} for $${space.price}`)}
+      }
+    }else if(space.owner!==who){
+      // Pay rent
+      let rent=0;
+      if(space.type==='property'){
+        const houses=space.houses;
+        rent=space.rent[Math.min(houses,5)];
+      }else if(space.type==='railroad'){
+        const rrCount=properties.filter(p=>p.type==='railroad'&&p.owner===space.owner).length;
+        rent=25*rrCount;
+      }else{
+        rent=Math.floor(Math.random()*10+2)*10;
+      }
+      setMoney(money-rent);
+      if(space.owner==='player')pMoney+=rent;else aMoney+=rent;
+      log(`${who==='player'?'You':'AI'} paid $${rent} rent on ${space.name}`);
+      
+      if(who==='player'&&pMoney<0){gameOver=true;log('You went bankrupt!')}
+      if(who==='ai'&&aMoney<0){gameOver=true;log('AI went bankrupt! You win!')}
+    }
+  }else if(space.type==='tax'){
+    setMoney(money-200);log(`${who==='player'?'You':'AI'} paid $200 tax`);
+  }else if(space.type==='chest'){
+    const amt=Math.random()>.5?50:-50;
+    setMoney(money+amt);log(`Community Chest: ${amt>0?'Collect':'Pay'} $${Math.abs(amt)}`);
+  }else if(space.type==='chance'){
+    const amt=Math.random()>.5?100:-100;
+    setMoney(money+amt);log(`Chance: ${amt>0?'Collect':'Pay'} $${Math.abs(amt)}`);
+  }else if(space.type==='go'){
+    setMoney(money+200);log(`${who==='player'?'You':'AI'} collected $200 for passing GO`);
+  }
+  
+  if(who==='player'&&phase!=='buy'){endPlayerTurn()}
+  updateInfo();
+}
+
+function buyProperty(){
+  if(phase!=='buy')return;
+  const space=properties[pPos];
+  if(pMoney>=space.price){
+    space.owner='player';pMoney-=space.price;
+    log(`You bought ${space.name} for $${space.price}`);
+  }
+  document.getElementById('buyBtn').style.display='none';
+  document.getElementById('passBtn').style.display='none';
+  document.getElementById('rollBtn').style.display='';
+  endPlayerTurn();
+}
+
+function passBuy(){
+  document.getElementById('buyBtn').style.display='none';
+  document.getElementById('passBtn').style.display='none';
+  document.getElementById('rollBtn').style.display='';
+  log('You passed');
+  endPlayerTurn();
+}
+
+function endPlayerTurn(){
+  if(gameOver)return;
+  turn='ai';phase='ai';
+  updateInfo();
+  setTimeout(aiTurn,800);
+}
+
+function aiTurn(){
+  if(gameOver)return;
+  const d1=Math.floor(Math.random()*6)+1,d2=Math.floor(Math.random()*6)+1;
+  const total=d1+d2;
+  document.getElementById('diceEl').textContent=`🎲 ${d1}+${d2}=${total}`;
+  aPos=(aPos+total)%SPACES.length;
+  log(`AI rolled ${total}, landed on ${SPACES[aPos].name}`);
+  landOn(aPos,'ai');
+  
+  // AI builds houses on owned properties
+  properties.forEach(p=>{
+    if(p.owner==='ai'&&p.type==='property'&&p.houses<3&&aMoney>100){
+      const cost=Math.floor(p.price*.5);
+      if(aMoney>=cost&&Math.random()<.3){p.houses++;aMoney-=cost;log(`AI built house on ${p.name}`)}
+    }
+  });
+  
+  if(!gameOver){
+    turn='player';phase='roll';
+    updateInfo();
+  }
+  render();
+}
+
+function updateInfo(){
+  document.getElementById('pMoney').textContent=pMoney;
+  document.getElementById('aMoney').textContent=aMoney;
+  document.getElementById('turnLabel').textContent=turn==='player'?'YOUR TURN':'AI TURN';
+}
+
+function render(){
+  const el=document.getElementById('board');el.innerHTML='';
+  
+  // Map spaces to grid positions (simplified: top row spaces 20-24, right col spaces 0-4, bottom row reversed, left col)
+  // Simple: just lay them in a grid path
+  const gridPositions=[];
+  // Bottom row: left to right, spaces 0-4
+  for(let i=0;i<5;i++)gridPositions.push({col:i+1,row:6,space:i});
+  // Right column: bottom to top, spaces 5-9
+  for(let i=0;i<5;i++)gridPositions.push({col:6,row:5-i,space:5+i});
+  // Top row: right to left, spaces 10-14
+  for(let i=0;i<5;i++)gridPositions.push({col:5-i,row:0,space:10+i});
+  // Left column: top to bottom, spaces 15-19
+  for(let i=0;i<5;i++)gridPositions.push({col:0,row:1+i,space:15+i});
+  
+  // Corner spaces
+  const corners=[{col:0,row:6,space:20},{col:6,row:6,space:5},{col:6,row:0,space:10},{col:0,row:0,space:15}];
+  // Adjust: corners at 0,5,10,15
+  // Actually let me just use a simpler mapping
+  
+  // Fill 7x7 grid
+  const grid=Array(7).fill(null).map(()=>Array(7).fill(null));
+  
+  // Bottom: spaces 0-6
+  for(let i=0;i<7;i++)grid[6][i]=i;
+  // Right: spaces 7-12
+  for(let i=0;i<6;i++)grid[5-i][6]=7+i;
+  // Top: spaces 13-18
+  for(let i=0;i<6;i++)grid[0][5-i]=13+i;
+  // Left: spaces 19-23
+  for(let i=0;i<5;i++)grid[1+i][0]=19+i;
+  
+  for(let r=0;r<7;r++)for(let c=0;c<7;c++){
+    const si=grid[r][c];
+    if(si===null){
+      // Center area - skip
+      continue;
+    }
+    const space=si<SPACES.length?properties[si]:null;
+    if(!space)continue;
+    
+    const d=document.createElement('div');
+    d.className='space'+(si===0||si===6||si===13||si===19?' corner':'');
+    if(space.owner==='player')d.classList.add('owned-player');
+    if(space.owner==='ai')d.classList.add('owned-ai');
+    
+    let html='';
+    if(space.color)html+=`<div class="color-bar" style="background:${space.color}"></div>`;
+    html+=`<div>${space.name.substring(0,6)}</div>`;
+    if(space.price)html+=`<div style="color:#f59e0b;font-size:.28rem">$${space.price}${space.houses>0?' 🏠'+space.houses:''}</div>`;
+    
+    // Tokens
+    let tokens='';
+    if(pPos===si)tokens+='🔵';
+    if(aPos===si)tokens+='🔴';
+    if(tokens)html+=`<div class="tokens">${tokens}</div>`;
+    
+    d.innerHTML=html;
+    d.style.gridColumn=c+1;d.style.gridRow=r+1;
+    el.appendChild(d);
+  }
+}
+
+function log(msg){logLines.unshift(msg);if(logLines.length>12)logLines.pop();
+  document.getElementById('logEl').innerHTML=logLines.join(' · ')}
+
+// Init
+document.addEventListener('DOMContentLoaded',()=>{
+  // Show menu
+  startGame();
+});
+</script>
+</body>
+</html>
