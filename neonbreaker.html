@@ -124,7 +124,7 @@ function loop(){
         b.hp--;combo++;
         if(b.hp<=0){b.alive=false;addP(b.x+b.w/2,b.y+b.h/2,b.color,10);
           // Power-up chance
-          if(Math.random()<.15)powerups.push({x:b.x+b.w/2,y:b.y+b.h/2,type:['wide','multi','life'][Math.floor(Math.random()*3)],vy:2});
+          if(Math.random()<.15)powerups.push({x:b.x+b.w/2,y:b.y+b.h/2,type:['wide','multi','life'][Math.floor(Math.random()*3)],vy:2,r:8});
         }else{addP(b.x+b.w/2,b.y+b.h/2,b.color,4)}
         score+=10*combo;
         break;
