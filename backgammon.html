@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Backgammon — COAL OS</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+body{background:#050510;display:flex;flex-direction:column;align-items:center;min-height:100vh;font-family:'Orbitron',sans-serif;color:#e2e8f0;overflow-x:hidden}
+.brand{font-size:.4rem;letter-spacing:4px;color:#334155;margin:6px 0 2px;text-transform:uppercase}
+.title{font-size:.85rem;font-weight:900;color:#8b4513;text-shadow:0 0 20px #8b451344;letter-spacing:2px;margin-bottom:4px}
+a.back{position:fixed;top:8px;left:8px;z-index:200;text-decoration:none;font-family:'Orbitron',sans-serif;font-size:.5rem;color:#475569;opacity:.6}
+.hud{display:flex;gap:10px;align-items:center;margin-bottom:4px;font-size:.5rem;flex-wrap:wrap;justify-content:center}
+.board{display:flex;width:min(95vw,500px);height:min(70vh,360px);border:3px solid #4a3520;border-radius:6px;overflow:hidden;margin-bottom:6px;position:relative}
+.side{display:flex;flex-direction:column;flex:1}
+.point{flex:1;position:relative;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:2px;min-height:0;transition:background .15s}
+.point:hover{background:rgba(255,255,255,.03)}
+.point.bottom{justify-content:flex-end}
+.point.dark{background:#2a1a0a}.point.light{background:#3a2a15}
+.point.selected{background:#f59e0b22;box-shadow:inset 0 0 10px #f59e0b44}
+.point.valid{background:#22c55e11}
+.bar{width:min(8vw,40px);background:#1a0f05;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-left:2px solid #4a3520;border-right:2px solid #4a3520}
+.checker{width:min(9vw,34px);height:min(3.5vh,16px);border-radius:50%;flex-shrink:0}
+.checker.p1{background:#e2e8f0;border:1px solid #94a3b8;box-shadow:0 1px 3px #000}
+.checker.p2{background:#1e293b;border:1px solid #475569;box-shadow:0 1px 3px #000}
+.dice{display:flex;gap:6px;margin-bottom:4px;justify-content:center}
+.die{width:min(8vw,32px);height:min(8vw,32px);background:#e2e8f0;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:min(4vw,18px);font-weight:900;color:#1e293b}
+.actions{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;margin-bottom:4px}
+.btn{background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:.25rem .6rem;border-radius:4px;font-family:inherit;font-size:.45rem;cursor:pointer}
+.btn:active{background:#334155;color:#fff}
+.btn.primary{border-color:#f59e0b;color:#f59e0b}
+.status{font-size:.45rem;color:#64748b;min-height:14px;text-align:center;margin-bottom:4px}
+</style>
+</head>
+<body>
+<div class="brand">COAL OS</div>
+<a class="back" href="index.html">← COAL OS</a>
+<div class="title">🎲 BACKGAMMON</div>
+<div class="hud">
+  <span style="color:#e2e8f0" id="p1Label">⚪ You</span>
+  <span style="color:#64748b" id="turnLabel">YOUR TURN</span>
+  <span style="color:#64748b" id="p2Label">⚫ AI</span>
+</div>
+<div class="status" id="status">Roll the dice!</div>
+<div class="dice" id="diceEl"></div>
+<div class="actions">
+  <button class="btn primary" id="rollBtn" onclick="rollDice()">🎲 ROLL</button>
+  <button class="btn" onclick="resetGame()">NEW GAME</button>
+</div>
+<div class="board" id="board"></div>
+
+<script>
+// Board: 24 points (0-23), player 1 moves 23→0, player 2 moves 0→23
+// Point 0-11 = bottom row (right to left for display), 12-23 = top row (left to right)
+let board,bar,borneOff,turn,dice,movesLeft,selected,gameOver;
+
+function resetGame(){
+  board=Array(24).fill(null).map(()=>({count:0,player:null}));
+  // Standard starting position
+  // Player 1 (white, moves high to low)
+  board[23]={count:2,player:1};board[12]={count:5,player:1};
+  board[7]={count:3,player:1};board[5]={count:5,player:1};
+  // Player 2 (dark, moves low to high)
+  board[0]={count:2,player:2};board[11]={count:5,player:2};
+  board[16]={count:3,player:2};board[18]={count:5,player:2};
+  
+  bar={1:0,2:0};borneOff={1:0,2:0};
+  turn=1;dice=[];movesLeft=[];selected=null;gameOver=false;
+  render();updateStatus();
+}
+
+function rollDice(){
+  if(gameOver||dice.length>0)return;
+  const d1=Math.floor(Math.random()*6)+1;
+  const d2=Math.floor(Math.random()*6)+1;
+  dice=[d1,d2];
+  movesLeft=d1===d2?[d1,d1,d1,d1]:[d1,d2];
+  document.getElementById('rollBtn').disabled=true;
+  render();updateStatus();
+  
+  if(turn===2){setTimeout(aiMove,600)}
+}
+
+function getValidMoves(from,die){
+  const p=turn;
+  const to=p===1?from-die:from+die;
+  // Check bearing off
+  if(p===1&&to<0){
+    if(canBearOff(p)&&from===from+die-(die-(from+1))){/* exact */}
+    if(canBearOff(p)){const farthest=getFarthest(p);if(from===farthest||to===from-die)return['off']}
+  }
+  if(p===2&&to>23){
+    if(canBearOff(p)){const farthest=getFarthest(p);if(from===farthest||to===from+die)return['off']}
+  }
+  if(to<0||to>23)return[];
+  if(board[to].player!==null&&board[to].player!==p&&board[to].count>1)return[];
+  return[to];
+}
+
+function canBearOff(p){
+  if(bar[p]>0)return false;
+  if(p===1){for(let i=6;i<24;i++)if(board[i].player===1&&board[i].count>0)return false}
+  else{for(let i=0;i<18;i++)if(board[i].player===2&&board[i].count>0)return false}
+  return true;
+}
+
+function getFarthest(p){
+  if(p===1){for(let i=0;i<=5;i++)if(board[i].player===1)return i;return 5}
+  else{for(let i=23;i>=18;i--)if(board[i].player===2)return i;return 18}
+}
+
+function moveChecker(from,to){
+  const p=turn;
+  // Remove from source
+  if(from==='bar'){bar[p]--}
+  else{board[from].count--;if(board[from].count===0)board[from].player=null}
+  
+  if(to==='off'){borneOff[p]++;checkWin();return}
+  
+  // Hit opponent
+  if(board[to].player!==null&&board[to].player!==p&&board[to].count===1){
+    bar[board[to].player]++;board[to].count=0;board[to].player=null;
+  }
+  
+  board[to].count++;board[to].player=p;
+}
+
+function clickPoint(idx){
+  if(gameOver||turn!==1||dice.length===0)return;
+  
+  // Must enter from bar first
+  if(bar[1]>0){
+    if(idx===selected)return;
+    // Find valid entry points
+    for(const die of [...new Set(movesLeft)]){
+      const entry=24-die; // player 1 enters at 24-die
+      if(idx===entry&&(board[idx].player===null||board[idx].player===1||board[idx].count<=1)){
+        moveChecker('bar',idx);
+        const di=movesLeft.indexOf(die);movesLeft.splice(di,1);
+        selected=null;endTurnCheck();render();return;
+      }
+    }
+    return;
+  }
+  
+  if(selected===null){
+    if(board[idx].player===1&&board[idx].count>0){selected=idx;render()}
+    return;
+  }
+  
+  if(idx===selected){selected=null;render();return}
+  
+  // Try to move
+  const die=Math.abs(selected-idx);
+  if(movesLeft.includes(die)){
+    const valid=getValidMoves(selected,die);
+    if(valid.includes(idx)){
+      moveChecker(selected,idx);
+      const di=movesLeft.indexOf(die);movesLeft.splice(di,1);
+      selected=null;endTurnCheck();render();return;
+    }
+  }
+  
+  // Clicked different own checker
+  if(board[idx].player===1){selected=idx;render()}
+}
+
+function endTurnCheck(){
+  if(movesLeft.length===0||!hasValidMoves()){endTurn()}
+}
+
+function hasValidMoves(){
+  const p=turn;
+  if(bar[p]>0){
+    return movesLeft.some(d=>{const e=p===1?24-d:d-1;return board[e].player===null||board[e].player===p||board[e].count<=1});
+  }
+  for(let i=0;i<24;i++){
+    if(board[i].player===p&&board[i].count>0){
+      for(const d of movesLeft){
+        if(getValidMoves(i,d).length>0)return true;
+      }
+    }
+  }
+  return false;
+}
+
+function endTurn(){
+  dice=[];movesLeft=[];selected=null;
+  turn=turn===1?2:1;
+  document.getElementById('rollBtn').disabled=turn!==1;
+  render();updateStatus();
+  if(turn===2)setTimeout(()=>{if(!gameOver)rollDice()},800);
+}
+
+function checkWin(){
+  if(borneOff[1]>=15){gameOver=true;document.getElementById('status').textContent='🏆 YOU WIN!';document.getElementById('status').style.color='#22c55e'}
+  if(borneOff[2]>=15){gameOver=true;document.getElementById('status').textContent='AI WINS!';document.getElementById('status').style.color='#ef4444'}
+}
+
+function aiMove(){
+  if(gameOver)return;
+  // Simple AI: try each move
+  let didMove=false;
+  for(let attempt=0;attempt<4&&movesLeft.length>0;attempt++){
+    if(bar[2]>0){
+      for(const d of [...new Set(movesLeft)]){
+        const e=d-1;
+        if(board[e].player===null||board[e].player===2||board[e].count<=1){
+          moveChecker('bar',e);movesLeft.splice(movesLeft.indexOf(d),1);didMove=true;break;
+        }
+      }
+      continue;
+    }
+    let bestFrom=-1,bestTo=-1,bestDie=-1,bestScore=-1;
+    for(let i=0;i<24;i++){
+      if(board[i].player!==2||board[i].count===0)continue;
+      for(const d of [...new Set(movesLeft)]){
+        const targets=getValidMoves(i,d);
+        for(const t of targets){
+          let score=Math.random()*2;
+          if(t==='off')score+=10;
+          else if(board[t].player===2)score+=3; // stack
+          else if(board[t].player===1&&board[t].count===1)score+=5; // hit
+          if(score>bestScore){bestScore=score;bestFrom=i;bestTo=t;bestDie=d}
+        }
+      }
+    }
+    if(bestFrom>=0){
+      moveChecker(bestFrom,bestTo);movesLeft.splice(movesLeft.indexOf(bestDie),1);didMove=true;
+    }else break;
+  }
+  endTurn();
+}
+
+function updateStatus(){
+  if(!gameOver){
+    let s=turn===1?'Your turn':'AI thinking';
+    if(movesLeft.length)s+=' — moves left: '+movesLeft.join(', ');
+    if(bar[1]>0)s+=' ⚠ Enter from bar!';
+    document.getElementById('status').textContent=s;
+    document.getElementById('status').style.color='#64748b';
+  }
+  document.getElementById('turnLabel').textContent=turn===1?'YOUR TURN':'AI TURN';
+}
+
+function render(){
+  // Dice
+  const de=document.getElementById('diceEl');
+  de.innerHTML=dice.length?dice.map(d=>`<div class="die">${d}</div>`).join(''):'<div style="font-size:.5rem;color:#334155">Roll to start</div>';
+  
+  const el=document.getElementById('board');el.innerHTML='';
+  
+  // Left side (points 12-17 top, 11-6 bottom)
+  const left=document.createElement('div');left.className='side';
+  for(let i=12;i<=17;i++)left.appendChild(renderPoint(i,'top'));
+  const barDiv=document.createElement('div');bar.className='bar';bar.innerHTML='';
+  // Bar checkers
+  if(bar[1]>0)for(let j=0;j<bar[1];j++){const c=document.createElement('div');c.className='checker p1';barDiv.appendChild(c)}
+  if(bar[2]>0)for(let j=0;j<bar[2];j++){const c=document.createElement('div');c.className='checker p2';barDiv.appendChild(c)}
+  for(let i=11;i>=6;i--)left.appendChild(renderPoint(i,'bottom'));
+  
+  // Right side (points 18-23 top, 5-0 bottom)
+  const right=document.createElement('div');right.className='side';
+  for(let i=18;i<=23;i++)right.appendChild(renderPoint(i,'top'));
+  const barDiv2=document.createElement('div');barDiv2.className='bar';
+  if(borneOff[2]>0){const b=document.createElement('div');b.style.cssText='font-size:.4rem;color:#64748b';b.textContent='OFF:'+borneOff[2];barDiv2.appendChild(b)}
+  if(borneOff[1]>0){const b=document.createElement('div');b.style.cssText='font-size:.4rem;color:#e2e8f0';b.textContent='OFF:'+borneOff[1];barDiv2.appendChild(b)}
+  for(let i=5;i>=0;i--)right.appendChild(renderPoint(i,'bottom'));
+  
+  el.appendChild(left);el.appendChild(barDiv);el.appendChild(right);
+}
+
+function renderPoint(idx,side){
+  const p=board[idx];
+  const d=document.createElement('div');
+  d.className='point '+(idx%2===0?'dark':'light')+(side==='bottom'?' bottom':'');
+  if(selected===idx)d.classList.add('selected');
+  
+  // Show valid move indicators
+  if(selected!==null&&turn===1&&movesLeft.length>0){
+    const die=Math.abs(selected-idx);
+    if(movesLeft.includes(die)&&getValidMoves(selected,die).includes(idx))d.classList.add('valid');
+  }
+  
+  // Checkers
+  const maxShow=Math.min(p.count,5);
+  for(let i=0;i<maxShow;i++){
+    const c=document.createElement('div');c.className='checker p'+p.player;d.appendChild(c);
+  }
+  if(p.count>5){const c=document.createElement('div');c.style.cssText='font-size:.35rem;color:#f59e0b';c.textContent=p.count;d.appendChild(c)}
+  
+  d.onclick=()=>clickPoint(idx);
+  return d;
+}
+
+resetGame();
+</script>
+</body>
+</html>

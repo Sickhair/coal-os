@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Yahtzee — COAL OS</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+body{background:#050510;display:flex;flex-direction:column;align-items:center;min-height:100vh;font-family:'Orbitron',sans-serif;color:#e2e8f0;overflow-x:hidden}
+.brand{font-size:.4rem;letter-spacing:4px;color:#334155;margin:6px 0 2px;text-transform:uppercase}
+.title{font-size:.9rem;font-weight:900;color:#f59e0b;text-shadow:0 0 20px #f59e0b44;letter-spacing:2px;margin-bottom:4px}
+.top{display:flex;gap:10px;align-items:center;margin-bottom:6px;font-size:.5rem;flex-wrap:wrap;justify-content:center}
+.dice-row{display:flex;gap:8px;margin-bottom:8px;justify-content:center}
+.die{width:min(14vw,56px);height:min(14vw,56px);background:#1e293b;border:2px solid #334155;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:min(7vw,28px);cursor:pointer;transition:all .15s;position:relative}
+.die:hover{border-color:#f59e0b44}
+.die.held{border-color:#f59e0b;background:#f59e0b11}
+.die.held::after{content:'HELD';position:absolute;bottom:2px;font-size:.25rem;color:#f59e0b;letter-spacing:1px}
+.die .pip{width:6px;height:6px;background:#e2e8f0;border-radius:50%}
+.actions{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;justify-content:center}
+.btn{background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:.3rem .8rem;border-radius:4px;font-family:inherit;font-size:.5rem;cursor:pointer}
+.btn:active{background:#334155;color:#fff}
+.btn.primary{border-color:#f59e0b;color:#f59e0b}
+.btn:disabled{opacity:.3;cursor:not-allowed}
+.scorecard{width:min(95vw,400px);margin-bottom:8px}
+.scorecard table{width:100%;border-collapse:collapse;font-size:.4rem}
+.scorecard th{background:#1e293b;padding:4px 6px;text-align:left;letter-spacing:1px;color:#64748b;font-weight:400}
+.scorecard td{padding:3px 6px;border-bottom:1px solid #1e293b}
+.scorecard tr.clickable{cursor:pointer}.scorecard tr.clickable:hover{background:#1e293b33}
+.scorecard .val{text-align:right;font-weight:700}
+.scorecard .potential{color:#f59e0b88}.scorecard .scored{color:#22c55e}.scorecard .zero{color:#ef444488}
+.scorecard .section{background:#0f172a;color:#475569;font-weight:700;letter-spacing:2px}
+.scorecard .upper-total{border-top:2px solid #334155;font-weight:700;color:#f59e0b}
+.scorecard .grand-total{border-top:2px solid #f59e0b;font-weight:900;color:#f59e0b;font-size:.5rem}
+</style>
+</head>
+<body>
+<div class="brand">COAL OS</div>
+<a href="index.html" style="position:fixed;top:8px;left:8px;z-index:200;text-decoration:none;font-family:'Orbitron',sans-serif;font-size:.5rem;color:#475569;opacity:.6">← COAL OS</a>
+<div class="title">🎲 YAHTZEE</div>
+<div class="top">
+  <span style="color:#64748b">ROLL <span id="rollNum">0</span>/3</span>
+  <span style="color:#64748b">ROUND <span id="roundNum">1</span>/13</span>
+  <span style="color:#f59e0b;font-weight:700" id="totalEl">TOTAL: 0</span>
+</div>
+<div class="dice-row" id="diceRow"></div>
+<div class="actions">
+  <button class="btn primary" id="rollBtn" onclick="rollDice()">🎲 ROLL</button>
+</div>
+<div class="scorecard" id="scorecard"></div>
+<script>
+const CATEGORIES=[
+  {id:'ones',name:'Ones',section:'upper',fn:d=>d.filter(x=>x===1).reduce((a,b)=>a+b,0)},
+  {id:'twos',name:'Twos',section:'upper',fn:d=>d.filter(x=>x===2).reduce((a,b)=>a+b,0)},
+  {id:'threes',name:'Threes',section:'upper',fn:d=>d.filter(x=>x===3).reduce((a,b)=>a+b,0)},
+  {id:'fours',name:'Fours',section:'upper',fn:d=>d.filter(x=>x===4).reduce((a,b)=>a+b,0)},
+  {id:'fives',name:'Fives',section:'upper',fn:d=>d.filter(x=>x===5).reduce((a,b)=>a+b,0)},
+  {id:'sixes',name:'Sixes',section:'upper',fn:d=>d.filter(x=>x===6).reduce((a,b)=>a+b,0)},
+  {id:'three',name:'3 of a Kind',section:'lower',fn:d=>{const c=[0,0,0,0,0,0,0];d.forEach(x=>c[x]++);return c.some(x=>x>=3)?d.reduce((a,b)=>a+b,0):0}},
+  {id:'four',name:'4 of a Kind',section:'lower',fn:d=>{const c=[0,0,0,0,0,0,0];d.forEach(x=>c[x]++);return c.some(x=>x>=4)?d.reduce((a,b)=>a+b,0):0}},
+  {id:'full',name:'Full House',section:'lower',fn:d=>{const c=[0,0,0,0,0,0,0];d.forEach(x=>c[x]++);const v=c.filter(x=>x>0).sort();return v.length===2&&((v[0]===2&&v[1]===3)||(v[0]===3&&v[1]===2))?25:0}},
+  {id:'smStraight',name:'Sm Straight',section:'lower',fn:d=>{const s=[...new Set(d)].sort((a,b)=>a-b);const str=s.join('');return str.includes('1234')||str.includes('2345')||str.includes('3456')?30:0}},
+  {id:'lgStraight',name:'Lg Straight',section:'lower',fn:d=>{const s=[...new Set(d)].sort((a,b)=>a-b).join('');return s==='12345'||s==='23456'?40:0}},
+  {id:'yahtzee',name:'YAHTZEE!',section:'lower',fn:d=>new Set(d).size===1?50:0},
+  {id:'chance',name:'Chance',section:'lower',fn:d=>d.reduce((a,b)=>a+b,0)},
+];
+
+let dice,held,rolls,scores,round,gameOver;
+
+function startGame(){
+  dice=[0,0,0,0,0];held=[false,false,false,false,false];rolls=0;round=0;gameOver=false;
+  scores={};CATEGORIES.forEach(c=>scores[c.id]=null);
+  renderDice();renderScorecard();updateInfo();
+}
+
+function rollDice(){
+  if(gameOver||rolls>=3)return;
+  rolls++;
+  for(let i=0;i<5;i++){if(!held[i])dice[i]=Math.floor(Math.random()*6)+1}
+  renderDice();renderScorecard();updateInfo();
+}
+
+function toggleHold(i){
+  if(rolls===0||gameOver)return;
+  held[i]=!held[i];renderDice();
+}
+
+function scoreCategory(id){
+  if(gameOver||rolls===0||scores[id]!==null)return;
+  const cat=CATEGORIES.find(c=>c.id===id);
+  const val=cat.fn(dice);
+  scores[id]=val;
+  rolls=0;held=[false,false,false,false,false];dice=[0,0,0,0,0];
+  round++;
+  if(round>=13){gameOver=true;renderScorecard();updateInfo();
+    const total=getTotal();
+    setTimeout(()=>alert('Game Over! Final score: '+total),200);
+    return;
+  }
+  renderDice();renderScorecard();updateInfo();
+}
+
+function getUpperTotal(){
+  let s=0;CATEGORIES.filter(c=>c.section==='upper').forEach(c=>{if(scores[c.id]!==null)s+=scores[c.id]});return s;
+}
+function getUpperBonus(){return getUpperTotal()>=63?35:0}
+function getTotal(){
+  let s=0;CATEGORIES.forEach(c=>{if(scores[c.id]!==null)s+=scores[c.id]});s+=getUpperBonus();return s;
+}
+
+function updateInfo(){
+  document.getElementById('rollNum').textContent=rolls;
+  document.getElementById('roundNum').textContent=Math.min(round+1,13);
+  document.getElementById('totalEl').textContent='TOTAL: '+getTotal();
+  document.getElementById('rollBtn').disabled=rolls>=3||gameOver;
+}
+
+function renderDice(){
+  const el=document.getElementById('diceRow');el.innerHTML='';
+  for(let i=0;i<5;i++){
+    const d=document.createElement('div');d.className='die'+(held[i]?' held':'');
+    if(dice[i]>0){
+      // Draw pips
+      const pips=getPipPositions(dice[i]);
+      pips.forEach(([px,py])=>{
+        const p=document.createElement('div');p.className='pip';
+        p.style.position='absolute';p.style.left=px+'%';p.style.top=py+'%';
+        d.appendChild(p);
+      });
+    }
+    d.onclick=()=>toggleHold(i);
+    el.appendChild(d);
+  }
+}
+
+function getPipPositions(n){
+  const pos={
+    1:[[42,42]],
+    2:[[20,20],[64,64]],
+    3:[[20,20],[42,42],[64,64]],
+    4:[[20,20],[64,20],[20,64],[64,64]],
+    5:[[20,20],[64,20],[42,42],[20,64],[64,64]],
+    6:[[20,15],[64,15],[20,42],[64,42],[20,69],[64,69]],
+  };
+  return pos[n]||[];
+}
+
+function renderScorecard(){
+  const el=document.getElementById('scorecard');
+  let html='<table><tr><th>CATEGORY</th><th style="text-align:right">SCORE</th></tr>';
+  
+  // Upper section
+  html+='<tr class="section"><td colspan="2">UPPER SECTION</td></tr>';
+  CATEGORIES.filter(c=>c.section==='upper').forEach(c=>{
+    const val=scores[c.id];
+    const potential=rolls>0&&val===null?c.fn(dice):null;
+    const cls=val!==null?(val>0?'scored':'zero'):(potential!==null?'clickable potential':'');
+    html+=`<tr class="${cls}" onclick="scoreCategory('${c.id}')"><td>${c.name}</td><td class="val">${val!==null?val:(potential!==null?potential:'-')}</td></tr>`;
+  });
+  const ut=getUpperTotal();
+  html+=`<tr class="upper-total"><td>Upper Total</td><td class="val">${ut}</td></tr>`;
+  html+=`<tr><td>Bonus (${ut}/63)</td><td class="val">${getUpperBonus()}</td></tr>`;
+  
+  // Lower section
+  html+='<tr class="section"><td colspan="2">LOWER SECTION</td></tr>';
+  CATEGORIES.filter(c=>c.section==='lower').forEach(c=>{
+    const val=scores[c.id];
+    const potential=rolls>0&&val===null?c.fn(dice):null;
+    const cls=val!==null?(val>0?'scored':'zero'):(potential!==null?'clickable potential':'');
+    html+=`<tr class="${cls}" onclick="scoreCategory('${c.id}')"><td>${c.name}</td><td class="val">${val!==null?val:(potential!==null?potential:'-')}</td></tr>`;
+  });
+  
+  html+=`<tr class="grand-total"><td>GRAND TOTAL</td><td class="val">${getTotal()}</td></tr>`;
+  html+='</table>';
+  el.innerHTML=html;
+}
+
+startGame();
+</script>
+</body>
+</html>
