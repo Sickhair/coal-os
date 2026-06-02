@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Dominoes — COAL OS</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+body{background:#050510;display:flex;flex-direction:column;align-items:center;min-height:100vh;font-family:'Orbitron',sans-serif;color:#e2e8f0;overflow-x:hidden}
+.brand{font-size:.4rem;letter-spacing:4px;color:#334155;margin:6px 0 2px;text-transform:uppercase}
+.title{font-size:.85rem;font-weight:900;color:#60a5fa;text-shadow:0 0 20px #60a5fa44;letter-spacing:2px;margin-bottom:4px}
+a.back{position:fixed;top:8px;left:8px;z-index:200;text-decoration:none;font-family:'Orbitron',sans-serif;font-size:.5rem;color:#475569;opacity:.6}
+.hud{display:flex;gap:10px;align-items:center;margin-bottom:6px;font-size:.5rem;flex-wrap:wrap;justify-content:center}
+.status{font-size:.45rem;color:#64748b;min-height:14px;text-align:center;margin-bottom:6px}
+.chain{display:flex;gap:2px;margin-bottom:10px;padding:8px;overflow-x:auto;max-width:95vw;min-height:36px;align-items:center;background:#0a0e1a;border-radius:6px;border:1px solid #1e293b}
+.bone{display:inline-flex;flex-shrink:0;cursor:pointer;border-radius:4px;border:1.5px solid #475569;background:#1e293b;transition:all .15s}
+.bone:hover{border-color:#f59e0b88}
+.bone.selected{border-color:#f59e0b;box-shadow:0 0 8px #f59e0b44}
+.bone.playable{border-color:#22c55e66}
+.half{width:min(11vw,40px);height:min(17vw,60px);display:flex;align-items:center;justify-content:center;position:relative}
+.half+.half{border-left:1.5px solid #475569}
+.pip{position:absolute;width:5px;height:5px;background:#e2e8f0;border-radius:50%}
+.hand{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;margin-bottom:6px;max-width:95vw}
+.btn{background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:.25rem .6rem;border-radius:4px;font-family:inherit;font-size:.45rem;cursor:pointer}
+.btn:active{background:#334155;color:#fff}
+.btn.primary{border-color:#f59e0b;color:#f59e0b}
+.btn:disabled{opacity:.3;cursor:not-allowed}
+.actions{display:flex;gap:4px;margin-bottom:6px}
+.end-btns{display:flex;gap:4px;margin-top:4px}
+</style>
+</head>
+<body>
+<div class="brand">COAL OS</div>
+<a class="back" href="index.html">← COAL OS</a>
+<div class="title">🁣 DOMINOES</div>
+<div class="hud">
+  <span style="color:#e2e8f0">⚪ You: <span id="pCount">7</span></span>
+  <span style="color:#64748b" id="turnLabel">YOUR TURN</span>
+  <span style="color:#94a3b8">⚫ AI: <span id="aCount">7</span></span>
+  <span style="color:#334155">Boneyard: <span id="byCount">14</span></span>
+</div>
+<div class="status" id="status">Select a domino to play</div>
+<div class="chain" id="chain"></div>
+<div class="actions">
+  <button class="btn" id="drawBtn" onclick="drawFromBoneyard()"> DRAW</button>
+  <button class="btn" onclick="resetGame()">NEW GAME</button>
+</div>
+<div class="end-btns" id="endBtns" style="display:none">
+  <button class="btn primary" onclick="playEnd('left')">◀ LEFT END</button>
+  <button class="btn primary" onclick="playEnd('right')">RIGHT END ▶</button>
+</div>
+<div class="hand" id="hand"></div>
+
+<script>
+let chain,hand,aiHand,boneyard,turn,selected,gameOver,leftEnd,rightEnd;
+
+function makeSet(){
+  const set=[];
+  for(let a=0;a<=6;a++)for(let b=a;b<=6;b++)set.push([a,b]);
+  return set;
+}
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+
+function resetGame(){
+  const set=shuffle(makeSet());
+  hand=set.splice(0,7);aiHand=set.splice(0,7);boneyard=set;
+  chain=[];turn=1;selected=null;gameOver=false;leftEnd=-1;rightEnd=-1;
+  document.getElementById('endBtns').style.display='none';
+  render();updateStatus();
+}
+
+function canPlay(bone,end){
+  if(chain.length===0)return true;
+  const val=end==='left'?leftEnd:rightEnd;
+  return bone[0]===val||bone[1]===val;
+}
+
+function canPlayAny(bone){return canPlay(bone,'left')||canPlay(bone,'right')}
+
+function playBone(bone,end,playerHand){
+  const idx=playerHand.indexOf(bone);
+  if(idx===-1)return false;
+  playerHand.splice(idx,1);
+  
+  if(chain.length===0){
+    chain.push([bone[0],bone[1]]);leftEnd=bone[0];rightEnd=bone[1];
+  }else if(end==='left'){
+    if(bone[1]===leftEnd){chain.unshift([bone[0],bone[1]]);leftEnd=bone[0]}
+    else{chain.unshift([bone[1],bone[0]]);leftEnd=bone[1]}
+  }else{
+    if(bone[0]===rightEnd){chain.push([bone[0],bone[1]]);rightEnd=bone[1]}
+    else{chain.push([bone[1],bone[0]]);rightEnd=bone[0]}
+  }
+  return true;
+}
+
+function selectBone(idx){
+  if(gameOver||turn!==1)return;
+  const bone=hand[idx];
+  if(selected===idx){selected=null;document.getElementById('endBtns').style.display='none';render();return}
+  
+  if(!canPlayAny(bone)){document.getElementById('status').textContent="Can't play that domino!";return}
+  
+  selected=idx;
+  
+  if(chain.length===0){
+    playBone(bone,'right',hand);selected=null;endTurn();return;
+  }
+  
+  const canL=canPlay(bone,'left'),canR=canPlay(bone,'right');
+  if(canL&&canR&&leftEnd!==rightEnd){
+    document.getElementById('endBtns').style.display='flex';
+  }else if(canL){
+    playBone(bone,'left',hand);selected=null;endTurn();return;
+  }else{
+    playBone(bone,'right',hand);selected=null;endTurn();return;
+  }
+  render();
+}
+
+function playEnd(end){
+  if(selected===null)return;
+  const bone=hand[selected];
+  playBone(bone,end,hand);selected=null;
+  document.getElementById('endBtns').style.display='none';
+  endTurn();
+}
+
+function drawFromBoneyard(){
+  if(gameOver||turn!==1||boneyard.length===0)return;
+  hand.push(boneyard.pop());
+  render();updateStatus();
+}
+
+function endTurn(){
+  if(hand.length===0){gameOver=true;document.getElementById('status').textContent='🏆 YOU WIN!';document.getElementById('status').style.color='#22c55e';render();return}
+  if(aiHand.length===0){gameOver=true;document.getElementById('status').textContent='AI WINS!';document.getElementById('status').style.color='#ef4444';render();return}
+  turn=turn===1?2:1;
+  render();updateStatus();
+  if(turn===2)setTimeout(aiTurn,700);
+}
+
+function aiTurn(){
+  if(gameOver)return;
+  
+  // Try to play
+  for(let i=0;i<aiHand.length;i++){
+    const bone=aiHand[i];
+    let end=null;
+    if(chain.length===0)end='right';
+    else if(canPlay(bone,'right'))end='right';
+    else if(canPlay(bone,'left'))end='left';
+    if(end){playBone(bone,end,aiHand);endTurn();return}
+  }
+  
+  // Draw until can play or boneyard empty
+  let drawn=0;
+  while(boneyard.length>0){
+    aiHand.push(boneyard.pop());drawn++;
+    const last=aiHand[aiHand.length-1];
+    if(canPlayAny(last)){
+      let end=canPlay(last,'right')?'right':'left';
+      playBone(last,end,aiHand);endTurn();return;
+    }
+  }
+  
+  // Can't play, pass
+  document.getElementById('status').textContent='AI passes';
+  turn=1;render();updateStatus();
+}
+
+function updateStatus(){
+  document.getElementById('pCount').textContent=hand.length;
+  document.getElementById('aCount').textContent=aiHand.length;
+  document.getElementById('byCount').textContent=boneyard.length;
+  document.getElementById('turnLabel').textContent=turn===1?'YOUR TURN':'AI TURN';
+  document.getElementById('drawBtn').disabled=turn!==1||boneyard.length===0;
+  if(!gameOver){
+    let s=turn===1?'Select a domino to play':'AI thinking...';
+    if(turn===1&&hand.length>0&&!hand.some(b=>canPlayAny(b))&&boneyard.length===0)s='No moves! Passing...';
+    document.getElementById('status').textContent=s;
+    document.getElementById('status').style.color='#64748b';
+    // Auto pass if can't play
+    if(turn===1&&!hand.some(b=>canPlayAny(b))&&boneyard.length===0){
+      setTimeout(()=>{turn=2;render();updateStatus();if(turn===2)setTimeout(aiTurn,700)},1000);
+    }
+  }
+}
+
+const PIP_POS={
+  0:[],
+  1:[[50,50]],
+  2:[[28,28],[72,72]],
+  3:[[28,28],[50,50],[72,72]],
+  4:[[28,28],[72,28],[28,72],[72,72]],
+  5:[[28,28],[72,28],[50,50],[28,72],[72,72]],
+  6:[[28,22],[72,22],[28,50],[72,50],[28,78],[72,78]],
+};
+
+function renderBone(a,b,cls='',onclick=null){
+  const d=document.createElement('div');d.className='bone'+(cls?' '+cls:'');
+  if(onclick)d.onclick=onclick;
+  [a,b].forEach(val=>{
+    const h=document.createElement('div');h.className='half';
+    (PIP_POS[val]||[]).forEach(([x,y])=>{
+      const p=document.createElement('div');p.className='pip';
+      p.style.left=x+'%';p.style.top=y+'%';p.style.transform='translate(-50%,-50%)';
+      h.appendChild(p);
+    });
+    d.appendChild(h);
+  });
+  return d;
+}
+
+function render(){
+  // Chain
+  const ce=document.getElementById('chain');ce.innerHTML='';
+  chain.forEach(([a,b])=>ce.appendChild(renderBone(a,b)));
+  
+  // Hand
+  const he=document.getElementById('hand');he.innerHTML='';
+  hand.forEach((bone,i)=>{
+    const playable=chain.length===0||canPlayAny(bone);
+    const cls=(selected===i?'selected':'')+(playable?' playable':'');
+    he.appendChild(renderBone(bone[0],bone[1],cls,()=>selectBone(i)));
+  });
+}
+
+resetGame();
+</script>
+</body>
+</html>
