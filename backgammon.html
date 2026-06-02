@@ -87,8 +87,7 @@ function getValidMoves(from,die){
   const to=p===1?from-die:from+die;
   // Check bearing off
   if(p===1&&to<0){
-    if(canBearOff(p)&&from===from+die-(die-(from+1))){/* exact */}
-    if(canBearOff(p)){const farthest=getFarthest(p);if(from===farthest||to===from-die)return['off']}
+    if(canBearOff(p)){return['off']}
   }
   if(p===2&&to>23){
     if(canBearOff(p)){const farthest=getFarthest(p);if(from===farthest||to===from+die)return['off']}
@@ -254,7 +253,7 @@ function render(){
   // Left side (points 12-17 top, 11-6 bottom)
   const left=document.createElement('div');left.className='side';
   for(let i=12;i<=17;i++)left.appendChild(renderPoint(i,'top'));
-  const barDiv=document.createElement('div');bar.className='bar';bar.innerHTML='';
+  const barDiv=document.createElement('div');barDiv.className='bar';barDiv.innerHTML='';
   // Bar checkers
   if(bar[1]>0)for(let j=0;j<bar[1];j++){const c=document.createElement('div');c.className='checker p1';barDiv.appendChild(c)}
   if(bar[2]>0)for(let j=0;j<bar[2];j++){const c=document.createElement('div');c.className='checker p2';barDiv.appendChild(c)}

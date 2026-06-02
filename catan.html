@@ -11,6 +11,7 @@ body{background:#050510;overflow:hidden;font-family:'Orbitron',sans-serif;color:
 canvas{display:block}
 .ov{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 30%,#0a1628,#050510);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;text-align:center;padding:1.5rem}
 .ov.h{display:none}
+.trade-panel[style*="display:none"]{display:none}
 .brand{font-size:.4rem;letter-spacing:4px;color:#334155;margin-bottom:.8rem;text-transform:uppercase}
 .tt{font-size:1.1rem;font-weight:900;letter-spacing:2px;text-shadow:0 0 30px currentColor66}
 .st{font-size:.5rem;color:#475569;letter-spacing:3px;margin:.4rem 0 1rem}
@@ -235,8 +236,8 @@ function upgradeCity(){
   phase='placeCity';
 }
 
-function showTrade(){document.getElementById('tradePanel').classList.remove('h')}
-function hideTrade(){document.getElementById('tradePanel').classList.add('h')}
+function showTrade(){document.getElementById('tradePanel').style.display='block'}
+function hideTrade(){document.getElementById('tradePanel').style.display='none'}}
 
 function doTrade(){
   const cost=4;
@@ -349,6 +350,36 @@ function updateHUD(){
 function handleClick(px,py){
   if(!running)return;
   
+  if(phase==='placeRoad'){
+    // Find nearest edge between two vertices
+    let bestKey=null,bestDist=Infinity;
+    tiles.forEach(tile=>{
+      const verts=getTileVertices(tile.q,tile.r);
+      for(let i=0;i<verts.length;i++){
+        const v1=verts[i],v2=verts[(i+1)%verts.length];
+        const mx=(v1.x+v2.x)/2,my=(v1.y+v2.y)/2;
+        const d=Math.hypot(px-mx,py-my);
+        if(d<15&&d<bestDist){
+          const key=vertexKey(v1.x,v1.y)+'-'+vertexKey(v2.x,v2.y);
+          const key2=vertexKey(v2.x,v2.y)+'-'+vertexKey(v1.x,v1.y);
+          if(!roads.has(key)&&!roads.has(key2)){
+            // Check near player settlement
+            let near=false;
+            settlements.forEach(s=>{if(s.owner==='player'&&(Math.hypot(s.x-v1.x,s.y-v1.y)<HEX_SIZE*1.5||Math.hypot(s.x-v2.x,s.y-v2.y)<HEX_SIZE*1.5))near=true});
+            roads.forEach((_,rk)=>{if(rk.includes(vertexKey(v1.x,v1.y))||rk.includes(vertexKey(v2.x,v2.y)))near=true});
+            if(near){bestKey=key;bestDist=d}
+          }
+        }
+      }
+    });
+    if(bestKey){
+      roads.set(bestKey,{owner:'player'});
+      playerRes.brick--;playerRes.wood--;
+      phase='player';updateHUD();showMsg('Road placed!');
+    }
+    return;
+  }
+  
   if(phase==='placeSettlement'){
     // Find nearest vertex
     let bestKey=null,bestDist=Infinity;
@@ -433,6 +464,15 @@ function renderLoop(){
     // Resource icon below token
     X.textBaseline='alphabetic';X.font='14px sans-serif';X.textAlign='center';
     if(tile.resource!=='desert')X.fillText(RES_EMOJI[tile.resource],x,y+24);
+  });
+  
+  // Draw roads
+  roads.forEach((road,key)=>{
+    const[vk1,vk2]=key.split('-');
+    const[x1,y1]=vk1.split('_').map(Number);
+    const[x2,y2]=vk2.split('_').map(Number);
+    X.strokeStyle=road.owner==='player'?'#3b82f6':'#ef4444';
+    X.lineWidth=4;X.beginPath();X.moveTo(x1,y1);X.lineTo(x2,y2);X.stroke();
   });
   
   // Draw settlements
