@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Rummy Tiles — COAL OS</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+body{background:#050510;display:flex;flex-direction:column;align-items:center;min-height:100vh;font-family:'Orbitron',sans-serif;color:#e2e8f0;overflow-x:hidden;padding-bottom:20px}
+a.back{position:fixed;top:8px;left:8px;z-index:200;text-decoration:none;font-size:.5rem;color:#475569;opacity:.6}
+.brand{font-size:.4rem;letter-spacing:4px;color:#334155;margin:8px 0 4px;text-transform:uppercase;text-align:center}
+.title{font-size:.85rem;font-weight:900;color:#f97316;text-shadow:0 0 20px #f9731644;letter-spacing:2px;margin-bottom:6px}
+.hud{display:flex;gap:12px;align-items:center;margin-bottom:6px;font-size:.5rem;flex-wrap:wrap;justify-content:center}
+.status{font-size:.45rem;color:#94a3b8;min-height:14px;text-align:center;margin-bottom:6px}
+.table{width:min(98vw,600px);min-height:100px;background:#0a1628;border:2px solid #1e293b;border-radius:8px;padding:6px;margin-bottom:8px;overflow-y:auto}
+.table-label{font-size:.35rem;color:#334155;margin-bottom:4px;letter-spacing:1px}
+.meld{display:inline-flex;gap:2px;margin:3px;padding:2px 4px;background:#0f172a;border-radius:4px;border:1px solid #1e293b}
+.tile{width:min(8vw,32px);height:min(11vw,44px);border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:700;cursor:pointer;transition:all .15s;border:1.5px solid transparent;flex-shrink:0}
+.tile:hover{transform:translateY(-2px)}
+.tile.selected{border-color:#f59e0b;box-shadow:0 0 8px #f59e0b44}
+.tile.black{background:#1e293b;color:#e2e8f0;border-color:#334155}
+.tile.red{background:#3b1111;color:#fca5a5;border-color:#7f1d1d}
+.tile.blue{background:#0c1a3a;color:#93c5fd;border-color:#1e3a5f}
+.tile.orange{background:#3a1a0a;color:#fdba74;border-color:#7c2d12}
+.tile.joker{background:#1e293b;color:#f59e0b;border-color:#f59e0b88;font-size:.4rem}
+.tile .num{font-size:min(4vw,14px);line-height:1}
+.tile .suit{font-size:min(2.5vw,8px)}
+.hand{display:flex;gap:3px;flex-wrap:wrap;justify-content:center;margin-bottom:8px;padding:4px;max-width:min(98vw,600px);min-height:50px;background:#0a0e1a;border-radius:6px}
+.actions{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;margin-bottom:6px}
+.btn{background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:.25rem .6rem;border-radius:4px;font-family:inherit;font-size:.45rem;cursor:pointer;transition:all .15s}
+.btn:hover{background:#334155;color:#e2e8f0}
+.btn.primary{border-color:#f97316;color:#f97316}
+.btn:disabled{opacity:.3;cursor:not-allowed}
+.log{font-size:.35rem;color:#334155;max-width:95vw;text-align:center;line-height:1.3;max-height:30px;overflow-y:auto}
+.overlay{position:fixed;inset:0;background:#050510ee;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100}
+.overlay h2{font-size:.8rem;color:#f97316;margin-bottom:8px}
+.overlay p{font-size:.5rem;color:#64748b;margin-bottom:16px;text-align:center;padding:0 20px}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← COAL OS</a>
+<div class="brand">COAL OS</div>
+<div class="title">🎲 RUMMY TILES</div>
+<div class="hud">
+  <span style="color:#e2e8f0">Your tiles: <span id="handCount">0</span></span>
+  <span style="color:#334155">|</span>
+  <span style="color:#64748b">AI tiles: <span id="aiCount">0</span></span>
+  <span style="color:#334155">|</span>
+  <span style="color:#334155">Pool: <span id="poolCount">0</span></span>
+</div>
+<div class="status" id="status">Draw a tile or play melds</div>
+<div class="table-label">TABLE MELDS</div>
+<div class="table" id="table"></div>
+<div class="table-label">YOUR HAND</div>
+<div class="hand" id="hand"></div>
+<div class="actions">
+  <button class="btn primary" id="drawBtn" onclick="drawTile()"> DRAW</button>
+  <button class="btn" id="meldBtn" onclick="playMeld()" disabled>PLAY MELD</button>
+  <button class="btn" id="endBtn" onclick="endTurn()" disabled>END TURN</button>
+  <button class="btn" onclick="sortHand()">SORT</button>
+  <button class="btn" onclick="newGame()">NEW GAME</button>
+</div>
+<div class="log" id="logEl"></div>
+
+<div class="overlay" id="menu">
+  <h2>🎲 RUMMY TILES</h2>
+  <p>Form runs (3+ consecutive same color) or groups (3-4 same number different colors). First to empty hand wins!</p>
+  <button class="btn primary" onclick="newGame()" style="font-size:.7rem;padding:.5rem 2rem">PLAY</button>
+</div>
+
+<div class="overlay" id="endScreen" style="display:none">
+  <h2 id="endTitle"></h2>
+  <p id="endInfo"></p>
+  <button class="btn primary" onclick="newGame()" style="font-size:.7rem;padding:.5rem 2rem">AGAIN</button>
+</div>
+
+<script>
+const COLORS=['black','red','blue','orange'];
+const NUMBERS=[1,2,3,4,5,6,7,8,9,10,11,12,13];
+let pool,playerHand,aiHand,tableMelds,selected,drewThisTurn,gameOver,turn;
+
+function makePool(){
+  const tiles=[];
+  // 2 copies of each number+color
+  for(let c of COLORS)for(let n of NUMBERS){
+    tiles.push({color:c,number:n,id:c+'_'+n+'_a'});
+    tiles.push({color:c,number:n,id:c+'_'+n+'_b'});
+  }
+  // 2 jokers
+  tiles.push({color:'joker',number:0,id:'joker_a'});
+  tiles.push({color:'joker',number:0,id:'joker_b'});
+  return tiles;
+}
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+
+function newGame(){
+  pool=shuffle(makePool());
+  playerHand=pool.splice(0,14);
+  aiHand=pool.splice(0,14);
+  tableMelds=[];selected=new Set();drewThisTurn=false;gameOver=false;turn='player';
+  document.getElementById('menu').style.display='none';
+  document.getElementById('endScreen').style.display='none';
+  document.getElementById('drawBtn').disabled=false;
+  addLog('Game started! Draw or play melds.');
+  render();
+}
+
+function drawTile(){
+  if(gameOver||turn!=='player'||drewThisTurn)return;
+  if(pool.length===0){addLog('Pool empty!');return}
+  playerHand.push(pool.pop());
+  drewThisTurn=true;
+  document.getElementById('drawBtn').disabled=true;
+  document.getElementById('endBtn').disabled=false;
+  addLog('Drew a tile. End your turn.');
+  render();
+}
+
+function sortHand(){
+  playerHand.sort((a,b)=>{
+    if(a.color!==b.color)return COLORS.indexOf(a.color)-COLORS.indexOf(b.color);
+    return a.number-b.number;
+  });
+  selected.clear();render();
+}
+
+function toggleSelect(idx){
+  if(gameOver||turn!=='player')return;
+  if(selected.has(idx))selected.delete(idx);else selected.add(idx);
+  // Enable meld button if valid selection
+  document.getElementById('meldBtn').disabled=!isValidMeld(getSelected());
+  render();
+}
+
+function getSelected(){
+  return[...selected].map(i=>playerHand[i]).filter(Boolean);
+}
+
+function isValidMeld(tiles){
+  if(tiles.length<3)return false;
+  // Check if group (same number, different colors)
+  const nums=tiles.map(t=>t.number);
+  const allSameNum=nums.every(n=>n===nums[0]);
+  if(allSameNum){
+    const colors=new Set(tiles.map(t=>t.color));
+    return colors.size===tiles.length&&tiles.length<=4;
+  }
+  // Check if run (consecutive, same color)
+  const colors=tiles.map(t=>t.color);
+  if(!colors.every(c=>c===colors[0]))return false;
+  const sorted=nums.slice().sort((a,b)=>a-b);
+  for(let i=1;i<sorted.length;i++){
+    if(sorted[i]!==sorted[i-1]+1)return false;
+  }
+  return true;
+}
+
+function playMeld(){
+  if(gameOver||turn!=='player')return;
+  const tiles=getSelected();
+  if(!isValidMeld(tiles))return;
+  // Remove from hand
+  const ids=new Set(tiles.map(t=>t.id));
+  playerHand=playerHand.filter(t=>!ids.has(t.id));
+  tableMelds.push(tiles);
+  selected.clear();
+  document.getElementById('meldBtn').disabled=true;
+  addLog('Played meld: '+tiles.map(t=>t.number+t.color[0]).join(', '));
+  if(playerHand.length===0){endGame('player');return}
+  render();
+}
+
+function endTurn(){
+  if(gameOver||turn!=='player')return;
+  if(!drewThisTurn&&tableMelds.length===0){
+    // Must draw if can't play... actually in Rummikub you can pass
+    // But let's require at least drawing
+    addLog('Draw a tile first or play a meld!');
+    return;
+  }
+  turn='ai';drewThisTurn=false;
+  document.getElementById('drawBtn').disabled=true;
+  document.getElementById('endBtn').disabled=true;
+  document.getElementById('meldBtn').disabled=true;
+  render();
+  setTimeout(aiTurn,800);
+}
+
+function aiTurn(){
+  if(gameOver)return;
+  
+  // AI tries to find melds in hand
+  let played=false;
+  const melds=findMeldsInHand(aiHand);
+  for(const meld of melds){
+    const ids=new Set(meld.map(t=>t.id));
+    aiHand=aiHand.filter(t=>!ids.has(t.id));
+    tableMelds.push(meld);
+    addLog('AI played a meld');
+    played=true;
+    if(aiHand.length===0){endGame('ai');return}
+  }
+  
+  if(!played){
+    if(pool.length>0){
+      aiHand.push(pool.pop());
+      addLog('AI drew a tile');
+    }else{
+      addLog('AI passed (pool empty)');
+    }
+  }
+  
+  turn='player';drewThisTurn=false;
+  document.getElementById('drawBtn').disabled=false;
+  addLog('Your turn');
+  render();
+}
+
+function findMeldsInHand(hand){
+  const melds=[];
+  // Find groups (same number, different colors)
+  const byNum={};
+  hand.forEach(t=>{
+    if(t.number===0)return; // skip jokers
+    if(!byNum[t.number])byNum[t.number]=[];
+    byNum[t.number].push(t);
+  });
+  for(const[num,tiles]of Object.entries(byNum)){
+    if(tiles.length>=3){
+      const colors=new Set(tiles.map(t=>t.color));
+      if(colors.size>=3){
+        melds.push(tiles.slice(0,Math.min(4,colors.size)));
+      }
+    }
+  }
+  // Find runs (same color, consecutive)
+  const byColor={};
+  hand.forEach(t=>{
+    if(t.number===0)return;
+    if(!byColor[t.color])byColor[t.color]=[];
+    byColor[t.color].push(t);
+  });
+  for(const[color,tiles]of Object.entries(byColor)){
+    tiles.sort((a,b)=>a.number-b.number);
+    let run=[tiles[0]];
+    for(let i=1;i<tiles.length;i++){
+      if(tiles[i].number===run[run.length-1].number+1){
+        run.push(tiles[i]);
+      }else{
+        if(run.length>=3)melds.push([...run]);
+        run=[tiles[i]];
+      }
+    }
+    if(run.length>=3)melds.push([...run]);
+  }
+  // Return best meld (longest first)
+  melds.sort((a,b)=>b.length-a.length);
+  return melds.length>0?[melds[0]]:[];
+}
+
+function endGame(winner){
+  gameOver=true;
+  const el=document.getElementById('endScreen');
+  const t=document.getElementById('endTitle');
+  const i=document.getElementById('endInfo');
+  if(winner==='player'){
+    t.textContent='🏆 YOU WIN!';t.style.color='#22c55e';
+    i.textContent='You emptied your hand!';
+  }else{
+    t.textContent='AI WINS';t.style.color='#ef4444';
+    i.textContent='AI emptied their hand!';
+  }
+  el.style.display='flex';
+}
+
+function addLog(msg){const el=document.getElementById('logEl');el.textContent=msg}
+
+function tileHTML(t,idx,selectable=false){
+  const cls=t.color==='joker'?'joker':t.color;
+  const sel=selected.has(idx)?'selected':'';
+  return`<div class="tile ${cls} ${sel}" ${selectable?`onclick="toggleSelect(${idx})"`:''}>
+    <div class="num">${t.number===0?'★':t.number}</div>
+    <div class="suit">${t.color==='joker'?'JOKER':t.color[0].toUpperCase()}</div>
+  </div>`;
+}
+
+function render(){
+  document.getElementById('handCount').textContent=playerHand.length;
+  document.getElementById('aiCount').textContent=aiHand.length;
+  document.getElementById('poolCount').textContent=pool.length;
+  
+  // Table melds
+  const tEl=document.getElementById('table');
+  if(tableMelds.length===0){
+    tEl.innerHTML='<div style="text-align:center;color:#334155;font-size:.4rem;padding:20px">No melds played yet</div>';
+  }else{
+    tEl.innerHTML=tableMelds.map(meld=>
+      `<div class="meld">${meld.map(t=>tileHTML(t,-1,false)).join('')}</div>`
+    ).join('');
+  }
+  
+  // Player hand
+  const hEl=document.getElementById('hand');
+  hEl.innerHTML=playerHand.map((t,i)=>tileHTML(t,i,true)).join('');
+  
+  if(!gameOver){
+    document.getElementById('status').textContent=turn==='player'?
+      (drewThisTurn?'End your turn or play more melds':'Draw a tile or select tiles to meld'):
+      'AI thinking...';
+  }
+}
+</script>
+</body>
+</html>
