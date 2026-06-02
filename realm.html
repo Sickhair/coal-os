@@ -63,6 +63,7 @@ let W,H,map,playerCity,aiCity,armies,turn,phase,selected,gold,income,running,ani
 
 function startGame(){
   resize();
+  cancelAnimationFrame(animId);
   document.getElementById('menu').classList.add('h');
   document.getElementById('over').classList.add('h');
   document.getElementById('winScreen').classList.add('h');

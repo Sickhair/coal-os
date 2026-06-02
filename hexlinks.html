@@ -44,7 +44,7 @@ canvas{display:block;touch-action:none}
 </div>
 <script>
 const C=document.getElementById('c'),X=C.getContext('2d');
-let W,H,grid,cols,rows,hexSize,offsetX,offsetY,level=1,moves,running,solved,sourceCol,sourceRow;
+let W,H,grid,cols,rows,hexSize,offsetX,offsetY,level=1,moves,running,solved,sourceCol,sourceRow,animId=0;
 
 function resize(){W=C.width=innerWidth;H=C.height=innerHeight}
 addEventListener('resize',resize);resize();
@@ -228,10 +228,11 @@ function clickHex(mx,my){
 
 function newGame(){
   resize();level=1;
+  cancelAnimationFrame(animId);
   document.getElementById('menu').classList.add('h');
   document.getElementById('win').classList.add('h');
   generateLevel();
-  requestAnimationFrame(renderLoop);
+  animId=requestAnimationFrame(renderLoop);
 }
 
 function nextLevel(){
@@ -294,7 +295,7 @@ function renderLoop(){
   X.fillStyle='#22c55e44';X.beginPath();X.arc(sp.x,sp.y,hexSize*.3,0,Math.PI*2);X.fill();
   X.fillStyle='#22c55e';X.font='bold 12px Orbitron';X.textAlign='center';X.fillText('S',sp.x,sp.y+4);
   
-  if(running)requestAnimationFrame(renderLoop);
+  if(running)animId=requestAnimationFrame(renderLoop);
 }
 
 C.addEventListener('click',e=>{const r=C.getBoundingClientRect();clickHex(e.clientX-r.left,e.clientY-r.top)});
